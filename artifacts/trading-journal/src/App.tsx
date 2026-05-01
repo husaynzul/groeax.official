@@ -8,6 +8,7 @@ import Dashboard from "@/pages/Dashboard";
 import Trades from "@/pages/Trades";
 import Journal from "@/pages/Journal";
 import Calculator from "@/pages/Calculator";
+import Analytics from "@/pages/Analytics";
 import NotFound from "@/pages/not-found";
 import { useTradeStore } from "@/store/tradeStore";
 
@@ -26,6 +27,7 @@ function AppRoutes() {
         <Route path="/" component={Dashboard} />
         <Route path="/trades" component={Trades} />
         <Route path="/journal" component={Journal} />
+        <Route path="/analytics" component={Analytics} />
         <Route path="/calculator" component={Calculator} />
         <Route component={NotFound} />
       </Switch>

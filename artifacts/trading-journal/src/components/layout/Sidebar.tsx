@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  BarChart2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddTradeModal from "@/components/trades/AddTradeModal";
@@ -17,6 +18,7 @@ const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/trades", label: "Trades", icon: BookOpen },
   { href: "/journal", label: "Journal", icon: CalendarDays },
+  { href: "/analytics", label: "Analytics", icon: BarChart2 },
   { href: "/calculator", label: "Risk Calc", icon: Calculator },
 ];
 
