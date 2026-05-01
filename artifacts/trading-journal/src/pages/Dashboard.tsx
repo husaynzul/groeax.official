@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useTradeStore } from "@/store/tradeStore";
 import { computeAnalytics } from "@/engine/analyticsEngine";
 import {
+  ComposedChart,
   AreaChart,
   Area,
   BarChart,
@@ -18,6 +19,9 @@ import {
   PieChart,
   Pie,
   Cell as PieCell,
+  Line,
+  LabelList,
+  ReferenceLine,
 } from "recharts";
 import { motion } from "framer-motion";
 import {
@@ -708,51 +712,47 @@ export default function Dashboard() {
             </h2>
           </div>
           {analytics.equityCurve.length > 0 ? (
-            <ResponsiveContainer width="100%" height={160}>
-              <AreaChart data={analytics.equityCurve}>
+            <ResponsiveContainer width="100%" height={180}>
+              <ComposedChart data={analytics.equityCurve} margin={{ top: 20, right: 10, bottom: 0, left: 10 }}>
                 <defs>
                   <linearGradient id="equityGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop
-                      offset="5%"
-                      stopColor="#10b981"
-                      stopOpacity={0.3}
-                    />
-                    <stop
-                      offset="95%"
-                      stopColor="#10b981"
-                      stopOpacity={0}
-                    />
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.22} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="rgba(255,255,255,0.04)"
-                />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
                 <XAxis
                   dataKey="date"
                   tick={{ fontSize: 9, fill: "hsl(215 20% 50%)" }}
-                  tickFormatter={(v) =>
-                    format(new Date(v + "T12:00:00"), "MMM d")
-                  }
+                  tickFormatter={(v) => format(new Date(v + "T12:00:00"), "MMM d")}
+                  axisLine={false} tickLine={false}
                 />
                 <YAxis
                   tick={{ fontSize: 9, fill: "hsl(215 20% 50%)" }}
                   tickFormatter={(v) => `$${v}`}
+                  axisLine={false} tickLine={false} width={45}
                 />
+                <ReferenceLine y={0} stroke="rgba(255,255,255,0.12)" strokeDasharray="4 4" />
                 <Tooltip content={<CustomTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="equity"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  fill="url(#equityGrad)"
-                  isAnimationActive
-                  animationDuration={800}
-                />
-              </AreaChart>
+                <Area type="monotone" dataKey="equity" fill="url(#equityGrad)" stroke="none" />
+                <Line
+                  type="monotone" dataKey="equity"
+                  stroke="#10b981" strokeWidth={2.5}
+                  dot={{ r: 4, fill: "#10b981", stroke: "#0f172a", strokeWidth: 2 }}
+                  activeDot={{ r: 6, fill: "#10b981", stroke: "#fff", strokeWidth: 1.5 }}
+                  isAnimationActive animationDuration={900}
+                >
+                  <LabelList
+                    dataKey="equity"
+                    position="top"
+                    style={{ fontSize: 9, fill: "#10b981", fontWeight: 700 }}
+                    formatter={(v: number) => `$${v.toFixed(2)}`}
+                  />
+                </Line>
+              </ComposedChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[160px] flex items-center justify-center text-muted-foreground text-sm">
+            <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">
               No trade data yet
             </div>
           )}
@@ -771,42 +771,38 @@ export default function Dashboard() {
             </h2>
           </div>
           {analytics.dailyPnL.length > 0 ? (
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={analytics.dailyPnL}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="rgba(255,255,255,0.04)"
-                />
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={analytics.dailyPnL} margin={{ top: 24, right: 8, bottom: 0, left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
                 <XAxis
                   dataKey="date"
                   tick={{ fontSize: 9, fill: "hsl(215 20% 50%)" }}
-                  tickFormatter={(v) =>
-                    format(new Date(v + "T12:00:00"), "MMM d")
-                  }
+                  tickFormatter={(v) => format(new Date(v + "T12:00:00"), "MMM d")}
+                  axisLine={false} tickLine={false}
                 />
                 <YAxis
                   tick={{ fontSize: 9, fill: "hsl(215 20% 50%)" }}
                   tickFormatter={(v) => `$${v}`}
+                  axisLine={false} tickLine={false} width={45}
                 />
+                <ReferenceLine y={0} stroke="rgba(255,255,255,0.18)" strokeWidth={1.5} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar
-                  dataKey="pnl"
-                  radius={[3, 3, 0, 0]}
-                  isAnimationActive
-                  animationDuration={800}
-                >
+                <Bar dataKey="pnl" radius={[4, 4, 0, 0]} isAnimationActive animationDuration={800} maxBarSize={40}>
+                  <LabelList
+                    dataKey="pnl"
+                    position="top"
+                    style={{ fontSize: 9, fontWeight: 700 }}
+                    formatter={(v: number) => v >= 0 ? `+$${v.toFixed(2)}` : `-$${Math.abs(v).toFixed(2)}`}
+                    fill="hsl(215 20% 65%)"
+                  />
                   {analytics.dailyPnL.map((entry, i) => (
-                    <PieCell
-                      key={i}
-                      fill={entry.pnl >= 0 ? "#10b981" : "#ef4444"}
-                      fillOpacity={0.85}
-                    />
+                    <PieCell key={i} fill={entry.pnl >= 0 ? "#10b981" : "#ef4444"} fillOpacity={0.9} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[160px] flex items-center justify-center text-muted-foreground text-sm">
+            <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">
               No trade data yet
             </div>
           )}

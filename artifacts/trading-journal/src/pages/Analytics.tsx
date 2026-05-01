@@ -2,9 +2,9 @@ import { useMemo } from "react";
 import { useTradeStore } from "@/store/tradeStore";
 import { computeAnalytics } from "@/engine/analyticsEngine";
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  ComposedChart, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ScatterChart, Scatter, Cell,
-  ReferenceLine, PieChart, Pie, Legend,
+  ReferenceLine, PieChart, Pie, Legend, Line, LabelList,
 } from "recharts";
 import { motion } from "framer-motion";
 import {
@@ -382,26 +382,41 @@ export default function Analytics() {
           Cumulative P&L over time
         </p>
         {!empty && analytics.equityCurve.length > 0 ? (
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={analytics.equityCurve}>
+          <ResponsiveContainer width="100%" height={230}>
+            <ComposedChart data={analytics.equityCurve} margin={{ top: 24, right: 16, bottom: 0, left: 10 }}>
               <defs>
-                <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                <linearGradient id="eqGradA" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.22} />
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
               <XAxis dataKey="date" tick={{ fontSize: 9, fill: "hsl(215 20% 50%)" }}
-                tickFormatter={(v) => format(new Date(v + "T12:00:00"), "MMM d")} />
-              <YAxis tick={{ fontSize: 9, fill: "hsl(215 20% 50%)" }} tickFormatter={(v) => `$${v}`} />
+                tickFormatter={(v) => format(new Date(v + "T12:00:00"), "MMM d")}
+                axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 9, fill: "hsl(215 20% 50%)" }}
+                tickFormatter={(v) => `$${v}`} axisLine={false} tickLine={false} width={50} />
               <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" strokeDasharray="4 4" />
               <Tooltip content={<EquityTooltip />} />
-              <Area type="monotone" dataKey="equity" stroke="#10b981" strokeWidth={2}
-                fill="url(#eqGrad)" isAnimationActive animationDuration={800} />
-            </AreaChart>
+              <Area type="monotone" dataKey="equity" fill="url(#eqGradA)" stroke="none" />
+              <Line
+                type="monotone" dataKey="equity"
+                stroke="#10b981" strokeWidth={2.5}
+                dot={{ r: 5, fill: "#10b981", stroke: "#0f172a", strokeWidth: 2.5 }}
+                activeDot={{ r: 7, fill: "#10b981", stroke: "#fff", strokeWidth: 2 }}
+                isAnimationActive animationDuration={900}
+              >
+                <LabelList
+                  dataKey="equity"
+                  position="top"
+                  style={{ fontSize: 9, fill: "#10b981", fontWeight: 700 }}
+                  formatter={(v: number) => `$${v.toFixed(2)}`}
+                />
+              </Line>
+            </ComposedChart>
           </ResponsiveContainer>
         ) : (
-          <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
+          <div className="h-[230px] flex items-center justify-center text-muted-foreground text-sm">
             Add trades to see your equity curve
           </div>
         )}
@@ -476,25 +491,51 @@ export default function Analytics() {
           Distance below peak equity at each point in time
         </p>
         {!empty && analytics.drawdownCurve.length > 0 ? (
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={analytics.drawdownCurve}>
+          <ResponsiveContainer width="100%" height={230}>
+            <ComposedChart data={analytics.drawdownCurve} margin={{ top: 24, right: 16, bottom: 0, left: 10 }}>
               <defs>
                 <linearGradient id="ddGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.35} />
                   <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
               <XAxis dataKey="date" tick={{ fontSize: 9, fill: "hsl(215 20% 50%)" }}
-                tickFormatter={(v) => format(new Date(v + "T12:00:00"), "MMM d")} />
-              <YAxis tick={{ fontSize: 9, fill: "hsl(215 20% 50%)" }} tickFormatter={(v) => `-$${Math.abs(v)}`} />
+                tickFormatter={(v) => format(new Date(v + "T12:00:00"), "MMM d")}
+                axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 9, fill: "hsl(215 20% 50%)" }}
+                tickFormatter={(v) => `-$${Math.abs(v)}`} axisLine={false} tickLine={false} width={50} />
               <Tooltip content={<DrawdownTooltip />} />
-              <Area type="monotone" dataKey="drawdown" stroke="#ef4444" strokeWidth={2}
-                fill="url(#ddGrad)" isAnimationActive animationDuration={900} />
-            </AreaChart>
+              <Area type="monotone" dataKey="drawdown" fill="url(#ddGrad)" stroke="none" />
+              <Line
+                type="monotone" dataKey="drawdown"
+                stroke="#ef4444" strokeWidth={2.5}
+                dot={(props: { cx: number; cy: number; payload: { drawdown: number } }) => {
+                  const isMax = props.payload.drawdown === maxDrawdown && maxDrawdown > 0;
+                  return (
+                    <circle
+                      key={`dd-dot-${props.cx}`}
+                      cx={props.cx} cy={props.cy}
+                      r={isMax ? 6 : 4}
+                      fill={isMax ? "#fbbf24" : "#ef4444"}
+                      stroke="#0f172a" strokeWidth={2}
+                    />
+                  );
+                }}
+                activeDot={{ r: 7, fill: "#ef4444", stroke: "#fff", strokeWidth: 2 }}
+                isAnimationActive animationDuration={900}
+              >
+                <LabelList
+                  dataKey="drawdown"
+                  position="top"
+                  style={{ fontSize: 9, fill: "#ef4444", fontWeight: 700 }}
+                  formatter={(v: number) => v > 0 ? `-$${v.toFixed(2)}` : ""}
+                />
+              </Line>
+            </ComposedChart>
           </ResponsiveContainer>
         ) : (
-          <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
+          <div className="h-[230px] flex items-center justify-center text-muted-foreground text-sm">
             Add trades to see your drawdown curve
           </div>
         )}
@@ -511,27 +552,50 @@ export default function Analytics() {
           Each dot is a trade. X-axis = planned R:R, Y-axis = actual P&L. Green = win, red = loss.
         </p>
         {!empty ? (
-          <ResponsiveContainer width="100%" height={240}>
-            <ScatterChart>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-              <XAxis dataKey="rr" name="R:R" type="number" tick={{ fontSize: 9, fill: "hsl(215 20% 50%)" }}
-                label={{ value: "R:R Ratio", position: "insideBottomRight", offset: -5, style: { fontSize: 9, fill: "hsl(215 20% 40%)" } }} />
-              <YAxis dataKey="profit" name="P&L" type="number" tick={{ fontSize: 9, fill: "hsl(215 20% 50%)" }}
-                tickFormatter={(v) => `$${v}`} />
-              <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" strokeDasharray="4 4" />
+          <ResponsiveContainer width="100%" height={260}>
+            <ScatterChart margin={{ top: 10, right: 16, bottom: 16, left: 10 }}>
+              <defs>
+                <filter id="glow-green" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+                <filter id="glow-red" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis
+                dataKey="rr" name="R:R" type="number"
+                tick={{ fontSize: 9, fill: "hsl(215 20% 50%)" }}
+                axisLine={false} tickLine={false}
+                label={{ value: "R:R Ratio", position: "insideBottomRight", offset: -8, style: { fontSize: 9, fill: "hsl(215 20% 40%)" } }}
+              />
+              <YAxis
+                dataKey="profit" name="P&L" type="number"
+                tick={{ fontSize: 9, fill: "hsl(215 20% 50%)" }}
+                tickFormatter={(v) => `$${v}`}
+                axisLine={false} tickLine={false} width={55}
+              />
+              <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" strokeWidth={1.5} strokeDasharray="5 5" />
+              <ReferenceLine x={1} stroke="rgba(255,255,255,0.08)" strokeDasharray="4 4" />
               <Tooltip content={<ScatterTooltip />} />
               <Scatter data={scatterWithOutcome} isAnimationActive animationDuration={800}>
                 {scatterWithOutcome.map((entry, i) => (
-                  <Cell key={i}
+                  <Cell
+                    key={i}
                     fill={entry.outcome === "WIN" ? "#10b981" : entry.outcome === "LOSS" ? "#ef4444" : "#6b7280"}
-                    fillOpacity={0.8} r={5}
+                    fillOpacity={0.9}
+                    stroke={entry.outcome === "WIN" ? "#10b98155" : entry.outcome === "LOSS" ? "#ef444455" : "#6b728055"}
+                    strokeWidth={4}
+                    r={7}
                   />
                 ))}
               </Scatter>
             </ScatterChart>
           </ResponsiveContainer>
         ) : (
-          <div className="h-[240px] flex items-center justify-center text-muted-foreground text-sm">
+          <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">
             Add trades to populate the scatter plot
           </div>
         )}
