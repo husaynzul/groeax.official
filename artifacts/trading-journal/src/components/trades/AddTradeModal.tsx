@@ -26,13 +26,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTradeStore } from "@/store/tradeStore";
-import {
-  calcNetProfit,
-  calcNetLoss,
-  calcRR,
-} from "@/engine/riskEngine";
-import { useMemo } from "react";
-import { Trade } from "@/types";
+import { calcNetProfit, calcNetLoss, calcRR } from "@/engine/riskEngine";
+import { useMemo, useState } from "react";
+import { Trade, PRIMARY_STRATEGIES, PATTERN_TYPES } from "@/types";
 
 const FOREX_PAIRS = [
   "EUR/USD", "GBP/USD", "USD/JPY", "USD/CHF",
@@ -50,6 +46,7 @@ const schema = z.object({
   date: z.string().min(1, "Required"),
   outcome: z.enum(["WIN", "LOSS", "BE"]).optional(),
   notes: z.string().optional(),
+  strategy: z.string().min(1, "Select a strategy"),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -60,9 +57,16 @@ interface Props {
   editTrade?: Trade;
 }
 
+const fmtMoney = (n: number) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+
 export default function AddTradeModal({ open, onClose, editTrade }: Props) {
   const addTrade = useTradeStore((s) => s.addTrade);
   const updateTrade = useTradeStore((s) => s.updateTrade);
+
+  const [selectedPatterns, setSelectedPatterns] = useState<string[]>(
+    editTrade?.patterns ?? []
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -77,6 +81,7 @@ export default function AddTradeModal({ open, onClose, editTrade }: Props) {
           date: editTrade.date.split("T")[0],
           outcome: editTrade.outcome,
           notes: editTrade.notes ?? "",
+          strategy: editTrade.strategy ?? "",
         }
       : {
           pair: "EUR/USD",
@@ -87,6 +92,7 @@ export default function AddTradeModal({ open, onClose, editTrade }: Props) {
           lotSize: 0.1,
           date: new Date().toISOString().split("T")[0],
           notes: "",
+          strategy: "",
         },
   });
 
@@ -97,28 +103,26 @@ export default function AddTradeModal({ open, onClose, editTrade }: Props) {
     const tp = watched.takeProfit ?? 0;
     const lot = watched.lotSize ?? 0;
     if (!e || !sl || !tp || !lot) return null;
-    const np = calcNetProfit(e, tp, lot);
-    const nl = calcNetLoss(e, sl, lot);
-    const rr = calcRR(np, nl);
-    return { np, nl, rr };
+    return {
+      np: calcNetProfit(e, tp, lot),
+      nl: calcNetLoss(e, sl, lot),
+      rr: calcRR(calcNetProfit(e, tp, lot), calcNetLoss(e, sl, lot)),
+    };
   }, [watched.entryPrice, watched.stopLoss, watched.takeProfit, watched.lotSize]);
 
+  function togglePattern(p: string) {
+    setSelectedPatterns((prev) =>
+      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
+    );
+  }
+
   function onSubmit(values: FormValues) {
-    const e = values.entryPrice;
-    const sl = values.stopLoss;
-    const tp = values.takeProfit;
-    const lot = values.lotSize;
-    const np = calcNetProfit(e, tp, lot);
-    const nl = calcNetLoss(e, sl, lot);
+    const np = calcNetProfit(values.entryPrice, values.takeProfit, values.lotSize);
+    const nl = calcNetLoss(values.entryPrice, values.stopLoss, values.lotSize);
     const rr = calcRR(np, nl);
 
     if (editTrade) {
-      updateTrade(editTrade.id, {
-        ...values,
-        netProfit: np,
-        netLoss: nl,
-        rr,
-      });
+      updateTrade(editTrade.id, { ...values, netProfit: np, netLoss: nl, rr, patterns: selectedPatterns });
     } else {
       const trade: Trade = {
         id: crypto.randomUUID(),
@@ -126,19 +130,18 @@ export default function AddTradeModal({ open, onClose, editTrade }: Props) {
         netProfit: np,
         netLoss: nl,
         rr,
+        patterns: selectedPatterns,
       };
       addTrade(trade);
     }
     form.reset();
+    setSelectedPatterns([]);
     onClose();
   }
 
-  const fmtMoney = (n: number) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n);
-
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-2xl bg-card border-card-border">
+      <DialogContent className="max-w-2xl bg-card border-card-border max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold">
             {editTrade ? "Edit Trade" : "Add New Trade"}
@@ -147,6 +150,7 @@ export default function AddTradeModal({ open, onClose, editTrade }: Props) {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* ── Core fields ── */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -208,13 +212,7 @@ export default function AddTradeModal({ open, onClose, editTrade }: Props) {
                   <FormItem>
                     <FormLabel>Entry Price</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.00001"
-                        placeholder="1.08500"
-                        data-testid="input-entry-price"
-                        {...field}
-                      />
+                      <Input type="number" step="0.00001" placeholder="1.08500" data-testid="input-entry-price" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -228,13 +226,7 @@ export default function AddTradeModal({ open, onClose, editTrade }: Props) {
                   <FormItem>
                     <FormLabel>Lot Size</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.10"
-                        data-testid="input-lot-size"
-                        {...field}
-                      />
+                      <Input type="number" step="0.01" placeholder="0.10" data-testid="input-lot-size" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -248,13 +240,7 @@ export default function AddTradeModal({ open, onClose, editTrade }: Props) {
                   <FormItem>
                     <FormLabel>Stop Loss</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.00001"
-                        placeholder="1.08200"
-                        data-testid="input-stop-loss"
-                        {...field}
-                      />
+                      <Input type="number" step="0.00001" placeholder="1.08200" data-testid="input-stop-loss" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -268,13 +254,7 @@ export default function AddTradeModal({ open, onClose, editTrade }: Props) {
                   <FormItem>
                     <FormLabel>Take Profit</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.00001"
-                        placeholder="1.09100"
-                        data-testid="input-take-profit"
-                        {...field}
-                      />
+                      <Input type="number" step="0.00001" placeholder="1.09100" data-testid="input-take-profit" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -319,6 +299,60 @@ export default function AddTradeModal({ open, onClose, editTrade }: Props) {
               />
             </div>
 
+            {/* ── Strategy (mandatory) ── */}
+            <FormField
+              control={form.control}
+              name="strategy"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Strategy <span className="text-red-400 text-xs">*required</span>
+                  </FormLabel>
+                  <div className="flex flex-wrap gap-2">
+                    {PRIMARY_STRATEGIES.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => field.onChange(s)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                          field.value === s
+                            ? "bg-primary/20 text-primary border-primary/40"
+                            : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* ── Patterns (multi-select) ── */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                Patterns <span className="text-muted-foreground text-xs">(optional, multi-select)</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {PATTERN_TYPES.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => togglePattern(p)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                      selectedPatterns.includes(p)
+                        ? "bg-violet-500/20 text-violet-400 border-violet-500/40"
+                        : "border-border text-muted-foreground hover:border-violet-400/30 hover:text-foreground"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Notes ── */}
             <FormField
               control={form.control}
               name="notes"
@@ -338,6 +372,7 @@ export default function AddTradeModal({ open, onClose, editTrade }: Props) {
               )}
             />
 
+            {/* ── Risk preview ── */}
             {preview && (
               <div className="grid grid-cols-3 gap-3 p-3 rounded-lg bg-secondary/50 border border-border">
                 <div className="text-center">
@@ -356,20 +391,10 @@ export default function AddTradeModal({ open, onClose, editTrade }: Props) {
             )}
 
             <div className="flex gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                className="flex-1"
-                data-testid="button-cancel-trade"
-              >
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1" data-testid="button-cancel-trade">
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                className="flex-1"
-                data-testid="button-submit-trade"
-              >
+              <Button type="submit" className="flex-1" data-testid="button-submit-trade">
                 {editTrade ? "Update Trade" : "Add Trade"}
               </Button>
             </div>
