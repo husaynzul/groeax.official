@@ -4,6 +4,7 @@ import { computeAnalytics } from "@/engine/analyticsEngine";
 import { format } from "date-fns";
 import { Plus, Search, Trash2, Edit2, ChevronUp, ChevronDown } from "lucide-react";
 import AddTradeModal from "@/components/trades/AddTradeModal";
+import TradeDetailDrawer from "@/components/trades/TradeDetailDrawer";
 import { Trade } from "@/types";
 
 const fmtMoney = (n: number) =>
@@ -24,6 +25,7 @@ export default function Trades() {
 
   const [addOpen, setAddOpen] = useState(false);
   const [editTrade, setEditTrade] = useState<Trade | null>(null);
+  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [search, setSearch] = useState("");
   const [filterPair, setFilterPair] = useState("all");
   const [filterDirection, setFilterDirection] = useState("all");
@@ -227,7 +229,8 @@ export default function Trades() {
                   <tr
                     key={t.id}
                     data-testid={`row-trade-${t.id}`}
-                    className="border-b border-border/40 hover:bg-accent/20 transition-colors"
+                    onClick={() => setSelectedTrade(t)}
+                    className="border-b border-border/40 hover:bg-accent/20 transition-colors cursor-pointer group"
                   >
                     <td className="py-2.5 px-4 text-xs text-muted-foreground">
                       {format(new Date(t.date + "T12:00:00"), "MM/dd/yyyy")}
@@ -282,14 +285,14 @@ export default function Trades() {
                     <td className="py-2.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => setEditTrade(t)}
+                          onClick={(e) => { e.stopPropagation(); setEditTrade(t); }}
                           data-testid={`button-edit-trade-${t.id}`}
                           className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded hover:bg-accent"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => deleteTrade(t.id)}
+                          onClick={(e) => { e.stopPropagation(); deleteTrade(t.id); }}
                           data-testid={`button-delete-trade-${t.id}`}
                           className="text-muted-foreground hover:text-red-400 transition-colors p-1 rounded hover:bg-red-500/10"
                         >
@@ -350,6 +353,13 @@ export default function Trades() {
           editTrade={editTrade}
         />
       )}
+      <TradeDetailDrawer
+        trade={selectedTrade}
+        open={!!selectedTrade}
+        onClose={() => setSelectedTrade(null)}
+        onEdit={(t) => { setSelectedTrade(null); setEditTrade(t); }}
+        onDelete={(id) => { deleteTrade(id); setSelectedTrade(null); }}
+      />
     </div>
   );
 }
