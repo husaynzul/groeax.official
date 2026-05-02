@@ -1,3 +1,4 @@
+import WebSocket from "ws";
 import type { OHLCBar } from "./candleGenerator.js";
 import { logger } from "../lib/logger.js";
 
@@ -28,6 +29,12 @@ const TF_MAP: Record<string, string> = {
 export const BINANCE_SUPPORTED = new Set(Object.keys(SYMBOL_MAP));
 
 type KlineRow = [number, string, string, string, string, string, ...unknown[]];
+
+interface BinanceKlineMsg {
+  k: {
+    t: number; o: string; h: string; l: string; c: string; v: string;
+  };
+}
 
 function parseKline(k: KlineRow): OHLCBar {
   return {
@@ -91,4 +98,68 @@ export async function fetchBinanceTicker(pair: string): Promise<number | null> {
   } catch {
     return null;
   }
+}
+
+/* ── WebSocket real-time kline stream ──────────────────────────────── */
+/**
+ * Opens a Binance WebSocket kline stream for real-time candle updates.
+ * Calls onBar on every price tick (≈every 1-2s when market is active).
+ * Returns a cleanup function that closes the WebSocket.
+ */
+export function startBinanceWSStream(
+  pair: string,
+  tf: string,
+  onBar: (bar: OHLCBar) => void,
+  onFail: () => void,
+): () => void {
+  const symbol   = SYMBOL_MAP[pair]?.toLowerCase();
+  const interval = TF_MAP[tf] ?? "1h";
+  if (!symbol) { onFail(); return () => {}; }
+
+  const url = `wss://stream.binance.com:9443/ws/${symbol}@kline_${interval}`;
+  let ws: WebSocket | null = null;
+  let dead = false;
+
+  try {
+    ws = new WebSocket(url);
+
+    ws.on("open", () => {
+      logger.info({ pair, tf }, "Binance WS kline stream opened");
+    });
+
+    ws.on("message", (raw) => {
+      try {
+        const msg = JSON.parse(raw.toString()) as BinanceKlineMsg;
+        const k = msg.k;
+        onBar({
+          time:   Math.floor(k.t / 1000),
+          open:   parseFloat(k.o),
+          high:   parseFloat(k.h),
+          low:    parseFloat(k.l),
+          close:  parseFloat(k.c),
+          volume: parseFloat(k.v),
+        });
+      } catch { /* ignore */ }
+    });
+
+    ws.on("error", (err) => {
+      logger.warn({ pair, err: String(err) }, "Binance WS error — falling back");
+      if (!dead) { dead = true; onFail(); }
+    });
+
+    ws.on("close", () => {
+      if (!dead) {
+        logger.warn({ pair }, "Binance WS closed unexpectedly — falling back");
+        dead = true; onFail();
+      }
+    });
+  } catch (err) {
+    logger.warn({ pair, err: String(err) }, "Binance WS connect failed — falling back");
+    onFail();
+  }
+
+  return () => {
+    dead = true;
+    try { ws?.close(); } catch { /* ignore */ }
+  };
 }

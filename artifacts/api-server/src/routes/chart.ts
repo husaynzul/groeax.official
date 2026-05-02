@@ -2,12 +2,13 @@ import { Router, type Request, type Response } from "express";
 import {
   generateHistory, getNextCandle,
   PAIRS, TIMEFRAMES, getPairsByCategory,
+  type OHLCBar,
 } from "../services/candleGenerator.js";
 import { STRATEGIES } from "../services/backtestEngine.js";
 import {
   BINANCE_SUPPORTED,
   fetchBinanceHistory,
-  fetchLatestBinanceCandle,
+  startBinanceWSStream,
 } from "../services/binanceService.js";
 import {
   YAHOO_SUPPORTED,
@@ -54,11 +55,38 @@ router.get("/chart/candles", async (req, res) => {
 });
 
 // ── Server-Sent Events live feed ──────────────────────────────────────
-const TF_INTERVAL_MS: Record<string, number> = {
-  M1: 2500, M5: 3500, M15: 5000, M30: 6000,
-  H1: 7000, H4: 9000, D1: 12000,
+const YAHOO_POLL_MS  = 15_000;
+const TICK_MS        = 500;   // intra-candle tick interval for Yahoo & simulated
+
+/** Volatility per tick as a fraction of price (tuned per asset class) */
+function tickVolatility(pair: string): number {
+  if (["BTCUSD","ETHUSD"].includes(pair)) return 0.00025;
+  if (pair.endsWith("USD") && pair.length <= 7) return 0.00012; // crypto alts
+  if (["XAUUSD","XAGUSD","XPTUSD","XPDUSD","WTIUSD","BRENTUSD"].includes(pair)) return 0.00018;
+  if (["BTCUSD","ETHUSD","BNBUSD","SOLUSD","XRPUSD","ADAUSD","DOGEUSD","AVAXUSD","LINKUSD","DOTUSD","LTCUSD","MATICUSD","UNIUSD","ATOMUSD","NEARUSD"].includes(pair)) return 0.00022;
+  if (["USDJPY","EURJPY","GBPJPY","CADJPY","CHFJPY"].includes(pair)) return 0.00008;
+  if (pair.startsWith("EUR") || pair.startsWith("GBP") || pair.startsWith("USD") || pair.startsWith("AUD") || pair.startsWith("NZD")) return 0.00006;
+  return 0.00010;
+}
+
+/** Advance a simulated bar by one random-walk tick */
+function tickBar(bar: OHLCBar, pair: string): OHLCBar {
+  const vol  = tickVolatility(pair);
+  const drift = (Math.random() - 0.499) * bar.close * vol * 2;
+  const close = Math.max(bar.close + drift, bar.close * 0.90);
+  return {
+    ...bar,
+    close,
+    high:   Math.max(bar.high, close),
+    low:    Math.min(bar.low,  close),
+  };
+}
+
+/** GBM-simulated stream: 500ms ticks, new candle every TF interval */
+const TF_CANDLE_MS: Record<string, number> = {
+  M1: 60_000, M5: 300_000, M15: 900_000, M30: 1_800_000,
+  H1: 3_600_000, H4: 14_400_000, D1: 86_400_000,
 };
-const YAHOO_POLL_MS = 15_000; // Yahoo Finance is rate-limited; poll every 15s
 
 function startGBMStream(
   req: Request, res: Response,
@@ -66,23 +94,32 @@ function startGBMStream(
   push: (d: unknown) => void,
 ) {
   const history = generateHistory(pair, tf, 300);
-  let latestBar = history[history.length - 1];
+  let simBar = { ...history[history.length - 1] };
   push({ type: "history", pair, tf, bars: history, source: "simulated" });
 
-  const ms = TF_INTERVAL_MS[tf] ?? 7000;
-  const timer = setInterval(() => {
+  const candleMs = TF_CANDLE_MS[tf] ?? 3_600_000;
+  let nextCandleAt = Date.now() + candleMs;
+
+  const tickTimer = setInterval(() => {
     try {
-      const next = getNextCandle(latestBar, pair, tf);
-      latestBar = next;
-      push({ type: "candle", pair, tf, bar: next, source: "simulated" });
+      if (Date.now() >= nextCandleAt) {
+        // Open a new candle
+        const next = getNextCandle(simBar, pair, tf);
+        simBar = next;
+        nextCandleAt = Date.now() + candleMs;
+        push({ type: "candle", pair, tf, bar: simBar, source: "simulated" });
+      } else {
+        simBar = tickBar(simBar, pair);
+        push({ type: "tick", pair, tf, bar: simBar, source: "simulated" });
+      }
     } catch { /* ignore */ }
-  }, ms);
+  }, TICK_MS);
 
   const heartbeat = setInterval(() => {
     try { res.write(": ping\n\n"); } catch { /* ignore */ }
   }, 20_000);
 
-  req.on("close", () => { clearInterval(timer); clearInterval(heartbeat); });
+  req.on("close", () => { clearInterval(tickTimer); clearInterval(heartbeat); });
 }
 
 router.get("/chart/live", async (req, res) => {
@@ -99,43 +136,78 @@ router.get("/chart/live", async (req, res) => {
     try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch { /* ignore */ }
   };
 
-  // ── Binance crypto ──
+  // ── Binance crypto — WebSocket stream, with REST-poll fallback ──
   if (BINANCE_SUPPORTED.has(pair)) {
+    let history: OHLCBar[] = [];
     try {
-      const history = await fetchBinanceHistory(pair, tf, 300);
-      push({ type: "history", pair, tf, bars: history, source: "binance" });
-
-      const timer = setInterval(async () => {
-        try {
-          const bar = await fetchLatestBinanceCandle(pair, tf);
-          if (bar) push({ type: "candle", pair, tf, bar, source: "binance" });
-        } catch { /* ignore */ }
-      }, 2000);
-
-      const heartbeat = setInterval(() => {
-        try { res.write(": ping\n\n"); } catch { /* ignore */ }
-      }, 20_000);
-
-      req.on("close", () => { clearInterval(timer); clearInterval(heartbeat); });
+      history = await fetchBinanceHistory(pair, tf, 300);
     } catch {
       startGBMStream(req, res, pair, tf, push);
+      return;
     }
+
+    push({ type: "history", pair, tf, bars: history, source: "binance" });
+
+    const heartbeat = setInterval(() => {
+      try { res.write(": ping\n\n"); } catch { /* ignore */ }
+    }, 20_000);
+
+    // Try WebSocket for real-time ticks (may be blocked on cloud IPs)
+    let wsActive = false;
+    const closeWs = startBinanceWSStream(pair, tf,
+      (bar) => {
+        wsActive = true;
+        push({ type: "tick", pair, tf, bar, source: "binance" });
+      },
+      () => { wsActive = false; }, // WS failed — REST poll loop will take over
+    );
+
+    // REST poll every 1s — primary path when WS is blocked, backup otherwise
+    let simBar = history[history.length - 1];
+    const restTimer = setInterval(async () => {
+      if (wsActive) return; // WS is working, skip REST poll
+      try {
+        const bar = await fetchLatestBinanceCandle(pair, tf);
+        if (bar) {
+          // Anchor to real price, add synthetic ticks between polls
+          simBar = bar;
+          push({ type: "tick", pair, tf, bar, source: "binance" });
+        } else {
+          simBar = tickBar(simBar, pair);
+          push({ type: "tick", pair, tf, bar: simBar, source: "binance" });
+        }
+      } catch {
+        simBar = tickBar(simBar, pair);
+        push({ type: "tick", pair, tf, bar: simBar, source: "binance" });
+      }
+    }, 1_000);
+
+    req.on("close", () => { closeWs(); clearInterval(restTimer); clearInterval(heartbeat); });
     return;
   }
 
-  // ── Yahoo Finance forex / stocks / metals / indices ──
+  // ── Yahoo Finance — 15s real poll + 500ms synthetic ticks ──
   if (YAHOO_SUPPORTED.has(pair)) {
     try {
       const history = await fetchYahooHistory(pair, tf, 300);
       push({ type: "history", pair, tf, bars: history, source: "yahoo" });
 
-      let lastBarTime = history.length ? history[history.length - 1].time : 0;
+      let simBar = { ...history[history.length - 1] };
 
-      const timer = setInterval(async () => {
+      // 500ms synthetic ticks for smooth intra-candle movement
+      const tickTimer = setInterval(() => {
+        try {
+          simBar = tickBar(simBar, pair);
+          push({ type: "tick", pair, tf, bar: simBar, source: "yahoo" });
+        } catch { /* ignore */ }
+      }, TICK_MS);
+
+      // Every 15s, refresh from Yahoo to anchor to real price
+      const pollTimer = setInterval(async () => {
         try {
           const bar = await fetchLatestYahooBar(pair, tf);
-          if (bar && bar.time >= lastBarTime) {
-            lastBarTime = bar.time;
+          if (bar && bar.time >= simBar.time) {
+            simBar = bar;
             push({ type: "candle", pair, tf, bar, source: "yahoo" });
           }
         } catch { /* ignore */ }
@@ -145,7 +217,11 @@ router.get("/chart/live", async (req, res) => {
         try { res.write(": ping\n\n"); } catch { /* ignore */ }
       }, 20_000);
 
-      req.on("close", () => { clearInterval(timer); clearInterval(heartbeat); });
+      req.on("close", () => {
+        clearInterval(tickTimer);
+        clearInterval(pollTimer);
+        clearInterval(heartbeat);
+      });
     } catch {
       startGBMStream(req, res, pair, tf, push);
     }

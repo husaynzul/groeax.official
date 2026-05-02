@@ -67,9 +67,10 @@ export default function ChartPage() {
   const [speed,    setSpeed]    = useState<Speed>(1);
   const [rightTab, setRightTab] = useState<RightTab>("order");
 
-  const [bars,    setBars]    = useState<ChartBar[]>([]);
-  const [signals, setSignals] = useState<ChartSignal[]>([]);
-  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [bars,      setBars]      = useState<ChartBar[]>([]);
+  const [latestBar, setLatestBar] = useState<ChartBar | undefined>();
+  const [signals,   setSignals]   = useState<ChartSignal[]>([]);
+  const [metrics,   setMetrics]   = useState<Metrics | null>(null);
   const [strategyName, setStrategyName] = useState<string | undefined>();
 
   const [sseStatus, setSseStatus]   = useState<"connecting"|"open"|"closed">("closed");
@@ -101,7 +102,9 @@ export default function ChartPage() {
   }, []);
 
   const startSse = useCallback((p: string, t: string) => {
-    stopSse(); setBars([]); setSseStatus("connecting"); setSseSource("");
+    stopSse();
+    setBars([]); setLatestBar(undefined);
+    setSseStatus("connecting"); setSseSource("");
     const es = new EventSource(`${BASE}/api/chart/live?pair=${p}&tf=${t}`);
     evsRef.current = es;
     es.onopen  = () => setSseStatus("open");
@@ -111,19 +114,19 @@ export default function ChartPage() {
         const msg = JSON.parse(ev.data) as {
           type: string; bars?: ChartBar[]; bar?: ChartBar; source?: string;
         };
-        if (msg.source) setSseSource(msg.source as "binance" | "simulated");
+        if (msg.source) setSseSource(msg.source as "binance" | "yahoo" | "simulated");
+
         if (msg.type === "history" && msg.bars) {
+          // Full history — triggers setData() in CandlestickChart
           setBars(msg.bars);
           const last = msg.bars[msg.bars.length - 1];
-          if (last) setCurrentPrice(last.close);
+          if (last) { setLatestBar(last); setCurrentPrice(last.close); }
         }
-        if (msg.type === "candle" && msg.bar) {
-          const bar = msg.bar;
-          setBars(prev => {
-            const idx = prev.findIndex(b => b.time === bar.time);
-            return idx >= 0 ? [...prev.slice(0, idx), bar, ...prev.slice(idx + 1)] : [...prev, bar];
-          });
-          setCurrentPrice(bar.close);
+
+        if ((msg.type === "candle" || msg.type === "tick") && msg.bar) {
+          // Live tick — triggers series.update() only, no setData()
+          setLatestBar(msg.bar);
+          setCurrentPrice(msg.bar.close);
         }
       } catch { /* ignore */ }
     };
@@ -388,6 +391,7 @@ export default function ChartPage() {
             <div className="absolute inset-0 p-1">
               <CandlestickChart
                 bars={bars}
+                latestBar={mode === "live" ? latestBar : undefined}
                 signals={mode === "backtest" ? signals : []}
                 replayIndex={mode === "replay" ? replayIdx : undefined}
                 decimals={decimals}

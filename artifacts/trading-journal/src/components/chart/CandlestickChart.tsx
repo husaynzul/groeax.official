@@ -36,6 +36,7 @@ export interface ChartPriceLines {
 
 interface Props {
   bars: ChartBar[];
+  latestBar?: ChartBar;
   signals?: ChartSignal[];
   replayIndex?: number;
   decimals?: number;
@@ -44,6 +45,7 @@ interface Props {
 
 export default function CandlestickChart({
   bars,
+  latestBar,
   signals = [],
   replayIndex,
   decimals = 5,
@@ -140,7 +142,8 @@ export default function CandlestickChart({
     };
   }, []); // eslint-disable-line
 
-  // ── Candle data ────────────────────────────────────────────────────
+  // ── Full history load via setData ──────────────────────────────────
+  // Only called when the bars array itself changes (pair/tf switch or history load)
   useEffect(() => {
     if (!candleSeriesRef.current || !volumeSeriesRef.current || bars.length === 0) return;
 
@@ -158,8 +161,32 @@ export default function CandlestickChart({
       }))
     );
 
-    chartRef.current?.timeScale().fitContent();
+    chartRef.current?.timeScale().scrollToRealTime();
   }, [bars]);
+
+  // ── Live tick update via series.update() ───────────────────────────
+  // Called on every tick WITHOUT re-rendering the full dataset.
+  // LW Charts update() handles both in-place updates (same timestamp)
+  // and new candle creation (newer timestamp) automatically.
+  useEffect(() => {
+    if (!candleSeriesRef.current || !latestBar) return;
+
+    candleSeriesRef.current.update({
+      time:  latestBar.time as Time,
+      open:  latestBar.open,
+      high:  latestBar.high,
+      low:   latestBar.low,
+      close: latestBar.close,
+    });
+
+    volumeSeriesRef.current?.update({
+      time:  latestBar.time as Time,
+      value: latestBar.volume ?? 0,
+      color: latestBar.close >= latestBar.open
+        ? "rgba(16,185,129,0.25)"
+        : "rgba(239,68,68,0.25)",
+    });
+  }, [latestBar]);
 
   // ── Signal markers ─────────────────────────────────────────────────
   useEffect(() => {
@@ -187,7 +214,6 @@ export default function CandlestickChart({
     const series = candleSeriesRef.current;
     if (!series) return;
 
-    // Remove existing lines
     if (entryLineRef.current) { try { series.removePriceLine(entryLineRef.current); } catch { /* ignore */ } entryLineRef.current = null; }
     if (slLineRef.current)    { try { series.removePriceLine(slLineRef.current); }    catch { /* ignore */ } slLineRef.current    = null; }
     if (tpLineRef.current)    { try { series.removePriceLine(tpLineRef.current); }    catch { /* ignore */ } tpLineRef.current    = null; }
