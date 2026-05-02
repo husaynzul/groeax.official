@@ -11,6 +11,7 @@ import Calculator from "@/pages/Calculator";
 import Analytics from "@/pages/Analytics";
 import AICoach from "@/pages/AICoach";
 import News from "@/pages/News";
+import Replay from "@/pages/Replay";
 import NotFound from "@/pages/not-found";
 import { useTradeStore } from "@/store/tradeStore";
 
@@ -33,6 +34,7 @@ function AppRoutes() {
         <Route path="/calculator" component={Calculator} />
         <Route path="/ai-coach" component={AICoach} />
         <Route path="/news" component={News} />
+        <Route path="/replay" component={Replay} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
