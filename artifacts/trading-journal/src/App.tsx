@@ -13,6 +13,7 @@ import AICoach from "@/pages/AICoach";
 import News from "@/pages/News";
 import Replay from "@/pages/Replay";
 import Chart from "@/pages/Chart";
+import Brokers from "@/pages/Brokers";
 import NotFound from "@/pages/not-found";
 import { useTradeStore } from "@/store/tradeStore";
 
@@ -37,6 +38,7 @@ function AppRoutes() {
         <Route path="/news" component={News} />
         <Route path="/replay" component={Replay} />
         <Route path="/chart" component={Chart} />
+        <Route path="/brokers" component={Brokers} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

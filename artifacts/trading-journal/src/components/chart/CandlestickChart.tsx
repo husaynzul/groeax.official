@@ -30,9 +30,10 @@ interface Props {
   bars: ChartBar[];
   signals?: ChartSignal[];
   replayIndex?: number;
+  decimals?: number;
 }
 
-export default function CandlestickChart({ bars, signals = [], replayIndex }: Props) {
+export default function CandlestickChart({ bars, signals = [], replayIndex, decimals = 5 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -77,6 +78,11 @@ export default function CandlestickChart({ bars, signals = [], replayIndex }: Pr
       borderDownColor: "#ef4444",
       wickUpColor: "#10b981",
       wickDownColor: "#ef4444",
+      priceFormat: {
+        type: "price",
+        precision: decimals,
+        minMove: 1 / Math.pow(10, decimals),
+      },
     });
 
     const volumeSeries = chart.addHistogramSeries({
