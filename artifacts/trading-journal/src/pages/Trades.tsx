@@ -2,10 +2,12 @@ import { useMemo, useState } from "react";
 import { useTradeStore } from "@/store/tradeStore";
 import { computeAnalytics } from "@/engine/analyticsEngine";
 import { format } from "date-fns";
-import { Plus, Search, Trash2, Edit2, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Search, Trash2, Edit2, ChevronUp, ChevronDown, Upload, Download } from "lucide-react";
 import AddTradeModal from "@/components/trades/AddTradeModal";
 import TradeDetailDrawer from "@/components/trades/TradeDetailDrawer";
+import CSVImportModal from "@/components/trades/CSVImportModal";
 import { Trade } from "@/types";
+import { exportTradesToCSV } from "@/utils/csvExporter";
 
 const fmtMoney = (n: number) =>
   new Intl.NumberFormat("en-US", {
@@ -23,7 +25,9 @@ export default function Trades() {
   const clearAll = useTradeStore((s) => s.clearAll);
   const analytics = useMemo(() => computeAnalytics(trades), [trades]);
 
+  const addTrade = useTradeStore((s) => s.addTrade);
   const [addOpen, setAddOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editTrade, setEditTrade] = useState<Trade | null>(null);
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [search, setSearch] = useState("");
@@ -102,14 +106,32 @@ export default function Trades() {
             <span className="text-red-400">{fmtMoney(analytics.totalLoss)} lost</span>
           </p>
         </div>
-        <button
-          onClick={() => setAddOpen(true)}
-          data-testid="button-add-trade-page"
-          className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Trade
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setImportOpen(true)}
+            className="flex items-center gap-2 border border-border hover:border-primary/50 bg-card hover:bg-accent text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            Import CSV
+          </button>
+          {trades.length > 0 && (
+            <button
+              onClick={() => exportTradesToCSV(trades)}
+              className="flex items-center gap-2 border border-border hover:border-primary/50 bg-card hover:bg-accent text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+          )}
+          <button
+            onClick={() => setAddOpen(true)}
+            data-testid="button-add-trade-page"
+            className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Trade
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3 mb-4">
@@ -359,6 +381,14 @@ export default function Trades() {
         onClose={() => setSelectedTrade(null)}
         onEdit={(t) => { setSelectedTrade(null); setEditTrade(t); }}
         onDelete={(id) => { deleteTrade(id); setSelectedTrade(null); }}
+      />
+      <CSVImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImport={(newTrades) => {
+          newTrades.forEach((t) => addTrade(t));
+          setImportOpen(false);
+        }}
       />
     </div>
   );

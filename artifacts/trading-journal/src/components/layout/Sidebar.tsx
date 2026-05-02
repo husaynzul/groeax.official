@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Plus,
   BarChart2,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddTradeModal from "@/components/trades/AddTradeModal";
@@ -20,6 +21,7 @@ const navItems = [
   { href: "/journal", label: "Journal", icon: CalendarDays },
   { href: "/analytics", label: "Analytics", icon: BarChart2 },
   { href: "/calculator", label: "Risk Calc", icon: Calculator },
+  { href: "/ai-coach", label: "AI Coach", icon: Bot },
 ];
 
 export default function Sidebar() {

@@ -9,6 +9,7 @@ import Trades from "@/pages/Trades";
 import Journal from "@/pages/Journal";
 import Calculator from "@/pages/Calculator";
 import Analytics from "@/pages/Analytics";
+import AICoach from "@/pages/AICoach";
 import NotFound from "@/pages/not-found";
 import { useTradeStore } from "@/store/tradeStore";
 
@@ -29,6 +30,7 @@ function AppRoutes() {
         <Route path="/journal" component={Journal} />
         <Route path="/analytics" component={Analytics} />
         <Route path="/calculator" component={Calculator} />
+        <Route path="/ai-coach" component={AICoach} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
