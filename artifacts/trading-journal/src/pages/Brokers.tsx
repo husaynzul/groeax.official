@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useBrokerStore, type BrokerConnection, type BrokerType } from "@/store/brokerStore";
 import { useTradeStore } from "@/store/tradeStore";
+import { usePnLRecalculator } from "@/hooks/usePnLRecalculator";
 import type { Trade } from "@/types";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
@@ -633,6 +634,7 @@ function BrokerCard({ def, configuredCount, onConnect }: {
 export default function Brokers() {
   const { brokers, addBroker, updateBroker, removeBroker } = useBrokerStore();
   const { addTrade } = useTradeStore();
+  const { recalculate: recalcPnL } = usePnLRecalculator();
   const [connectingDef, setConnectingDef] = useState<BrokerDef | null>(null);
 
   const handleSave = useCallback((data: Partial<BrokerConnection>) => {
@@ -786,13 +788,14 @@ export default function Brokers() {
           tradesImported: (b.tradesImported ?? 0) + (d.count ?? d.trades.length),
           errorMsg: d.count === 0 ? "No new trades found." : "",
         });
+        if (d.trades.length > 0) void recalcPnL();
       } else {
         updateBroker(id, { status: "error", errorMsg: d?.error ?? "Sync failed" });
       }
     } catch (e) {
       updateBroker(id, { status: "error", errorMsg: String(e) });
     }
-  }, [brokers, updateBroker, addTrade]);
+  }, [brokers, updateBroker, addTrade, recalcPnL]);
 
   const connectedCount = brokers.filter(b => b.status === "connected").length;
 

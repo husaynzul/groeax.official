@@ -10,6 +10,7 @@ interface TradeStore {
   monthlyGoal: number;
   addTrade: (trade: Trade) => void;
   updateTrade: (id: string, trade: Partial<Trade>) => void;
+  bulkUpdateTrades: (updates: { id: string; changes: Partial<Trade> }[]) => void;
   deleteTrade: (id: string) => void;
   clearAll: () => void;
   hydrate: () => Promise<void>;
@@ -37,6 +38,16 @@ export const useTradeStore = create<TradeStore>((set, get) => ({
 
   updateTrade: (id, updates) => {
     const next = get().trades.map((t) => (t.id === id ? { ...t, ...updates } : t));
+    set({ trades: next });
+    saveToStorage(next);
+  },
+
+  bulkUpdateTrades: (updates) => {
+    const map = new Map(updates.map(u => [u.id, u.changes]));
+    const next = get().trades.map(t => {
+      const changes = map.get(t.id);
+      return changes ? { ...t, ...changes } : t;
+    });
     set({ trades: next });
     saveToStorage(next);
   },

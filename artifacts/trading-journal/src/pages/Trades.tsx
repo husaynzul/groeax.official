@@ -1,13 +1,14 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useTradeStore } from "@/store/tradeStore";
 import { computeAnalytics } from "@/engine/analyticsEngine";
 import { fmtTradeDate } from "@/lib/dateUtils";
-import { Plus, Search, Trash2, Edit2, ChevronUp, ChevronDown, Upload, Download } from "lucide-react";
+import { Plus, Search, Trash2, Edit2, ChevronUp, ChevronDown, Upload, Download, RefreshCw, CheckCircle, AlertCircle } from "lucide-react";
 import AddTradeModal from "@/components/trades/AddTradeModal";
 import TradeDetailDrawer from "@/components/trades/TradeDetailDrawer";
 import CSVImportModal from "@/components/trades/CSVImportModal";
 import { Trade } from "@/types";
 import { exportTradesToCSV } from "@/utils/csvExporter";
+import { usePnLRecalculator } from "@/hooks/usePnLRecalculator";
 
 const fmtMoney = (n: number) =>
   new Intl.NumberFormat("en-US", {
@@ -26,6 +27,8 @@ export default function Trades() {
   const analytics = useMemo(() => computeAnalytics(trades), [trades]);
 
   const addTrade = useTradeStore((s) => s.addTrade);
+  const { recalculate, running: recalcRunning, lastResult } = usePnLRecalculator();
+  const [toast, setToast] = useState<{ ok: boolean; msg: string } | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editTrade, setEditTrade] = useState<Trade | null>(null);
@@ -37,6 +40,24 @@ export default function Trades() {
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [confirmClear, setConfirmClear] = useState(false);
+
+  useEffect(() => {
+    if (!lastResult) return;
+    const s = lastResult.summary;
+    const msg = lastResult.error
+      ? `Error: ${lastResult.error}`
+      : s.matchedPositions === 0
+        ? "No matchable round-trips found."
+        : `Matched ${s.matchedPositions} positions — ${s.wins}W / ${s.losses}L · Net ${s.totalPnL >= 0 ? "+" : ""}${s.totalPnL.toFixed(2)}`;
+    setToast({ ok: !lastResult.error, msg });
+    const t = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [lastResult]);
+
+  async function handleRecalculate() {
+    if (trades.length === 0) { setToast({ ok: false, msg: "No trades to recalculate." }); return; }
+    await recalculate();
+  }
 
   const allPairs = useMemo(
     () => Array.from(new Set(trades.map((t) => t.pair))).sort(),
@@ -96,6 +117,14 @@ export default function Trades() {
 
   return (
     <div className="p-6">
+      {/* P&L recalc toast */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl border text-sm font-medium transition-all
+          ${toast.ok ? "bg-emerald-950 border-emerald-700 text-emerald-300" : "bg-red-950 border-red-700 text-red-300"}`}>
+          {toast.ok ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+          {toast.msg}
+        </div>
+      )}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-foreground">Trades</h1>
@@ -107,6 +136,17 @@ export default function Trades() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {trades.length > 0 && (
+            <button
+              onClick={handleRecalculate}
+              disabled={recalcRunning}
+              title="FIFO-match buy/sell fills and compute realised P&L for all synced trades"
+              className="flex items-center gap-2 border border-border hover:border-primary/50 bg-card hover:bg-accent text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${recalcRunning ? "animate-spin" : ""}`} />
+              Recalc P&amp;L
+            </button>
+          )}
           <button
             onClick={() => setImportOpen(true)}
             className="flex items-center gap-2 border border-border hover:border-primary/50 bg-card hover:bg-accent text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg text-sm font-medium transition-colors"
