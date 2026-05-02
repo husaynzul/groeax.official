@@ -3,11 +3,19 @@ import { motion } from "framer-motion";
 import {
   Play, Pause, SkipBack, SkipForward, ChevronLeft, ChevronRight,
   RefreshCw, Settings2, TrendingUp, Wifi, Zap, Radio,
+  ShoppingCart, X,
 } from "lucide-react";
-import CandlestickChart, { type ChartBar, type ChartSignal } from "@/components/chart/CandlestickChart";
+import CandlestickChart, {
+  type ChartBar,
+  type ChartSignal,
+  type ChartPriceLines,
+} from "@/components/chart/CandlestickChart";
 import MetricsPanel from "@/components/chart/MetricsPanel";
+import OrderPanel, { type PlacedOrder } from "@/components/chart/OrderPanel";
+import { useTradeStore } from "@/store/tradeStore";
+import type { Trade } from "@/types";
 
-/* ── Pair catalogue (mirrors backend) ──────────────────────────────── */
+/* ── Pair catalogue ─────────────────────────────────────────────────── */
 const PAIR_CATEGORIES: Record<string, string[]> = {
   Forex:   ["EURUSD","GBPUSD","USDJPY","AUDUSD","USDCAD","USDCHF","NZDUSD",
              "EURJPY","GBPJPY","EURGBP","EURAUD","EURCAD","GBPAUD","GBPCAD",
@@ -21,14 +29,11 @@ const PAIR_CATEGORIES: Record<string, string[]> = {
   Indices: ["SPY","QQQ","SPX","NDX","DJI","GER40","UK100","JPN225","VIX"],
 };
 
-/* Decimal places per symbol (fallback = 5) */
 const PAIR_DECIMALS: Record<string, number> = {
-  USDJPY:3, EURJPY:3, GBPJPY:3, CADJPY:3, CHFJPY:3,
-  USDMXN:4, USDSEK:4,
-  XAGUSD:3, AVAXUSD:3, LINKUSD:3, DOTUSD:3, LTCUSD:3,
-  MATICUSD:4, UNIUSD:3, ATOMUSD:3, NEARUSD:3,
+  USDJPY:3, EURJPY:3, GBPJPY:3, CADJPY:3, CHFJPY:3, USDMXN:4, USDSEK:4,
+  XAGUSD:3, AVAXUSD:3, LINKUSD:3, DOTUSD:3, MATICUSD:4, UNIUSD:3, ATOMUSD:3, NEARUSD:3,
   XRPUSD:4, ADAUSD:4, DOGEUSD:5,
-  BTCUSD:2, ETHUSD:2, BNBUSD:2, SOLUSD:2,
+  BTCUSD:2, ETHUSD:2, BNBUSD:2, SOLUSD:2, LTCUSD:2,
   XAUUSD:2, XPTUSD:2, XPDUSD:2, WTIUSD:2, BRENTUSD:2,
   AAPL:2, MSFT:2, GOOGL:2, AMZN:2, META:2, NVDA:2, TSLA:2, AMD:2,
   NFLX:2, JPM:2, GS:2, BAC:2, DIS:2, INTC:2, COIN:2,
@@ -39,6 +44,7 @@ const TIMEFRAMES = ["M1","M5","M15","M30","H1","H4","D1"];
 const SPEEDS     = [0.5, 1, 2, 4, 8] as const;
 type  Speed = (typeof SPEEDS)[number];
 type  Mode  = "live" | "replay" | "backtest";
+type  RightTab = "order" | "strategy" | "replay";
 
 interface Metrics {
   totalTrades: number; wins: number; losses: number; winRate: number;
@@ -50,27 +56,35 @@ interface StrategyMeta { id: string; name: string; description: string }
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
 export default function ChartPage() {
-  const [category, setCategory] = useState("Forex");
-  const [pair, setPair]   = useState("EURUSD");
-  const [tf, setTf]       = useState("H1");
-  const [mode, setMode]   = useState<Mode>("live");
+  const { addTrade } = useTradeStore();
+
+  const [category, setCategory] = useState("Crypto");
+  const [pair,     setPair]     = useState("BTCUSD");
+  const [tf,       setTf]       = useState("H1");
+  const [mode,     setMode]     = useState<Mode>("live");
   const [strategy, setStrategy] = useState("ema_9_21");
   const [strategies, setStrategies] = useState<StrategyMeta[]>([]);
-  const [speed, setSpeed] = useState<Speed>(1);
+  const [speed,    setSpeed]    = useState<Speed>(1);
+  const [rightTab, setRightTab] = useState<RightTab>("order");
 
-  const [bars, setBars]       = useState<ChartBar[]>([]);
+  const [bars,    setBars]    = useState<ChartBar[]>([]);
   const [signals, setSignals] = useState<ChartSignal[]>([]);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [strategyName, setStrategyName] = useState<string | undefined>();
 
-  const [sseStatus, setSseStatus] = useState<"connecting"|"open"|"closed">("closed");
+  const [sseStatus, setSseStatus]   = useState<"connecting"|"open"|"closed">("closed");
+  const [sseSource, setSseSource]   = useState<"binance"|"simulated"|"">("");
+  const [currentPrice, setCurrentPrice] = useState(0);
+  const [priceLines, setPriceLines] = useState<ChartPriceLines>({});
+  const [openOrdersCount, setOpenOrdersCount] = useState(0);
+
   const evsRef = useRef<EventSource | null>(null);
 
-  const allBarsRef = useRef<ChartBar[]>([]);
-  const [replayIdx, setReplayIdx]     = useState(0);
+  const allBarsRef    = useRef<ChartBar[]>([]);
+  const [replayIdx,   setReplayIdx]   = useState(0);
   const [replayTotal, setReplayTotal] = useState(0);
-  const [isPlaying, setIsPlaying]     = useState(false);
-  const playTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [isPlaying,   setIsPlaying]   = useState(false);
+  const playTimerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [backtesting, setBacktesting] = useState(false);
 
@@ -81,31 +95,41 @@ export default function ChartPage() {
       .catch(() => {});
   }, []);
 
-  /* ── SSE ── */
+  /* ── SSE ────────────────────────────────────────────────────────── */
   const stopSse = useCallback(() => {
     evsRef.current?.close(); evsRef.current = null; setSseStatus("closed");
   }, []);
 
   const startSse = useCallback((p: string, t: string) => {
-    stopSse(); setBars([]); setSseStatus("connecting");
+    stopSse(); setBars([]); setSseStatus("connecting"); setSseSource("");
     const es = new EventSource(`${BASE}/api/chart/live?pair=${p}&tf=${t}`);
     evsRef.current = es;
     es.onopen  = () => setSseStatus("open");
     es.onerror = () => setSseStatus("closed");
     es.onmessage = (ev) => {
       try {
-        const msg = JSON.parse(ev.data) as { type: string; bars?: ChartBar[]; bar?: ChartBar };
-        if (msg.type === "history" && msg.bars) setBars(msg.bars);
-        if (msg.type === "candle"  && msg.bar)  setBars(prev => {
-          const bar = msg.bar!;
-          const idx = prev.findIndex(b => b.time === bar.time);
-          return idx >= 0 ? [...prev.slice(0, idx), bar, ...prev.slice(idx + 1)] : [...prev, bar];
-        });
+        const msg = JSON.parse(ev.data) as {
+          type: string; bars?: ChartBar[]; bar?: ChartBar; source?: string;
+        };
+        if (msg.source) setSseSource(msg.source as "binance" | "simulated");
+        if (msg.type === "history" && msg.bars) {
+          setBars(msg.bars);
+          const last = msg.bars[msg.bars.length - 1];
+          if (last) setCurrentPrice(last.close);
+        }
+        if (msg.type === "candle" && msg.bar) {
+          const bar = msg.bar;
+          setBars(prev => {
+            const idx = prev.findIndex(b => b.time === bar.time);
+            return idx >= 0 ? [...prev.slice(0, idx), bar, ...prev.slice(idx + 1)] : [...prev, bar];
+          });
+          setCurrentPrice(bar.close);
+        }
       } catch { /* ignore */ }
     };
   }, [stopSse]);
 
-  /* ── Replay ── */
+  /* ── Replay ─────────────────────────────────────────────────────── */
   const stopPlay = useCallback(() => {
     if (playTimerRef.current) { clearInterval(playTimerRef.current); playTimerRef.current = null; }
     setIsPlaying(false);
@@ -120,6 +144,8 @@ export default function ChartPage() {
     setReplayIdx(startIdx);
     setReplayTotal(allBarsRef.current.length);
     setBars(allBarsRef.current.slice(0, startIdx + 1));
+    const last = allBarsRef.current[startIdx];
+    if (last) setCurrentPrice(last.close);
   }, [stopPlay]);
 
   const playStep = useCallback(() => {
@@ -127,6 +153,8 @@ export default function ChartPage() {
       const next = prev + 1;
       if (next >= allBarsRef.current.length) { stopPlay(); return prev; }
       setBars(allBarsRef.current.slice(0, next + 1));
+      const bar = allBarsRef.current[next];
+      if (bar) setCurrentPrice(bar.close);
       return next;
     });
   }, [stopPlay]);
@@ -146,6 +174,8 @@ export default function ChartPage() {
     setReplayIdx(prev => {
       const next = Math.max(0, Math.min(prev + delta, allBarsRef.current.length - 1));
       setBars(allBarsRef.current.slice(0, next + 1));
+      const bar = allBarsRef.current[next];
+      if (bar) setCurrentPrice(bar.close);
       return next;
     });
   }, [stopPlay]);
@@ -155,9 +185,11 @@ export default function ChartPage() {
     const c = Math.max(0, Math.min(idx, allBarsRef.current.length - 1));
     setReplayIdx(c);
     setBars(allBarsRef.current.slice(0, c + 1));
+    const bar = allBarsRef.current[c];
+    if (bar) setCurrentPrice(bar.close);
   }, [stopPlay]);
 
-  /* ── Backtest ── */
+  /* ── Backtest ────────────────────────────────────────────────────── */
   const runBacktest = useCallback(async () => {
     setBacktesting(true); setSignals([]); setMetrics(null);
     try {
@@ -175,20 +207,24 @@ export default function ChartPage() {
     setBacktesting(false);
   }, [pair, tf, strategy]);
 
-  /* ── Mode switch ── */
+  /* ── Mode switch ─────────────────────────────────────────────────── */
   const switchMode = useCallback((m: Mode) => {
     stopSse(); stopPlay(); setSignals([]); setMetrics(null); setStrategyName(undefined); setMode(m);
     if (m === "live")    startSse(pair, tf);
     else if (m === "replay") loadReplayBars(pair, tf);
   }, [stopSse, stopPlay, startSse, loadReplayBars, pair, tf]);
 
+  // Initial mount
   useEffect(() => { startSse(pair, tf); return stopSse; }, []); // eslint-disable-line
 
+  // Pair/TF change
   useEffect(() => {
     if (mode === "live")        startSse(pair, tf);
     else if (mode === "replay") loadReplayBars(pair, tf);
+    setPriceLines({});
   }, [pair, tf]); // eslint-disable-line
 
+  // Keyboard shortcuts for replay
   useEffect(() => {
     if (mode !== "replay") return;
     const h = (e: KeyboardEvent) => {
@@ -202,7 +238,34 @@ export default function ChartPage() {
 
   useEffect(() => { if (isPlaying) { stopPlay(); startPlay(); } }, [speed]); // eslint-disable-line
 
-  /* ── Category / pair select ── */
+  /* ── Order handling ──────────────────────────────────────────────── */
+  const handleOrder = useCallback((order: PlacedOrder) => {
+    const trade: Trade = {
+      id:          `chart_order_${Date.now()}`,
+      pair,
+      direction:   order.direction,
+      entryPrice:  order.entryPrice,
+      stopLoss:    order.sl ?? 0,
+      takeProfit:  order.tp ?? 0,
+      lotSize:     order.lotSize,
+      date:        new Date().toISOString(),
+      notes:       `${order.orderType} order placed from chart`,
+      outcome:     undefined,
+      netProfit:   0,
+      netLoss:     0,
+      rr:          order.sl && order.tp
+        ? Math.abs(order.tp - order.entryPrice) / Math.abs(order.entryPrice - order.sl)
+        : 0,
+      strategy: "Manual",
+    };
+    addTrade(trade);
+    setPriceLines({ entry: order.entryPrice, sl: order.sl, tp: order.tp });
+    setOpenOrdersCount(c => c + 1);
+  }, [pair, addTrade]);
+
+  const clearPriceLines = () => setPriceLines({});
+
+  /* ── Category / pair select ─────────────────────────────────────── */
   const pairsInCategory = PAIR_CATEGORIES[category] ?? [];
 
   const handleCategory = (cat: string) => {
@@ -213,8 +276,8 @@ export default function ChartPage() {
 
   const decimals = PAIR_DECIMALS[pair] ?? 5;
 
-  const StatusIcon = sseStatus === "open" ? Radio : sseStatus === "connecting" ? RefreshCw : Wifi;
-  const statusColor = sseStatus === "open" ? "text-emerald-400" : sseStatus === "connecting" ? "text-yellow-400" : "text-muted-foreground";
+  const isBinanceLive = sseSource === "binance" && sseStatus === "open";
+  const isSimLive     = sseSource === "simulated" && sseStatus === "open";
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -265,15 +328,43 @@ export default function ChartPage() {
 
         <div className="flex-1" />
 
+        {/* Data source badge */}
         {mode === "live" && (
-          <div className={`flex items-center gap-1 text-[10px] font-medium ${statusColor}`}>
-            <StatusIcon className={`w-3 h-3 ${sseStatus === "connecting" ? "animate-spin" : ""}`} />
-            <span className="capitalize hidden sm:inline">{sseStatus}</span>
+          <div className={`flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider rounded-full px-2 py-0.5 border ${
+            isBinanceLive
+              ? "text-yellow-400 border-yellow-500/30 bg-yellow-500/10"
+              : isSimLive
+              ? "text-blue-400 border-blue-500/30 bg-blue-500/10"
+              : "text-muted-foreground border-border"
+          }`}>
+            {isBinanceLive ? (
+              <><span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse inline-block" /> Binance Live</>
+            ) : isSimLive ? (
+              <><Radio className="w-3 h-3" /> Simulated</>
+            ) : (
+              <><RefreshCw className="w-3 h-3 animate-spin" /> Connecting</>
+            )}
           </div>
         )}
+
+        {/* Current price */}
+        {currentPrice > 0 && (
+          <span className="text-xs font-mono font-semibold text-foreground tabular-nums">
+            {currentPrice.toFixed(decimals)}
+          </span>
+        )}
+
+        {/* Clear order lines */}
+        {(priceLines.entry || priceLines.sl || priceLines.tp) && (
+          <button onClick={clearPriceLines}
+            title="Clear order lines"
+            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-red-400 transition-colors">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+
         <button onClick={() => switchMode(mode)}
-          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-          title="Refresh">
+          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
           <RefreshCw className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -281,12 +372,12 @@ export default function ChartPage() {
       {/* ── Main ── */}
       <div className="flex flex-1 overflow-hidden min-h-0">
 
-        {/* Chart */}
+        {/* Chart area */}
         <div className="flex-1 min-w-0 relative bg-[#080c15]">
           {bars.length === 0 ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-3">
               <TrendingUp className="w-10 h-10 opacity-20" />
-              <p className="text-sm">{sseStatus === "connecting" ? "Connecting…" : "Loading candles…"}</p>
+              <p className="text-sm">{sseStatus === "connecting" ? "Connecting to market data…" : "Loading candles…"}</p>
             </div>
           ) : (
             <div className="absolute inset-0 p-1">
@@ -295,83 +386,140 @@ export default function ChartPage() {
                 signals={mode === "backtest" ? signals : []}
                 replayIndex={mode === "replay" ? replayIdx : undefined}
                 decimals={decimals}
+                priceLines={priceLines}
               />
             </div>
           )}
 
+          {/* Pair label overlay */}
           <div className="absolute top-3 left-3 pointer-events-none select-none">
             <p className="text-sm font-bold text-white/40 font-mono">{pair}</p>
             <p className="text-[10px] text-white/25 font-mono">{tf} · {category}</p>
           </div>
 
-          {mode === "live" && sseStatus === "open" && (
+          {/* LIVE badge */}
+          {mode === "live" && isBinanceLive && (
             <div className="absolute top-3 right-3 flex items-center gap-1.5 pointer-events-none">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500" />
               </span>
-              <span className="text-[9px] font-bold text-red-400 uppercase tracking-widest">LIVE</span>
+              <span className="text-[9px] font-bold text-yellow-400 uppercase tracking-widest">BINANCE LIVE</span>
+            </div>
+          )}
+          {mode === "live" && isSimLive && (
+            <div className="absolute top-3 right-3 pointer-events-none">
+              <span className="text-[9px] font-bold text-blue-400/60 uppercase tracking-widest">SIM</span>
+            </div>
+          )}
+
+          {/* Open orders badge */}
+          {openOrdersCount > 0 && (
+            <div className="absolute bottom-14 left-3 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary/20 border border-primary/30 pointer-events-none">
+              <ShoppingCart className="w-3 h-3 text-primary" />
+              <span className="text-[10px] text-primary font-semibold">{openOrdersCount} order{openOrdersCount > 1 ? "s" : ""} placed</span>
             </div>
           )}
         </div>
 
-        {/* Right panel */}
-        <div className="w-60 shrink-0 border-l border-border flex flex-col overflow-y-auto bg-card/30">
-          {mode === "backtest" && (
-            <div className="p-3 border-b border-border space-y-2">
-              <div className="flex items-center gap-1.5">
-                <Settings2 className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Strategy</span>
-              </div>
-              <select value={strategy} onChange={e => setStrategy(e.target.value)}
-                className="w-full text-xs bg-secondary border border-border rounded-lg px-2.5 py-1.5 text-foreground focus:outline-none cursor-pointer">
-                {strategies.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-              {strategies.find(s => s.id === strategy) && (
-                <p className="text-[10px] text-muted-foreground leading-snug">
-                  {strategies.find(s => s.id === strategy)?.description}
-                </p>
-              )}
-              <button onClick={runBacktest} disabled={backtesting}
-                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50">
-                <Zap className="w-3.5 h-3.5" />
-                {backtesting ? "Running…" : "Run Backtest"}
+        {/* ── Right panel ── */}
+        <div className="w-64 shrink-0 border-l border-border flex flex-col overflow-hidden bg-card/30">
+
+          {/* Tab bar */}
+          <div className="flex border-b border-border shrink-0">
+            {([
+              { id: "order",    label: "Order",    icon: ShoppingCart },
+              { id: "strategy", label: mode === "backtest" ? "Backtest" : "Strategy", icon: Zap },
+              { id: "replay",   label: "Replay",   icon: Settings2 },
+            ] as const).map(({ id, label, icon: Icon }) => (
+              <button key={id} onClick={() => setRightTab(id)}
+                className={`flex-1 flex items-center justify-center gap-1 py-2.5 text-[10px] font-semibold transition-colors border-b-2 ${
+                  rightTab === id
+                    ? "border-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}>
+                <Icon className="w-3 h-3" />
+                {label}
               </button>
-            </div>
-          )}
+            ))}
+          </div>
 
-          {mode === "replay" && (
-            <div className="p-3 border-b border-border space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Speed</p>
-              <div className="flex gap-1 flex-wrap">
-                {SPEEDS.map(s => (
-                  <button key={s} onClick={() => setSpeed(s)}
-                    className={`flex-1 min-w-[32px] py-1.5 rounded-lg text-[11px] font-mono font-semibold transition-all
-                      ${speed === s ? "bg-primary text-primary-foreground" : "bg-secondary border border-border text-muted-foreground hover:text-foreground"}`}>
-                    {s}×
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="flex-1 overflow-y-auto">
 
-          <div className="p-3 flex-1">
-            {mode === "backtest" ? (
-              <>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">Results</p>
-                <MetricsPanel metrics={metrics} strategyName={strategyName} pair={pair} tf={tf} />
-              </>
-            ) : mode === "live" ? (
-              <div className="text-center text-muted-foreground text-xs pt-6 space-y-2">
-                <Wifi className="w-7 h-7 mx-auto opacity-20" />
-                <p>{bars.length} candles loaded</p>
-                <p className="text-[10px] opacity-50">New candles stream automatically</p>
+            {/* ORDER TAB */}
+            {rightTab === "order" && (
+              <OrderPanel
+                currentPrice={currentPrice}
+                pair={pair}
+                decimals={decimals}
+                onOrder={handleOrder}
+              />
+            )}
+
+            {/* STRATEGY / BACKTEST TAB */}
+            {rightTab === "strategy" && (
+              <div className="p-3 space-y-3">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Settings2 className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Strategy</span>
+                  </div>
+                  <select value={strategy} onChange={e => setStrategy(e.target.value)}
+                    className="w-full text-xs bg-secondary border border-border rounded-lg px-2.5 py-1.5 text-foreground focus:outline-none cursor-pointer">
+                    {strategies.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                  {strategies.find(s => s.id === strategy) && (
+                    <p className="text-[10px] text-muted-foreground leading-snug">
+                      {strategies.find(s => s.id === strategy)?.description}
+                    </p>
+                  )}
+                </div>
+                <button onClick={() => { setMode("backtest"); runBacktest(); }}
+                  disabled={backtesting}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50">
+                  <Zap className="w-3.5 h-3.5" />
+                  {backtesting ? "Running…" : "Run Backtest"}
+                </button>
+
+                {mode === "backtest" && (
+                  <>
+                    <div className="w-full h-px bg-border" />
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Results</p>
+                    <MetricsPanel metrics={metrics} strategyName={strategyName} pair={pair} tf={tf} />
+                  </>
+                )}
+
+                {mode === "live" && (
+                  <div className="text-center text-muted-foreground text-xs pt-4 space-y-1.5">
+                    <Wifi className="w-7 h-7 mx-auto opacity-20" />
+                    <p>{bars.length} candles loaded</p>
+                    <p className="text-[10px] opacity-50">Switch to Backtest mode to run strategies</p>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="space-y-3 pt-2">
-                <p className="text-center text-sm font-semibold text-foreground">Bar {replayIdx + 1} / {replayTotal}</p>
-                {allBarsRef.current[replayIdx] && (
+            )}
+
+            {/* REPLAY TAB */}
+            {rightTab === "replay" && (
+              <div className="p-3 space-y-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Replay Speed</p>
+                <div className="flex gap-1 flex-wrap">
+                  {SPEEDS.map(s => (
+                    <button key={s} onClick={() => setSpeed(s)}
+                      className={`flex-1 min-w-[32px] py-1.5 rounded-lg text-[11px] font-mono font-semibold transition-all
+                        ${speed === s ? "bg-primary text-primary-foreground" : "bg-secondary border border-border text-muted-foreground hover:text-foreground"}`}>
+                      {s}×
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => { setMode("replay"); loadReplayBars(pair, tf); }}
+                  className="w-full py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-xs font-semibold text-muted-foreground transition-colors">
+                  ⏮ Load Replay
+                </button>
+
+                {mode === "replay" && allBarsRef.current[replayIdx] && (
                   <div className="rounded-xl p-3 bg-secondary/30 border border-border space-y-1.5">
+                    <p className="text-[10px] text-muted-foreground font-semibold">Bar {replayIdx + 1} / {replayTotal}</p>
                     {[["O",allBarsRef.current[replayIdx].open],["H",allBarsRef.current[replayIdx].high],
                       ["L",allBarsRef.current[replayIdx].low],["C",allBarsRef.current[replayIdx].close]].map(([k,v]) => (
                       <div key={String(k)} className="flex justify-between">
@@ -379,12 +527,9 @@ export default function ChartPage() {
                         <span className="text-[10px] font-mono text-foreground">{Number(v).toFixed(decimals)}</span>
                       </div>
                     ))}
-                    <div className="flex justify-between pt-0.5 border-t border-border">
-                      <span className="text-[10px] font-mono text-muted-foreground">Vol</span>
-                      <span className="text-[10px] font-mono text-foreground">{allBarsRef.current[replayIdx].volume?.toLocaleString()}</span>
-                    </div>
                   </div>
                 )}
+
                 <p className="text-[10px] text-muted-foreground text-center opacity-60">← → step  •  Space play/pause</p>
               </div>
             )}

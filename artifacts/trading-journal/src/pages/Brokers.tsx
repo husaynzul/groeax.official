@@ -84,6 +84,16 @@ const BROKER_DEFS: BrokerDef[] = [
     labels: { apiKey: "Access Token", accountId: "Account ID" },
     docsUrl: "https://connect.spotware.com",
   },
+  {
+    type: "custom" as BrokerType,
+    name: "Exness",
+    description: "Connect via MT5 bridge. Exness supports all major MT5 features including scalping.",
+    color: "text-orange-400",
+    bgColor: "bg-orange-500/10 border-orange-500/20",
+    fields: [],
+    labels: {},
+    docsUrl: "https://www.exness.com/trading/platform/mt5/",
+  },
 ];
 
 /* ── Icons ─────────────────────────────────────────────────────────── */

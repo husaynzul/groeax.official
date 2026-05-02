@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTradeStore } from "@/store/tradeStore";
+import OpenPositions from "@/components/dashboard/OpenPositions";
 import { computeAnalytics } from "@/engine/analyticsEngine";
 import TradingSessions from "@/components/dashboard/TradingSessions";
 import StreakCard from "@/components/dashboard/StreakCard";
@@ -594,6 +595,9 @@ export default function Dashboard() {
           {analytics.totalTrades} trades tracked
         </p>
       </div>
+
+      {/* ── Open Positions ── */}
+      <OpenPositions />
 
       {/* ── Top metric strip ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">

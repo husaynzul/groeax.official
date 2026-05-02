@@ -1,14 +1,19 @@
-import { Router } from "express";
-import { generateHistory, getNextCandle, PAIRS, TIMEFRAMES } from "../services/candleGenerator.js";
+import { Router, type Request, type Response } from "express";
+import { generateHistory, getNextCandle, PAIRS, TIMEFRAMES, getPairsByCategory } from "../services/candleGenerator.js";
 import { STRATEGIES } from "../services/backtestEngine.js";
+import {
+  BINANCE_SUPPORTED,
+  fetchBinanceHistory,
+  fetchLatestBinanceCandle,
+} from "../services/binanceService.js";
 
 const router = Router();
 
 router.get("/chart/pairs", (_req, res) => {
-  res.json({ pairs: PAIRS, timeframes: TIMEFRAMES });
+  res.json({ pairs: PAIRS, timeframes: TIMEFRAMES, byCategory: getPairsByCategory() });
 });
 
-router.get("/chart/candles", (req, res) => {
+router.get("/chart/candles", async (req, res) => {
   const pair  = String(req.query["pair"]  ?? "EURUSD");
   const tf    = String(req.query["tf"]    ?? "H1");
   const limit = Math.min(Number(req.query["limit"] ?? 500), 2000);
@@ -16,8 +21,18 @@ router.get("/chart/candles", (req, res) => {
   if (!PAIRS.includes(pair)) { res.status(400).json({ error: `Unknown pair: ${pair}` }); return; }
   if (!TIMEFRAMES.includes(tf)) { res.status(400).json({ error: `Unknown timeframe: ${tf}` }); return; }
 
-  const bars = generateHistory(pair, tf, limit);
-  res.json({ pair, tf, count: bars.length, bars });
+  if (BINANCE_SUPPORTED.has(pair)) {
+    try {
+      const bars = await fetchBinanceHistory(pair, tf, limit);
+      res.json({ pair, tf, count: bars.length, bars, source: "binance" });
+    } catch {
+      const bars = generateHistory(pair, tf, limit);
+      res.json({ pair, tf, count: bars.length, bars, source: "simulated" });
+    }
+  } else {
+    const bars = generateHistory(pair, tf, limit);
+    res.json({ pair, tf, count: bars.length, bars, source: "simulated" });
+  }
 });
 
 // ── Server-Sent Events live feed ──────────────────────────────────────
@@ -26,37 +41,71 @@ const TF_INTERVAL_MS: Record<string, number> = {
   H1: 7000, H4: 9000, D1: 12000,
 };
 
-router.get("/chart/live", (req, res) => {
+function startGBMStream(
+  req: Request,
+  res: Response,
+  pair: string,
+  tf: string,
+  push: (d: unknown) => void,
+) {
+  const history = generateHistory(pair, tf, 300);
+  let latestBar = history[history.length - 1];
+  push({ type: "history", pair, tf, bars: history, source: "simulated" });
+
+  const ms = TF_INTERVAL_MS[tf] ?? 7000;
+  const timer = setInterval(() => {
+    try {
+      const next = getNextCandle(latestBar, pair, tf);
+      latestBar = next;
+      push({ type: "candle", pair, tf, bar: next });
+    } catch { /* ignore */ }
+  }, ms);
+
+  const heartbeat = setInterval(() => {
+    try { res.write(": ping\n\n"); } catch { /* ignore */ }
+  }, 20_000);
+
+  req.on("close", () => { clearInterval(timer); clearInterval(heartbeat); });
+}
+
+router.get("/chart/live", async (req, res) => {
   const pair = String(req.query["pair"] ?? "EURUSD");
   const tf   = String(req.query["tf"]   ?? "H1");
 
-  res.setHeader("Content-Type",  "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache, no-transform");
-  res.setHeader("Connection",    "keep-alive");
+  res.setHeader("Content-Type",      "text/event-stream");
+  res.setHeader("Cache-Control",     "no-cache, no-transform");
+  res.setHeader("Connection",        "keep-alive");
   res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders();
 
   const push = (data: unknown) => {
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch { /* ignore */ }
   };
 
-  const history = generateHistory(pair, tf, 300);
-  let latestBar = history[history.length - 1];
-  push({ type: "history", pair, tf, bars: history });
+  if (BINANCE_SUPPORTED.has(pair)) {
+    try {
+      const history = await fetchBinanceHistory(pair, tf, 300);
+      push({ type: "history", pair, tf, bars: history, source: "binance" });
 
-  const ms = TF_INTERVAL_MS[tf] ?? 7000;
-  const timer = setInterval(() => {
-    const next = getNextCandle(latestBar, pair, tf);
-    latestBar = next;
-    push({ type: "candle", pair, tf, bar: next });
-  }, ms);
+      const timer = setInterval(async () => {
+        try {
+          const bar = await fetchLatestBinanceCandle(pair, tf);
+          if (bar) push({ type: "candle", pair, tf, bar });
+        } catch { /* ignore */ }
+      }, 2000);
 
-  const heartbeat = setInterval(() => res.write(": ping\n\n"), 20_000);
+      const heartbeat = setInterval(() => {
+        try { res.write(": ping\n\n"); } catch { /* ignore */ }
+      }, 20_000);
 
-  req.on("close", () => {
-    clearInterval(timer);
-    clearInterval(heartbeat);
-  });
+      req.on("close", () => { clearInterval(timer); clearInterval(heartbeat); });
+    } catch {
+      // Binance unavailable — fall back to GBM simulation
+      startGBMStream(req, res, pair, tf, push);
+    }
+  } else {
+    startGBMStream(req, res, pair, tf, push);
+  }
 });
 
 // ── Backtest ──────────────────────────────────────────────────────────
@@ -83,7 +132,7 @@ router.post("/chart/backtest", (req, res) => {
   });
 });
 
-// ── Meta ──────────────────────────────────────────────────────────────
+// ── Strategies meta ───────────────────────────────────────────────────
 router.get("/chart/strategies", (_req, res) => {
   res.json({
     strategies: [
