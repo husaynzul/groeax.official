@@ -43,12 +43,7 @@ function load(): BrokerConnection[] {
 
 function save(brokers: BrokerConnection[]) {
   try {
-    const safe = brokers.map(b => ({
-      ...b,
-      apiKey: b.apiKey ? "***" : "",
-      apiSecret: b.apiSecret ? "***" : "",
-    }));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(safe));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(brokers));
   } catch { /* ignore */ }
 }
 

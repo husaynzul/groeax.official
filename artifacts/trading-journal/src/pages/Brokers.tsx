@@ -678,13 +678,60 @@ export default function Brokers() {
         } else {
           updateBroker(id, { status: "error", errorMsg: d.error ?? "Connection failed" });
         }
-      } else if (CRYPTO_TYPES.includes(b.type)) {
-        // Crypto exchanges: validate key format locally (server geo-blocks prevent live test)
-        if (!b.apiKey || b.apiKey === "***") {
-          updateBroker(id, { status: "error", errorMsg: "No API key saved. Please reconnect and enter your key." });
-        } else {
-          updateBroker(id, { status: "connected", errorMsg: "" });
-        }
+      } else if (b.type === "binance") {
+        const res = await fetch(`${BASE}/api/broker/binance/test`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ apiKey: b.apiKey, apiSecret: b.apiSecret }),
+        });
+        const d = await res.json() as { ok: boolean; error?: string };
+        d.ok
+          ? updateBroker(id, { status: "connected", errorMsg: "" })
+          : updateBroker(id, { status: "error", errorMsg: d.error ?? "Connection failed" });
+      } else if (b.type === "coinbase") {
+        const res = await fetch(`${BASE}/api/broker/coinbase/test`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ apiKey: b.apiKey, apiSecret: b.apiSecret }),
+        });
+        const d = await res.json() as { ok: boolean; error?: string };
+        d.ok
+          ? updateBroker(id, { status: "connected", errorMsg: "" })
+          : updateBroker(id, { status: "error", errorMsg: d.error ?? "Connection failed" });
+      } else if (b.type === "kraken") {
+        const res = await fetch(`${BASE}/api/broker/kraken/test`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ apiKey: b.apiKey, apiSecret: b.apiSecret }),
+        });
+        const d = await res.json() as { ok: boolean; error?: string };
+        d.ok
+          ? updateBroker(id, { status: "connected", errorMsg: "" })
+          : updateBroker(id, { status: "error", errorMsg: d.error ?? "Connection failed" });
+      } else if (b.type === "bybit") {
+        const res = await fetch(`${BASE}/api/broker/bybit/test`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ apiKey: b.apiKey, apiSecret: b.apiSecret }),
+        });
+        const d = await res.json() as { ok: boolean; error?: string };
+        d.ok
+          ? updateBroker(id, { status: "connected", errorMsg: "" })
+          : updateBroker(id, { status: "error", errorMsg: d.error ?? "Connection failed" });
+      } else if (b.type === "okx") {
+        const res = await fetch(`${BASE}/api/broker/okx/test`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ apiKey: b.apiKey, apiSecret: b.apiSecret, passphrase: b.accountId }),
+        });
+        const d = await res.json() as { ok: boolean; error?: string };
+        d.ok
+          ? updateBroker(id, { status: "connected", errorMsg: "" })
+          : updateBroker(id, { status: "error", errorMsg: d.error ?? "Connection failed" });
+      } else if (b.type === "kucoin") {
+        const res = await fetch(`${BASE}/api/broker/kucoin/test`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ apiKey: b.apiKey, apiSecret: b.apiSecret, passphrase: b.accountId }),
+        });
+        const d = await res.json() as { ok: boolean; error?: string };
+        d.ok
+          ? updateBroker(id, { status: "connected", errorMsg: "" })
+          : updateBroker(id, { status: "error", errorMsg: d.error ?? "Connection failed" });
       } else {
         updateBroker(id, { status: "connected" });
       }
@@ -696,38 +743,51 @@ export default function Brokers() {
   const syncTrades = useCallback(async (id: string) => {
     const b = brokers.find(x => x.id === id);
     if (!b) return;
-    updateBroker(id, { status: "testing" });
+    updateBroker(id, { status: "testing", errorMsg: "" });
+
+    const brokerPost = async (endpoint: string, body: Record<string, unknown>) => {
+      const res = await fetch(`${BASE}/api/broker/${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      return res.json() as Promise<{ ok: boolean; error?: string; trades?: Trade[]; count?: number }>;
+    };
+
     try {
+      let d: { ok: boolean; error?: string; trades?: Trade[]; count?: number } | null = null;
+
       if (b.type === "alpaca") {
-        const res = await fetch(`${BASE}/api/broker/alpaca/sync`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ apiKey: b.apiKey, apiSecret: b.apiSecret, paper: b.paper }),
-        });
-        const d = await res.json() as { ok: boolean; error?: string; trades?: Trade[]; count?: number };
-        if (d.ok && d.trades) {
-          d.trades.forEach(t => addTrade(t));
-          updateBroker(id, { status: "connected", lastSync: Date.now(), tradesImported: (b.tradesImported ?? 0) + (d.count ?? d.trades.length), errorMsg: "" });
-        } else {
-          updateBroker(id, { status: "error", errorMsg: d.error ?? "Sync failed" });
-        }
+        d = await brokerPost("alpaca/sync", { apiKey: b.apiKey, apiSecret: b.apiSecret, paper: b.paper });
       } else if (b.type === "oanda") {
-        const res = await fetch(`${BASE}/api/broker/oanda/sync`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ apiKey: b.apiKey, accountId: b.accountId, practice: b.paper }),
-        });
-        const d = await res.json() as { ok: boolean; error?: string; trades?: Trade[]; count?: number };
-        if (d.ok && d.trades) {
-          d.trades.forEach(t => addTrade(t));
-          updateBroker(id, { status: "connected", lastSync: Date.now(), tradesImported: (b.tradesImported ?? 0) + (d.count ?? d.trades.length), errorMsg: "" });
-        } else {
-          updateBroker(id, { status: "error", errorMsg: d.error ?? "Sync failed" });
-        }
-      } else if (CRYPTO_TYPES.includes(b.type)) {
-        updateBroker(id, { status: "connected", errorMsg: "Direct sync is available in the desktop version. API keys are stored and ready." });
+        d = await brokerPost("oanda/sync", { apiKey: b.apiKey, accountId: b.accountId, practice: b.paper });
+      } else if (b.type === "binance") {
+        d = await brokerPost("binance/sync", { apiKey: b.apiKey, apiSecret: b.apiSecret });
+      } else if (b.type === "coinbase") {
+        d = await brokerPost("coinbase/sync", { apiKey: b.apiKey, apiSecret: b.apiSecret });
+      } else if (b.type === "kraken") {
+        d = await brokerPost("kraken/sync", { apiKey: b.apiKey, apiSecret: b.apiSecret });
+      } else if (b.type === "bybit") {
+        d = await brokerPost("bybit/sync", { apiKey: b.apiKey, apiSecret: b.apiSecret });
+      } else if (b.type === "okx") {
+        d = await brokerPost("okx/sync", { apiKey: b.apiKey, apiSecret: b.apiSecret, passphrase: b.accountId });
+      } else if (b.type === "kucoin") {
+        d = await brokerPost("kucoin/sync", { apiKey: b.apiKey, apiSecret: b.apiSecret, passphrase: b.accountId });
       } else {
         updateBroker(id, { status: "connected" });
+        return;
+      }
+
+      if (d.ok && d.trades) {
+        d.trades.forEach(t => addTrade(t));
+        updateBroker(id, {
+          status: "connected",
+          lastSync: Date.now(),
+          tradesImported: (b.tradesImported ?? 0) + (d.count ?? d.trades.length),
+          errorMsg: d.count === 0 ? "No new trades found." : "",
+        });
+      } else {
+        updateBroker(id, { status: "error", errorMsg: d?.error ?? "Sync failed" });
       }
     } catch (e) {
       updateBroker(id, { status: "error", errorMsg: String(e) });
