@@ -1,0 +1,84 @@
+Build a Trading Replay System similar to TradingView Bar Replay mode inside a web-based trading application.
+
+🎯 Core Objective:
+
+Create a feature that lets users replay historical market data candle-by-candle in a controlled simulation, exactly like a live market environment for practice and strategy testing.
+
+⚙️ Functional Requirements:
+1. Historical Data Engine
+Load OHLC candle data (Open, High, Low, Close)
+Include:
+timestamp
+volume
+optional indicators (RSI, EMA, MACD)
+2. Replay Start System
+User selects a specific point in history
+System hides all future candles after selected point
+Only past data is visible initially
+3. Candle-by-Candle Replay Controls
+
+Implement controls:
+
+▶ Play (auto advance candles)
+⏸ Pause
+⏭ Next candle
+⏮ Previous candle
+Speed control (optional: 1x, 2x, 5x)
+
+Each step reveals exactly one new candle only
+
+4. Virtual Market Simulation
+Simulate market as if it is live
+Advance time based on candle timestamps
+No real-time API connection during replay
+5. Chart Rendering System
+
+On every candle update:
+
+Re-render price chart
+Recalculate indicators (RSI, EMA, MACD if enabled)
+Maintain all drawings:
+support/resistance
+trendlines
+zones
+6. Trade Simulation Module (Optional but important)
+Allow user to place demo trades during replay
+Track:
+entry price
+exit price
+profit/loss
+R:R ratio
+Store trades for later analysis
+🧠 Critical Rules (VERY IMPORTANT):
+❌ No future candles allowed (no lookahead bias)
+❌ No prediction logic inside replay engine
+❌ No real-time market updates during replay
+✔ Only historical deterministic data
+🧩 Suggested Architecture:
+Frontend:
+React (preferred)
+Chart library (TradingView Lightweight Charts or Chart.js)
+State management for replay index + speed
+Backend:
+Node.js / Express (or Replit backend)
+API endpoint:
+/candles?symbol=EURUSD&timeframe=1m
+State System:
+currentIndex
+dataset
+replaySpeed
+sessionId
+📊 Expected Behavior:
+
+System should behave like:
+
+A real-time trading simulator where historical market data is played forward step-by-step under user control.
+
+🚀 Goal:
+
+Build a professional-grade trading replay engine for:
+
+strategy practice
+manual backtesting
+trader training
+execution skill improvement

@@ -497,8 +497,9 @@ export default function Dashboard() {
   const monthlyPnL = useMemo(() => {
     const now = new Date();
     return trades.reduce((acc, t) => {
+      if (!t.date) return acc;
       const tradeDate = new Date(t.date + "T12:00:00");
-      if (!isSameMonth(tradeDate, now)) return acc;
+      if (isNaN(tradeDate.getTime()) || !isSameMonth(tradeDate, now)) return acc;
       if (t.outcome === "WIN") return acc + t.netProfit;
       if (t.outcome === "LOSS") return acc - t.netLoss;
       return acc;
@@ -855,10 +856,9 @@ export default function Dashboard() {
                       className="border-b border-border/40 hover:bg-accent/30 transition-colors"
                     >
                       <td className="py-2 text-muted-foreground text-xs">
-                        {format(
-                          new Date(t.date + "T12:00:00"),
-                          "MM/dd/yy"
-                        )}
+                        {t.date && !isNaN(new Date(t.date + "T12:00:00").getTime())
+                          ? format(new Date(t.date + "T12:00:00"), "MM/dd/yy")
+                          : "—"}
                       </td>
                       <td className="py-2 font-medium text-xs">{t.pair}</td>
                       <td className="py-2">
