@@ -205,7 +205,7 @@ export default function SessionAnalytics({ trades }: { trades: Trade[] }) {
                       <p className={`text-sm font-semibold ${s.trades === 0 ? "text-muted-foreground" : s.winRate >= 60 ? "text-emerald-400" : s.winRate >= 40 ? "text-yellow-400" : s.winRate > 0 ? "text-red-400" : "text-muted-foreground"}`}>
                         {s.trades === 0 ? "—" : `${s.winRate}%`}
                       </p>
-                      <p className="text-[10px] text-muted-foreground">Win Rate</p>
+                      <p className="text-[10px] text-muted-foreground">Win Rate (W vs L)</p>
                     </div>
                     <div>
                       <p className={`text-sm font-semibold ${s.avgRR >= 2 ? "text-emerald-400" : s.avgRR >= 1 ? "text-yellow-400" : s.avgRR > 0 ? "text-red-400" : "text-muted-foreground"}`}>
@@ -214,10 +214,22 @@ export default function SessionAnalytics({ trades }: { trades: Trade[] }) {
                       <p className="text-[10px] text-muted-foreground">Avg R:R</p>
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {s.trades === 0 ? "—" : `${s.wins}W/${s.losses}L`}
+                      <p className="text-sm font-semibold text-foreground leading-tight">
+                        {s.trades === 0 ? "—" : (
+                          <span className="flex flex-wrap gap-x-1 items-baseline">
+                            <span className="text-emerald-400">{s.wins}W</span>
+                            <span className="text-muted-foreground">/</span>
+                            <span className="text-red-400">{s.losses}L</span>
+                            {s.be > 0 && (
+                              <>
+                                <span className="text-muted-foreground">/</span>
+                                <span className="text-yellow-400">{s.be}BE</span>
+                              </>
+                            )}
+                          </span>
+                        )}
                       </p>
-                      <p className="text-[10px] text-muted-foreground">W/L Split</p>
+                      <p className="text-[10px] text-muted-foreground">W / L / BE</p>
                     </div>
                     <div>
                       <p className={`text-sm font-semibold ${s.trades === 0 ? "text-muted-foreground" : s.avgPnL >= 0 ? "text-emerald-400" : "text-red-400"}`}>
@@ -314,7 +326,7 @@ export default function SessionAnalytics({ trades }: { trades: Trade[] }) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    {["Session", "Trades", "Win Rate", "Avg R:R", "Biggest Win", "Biggest Loss", "Net P&L"].map((h) => (
+                    {["Session", "Trades", "W / L / BE", "Win Rate", "Avg R:R", "Biggest Win", "Biggest Loss", "Net P&L"].map((h) => (
                       <th key={h} className="text-left px-4 py-2.5 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
                         {h}
                       </th>
@@ -333,6 +345,21 @@ export default function SessionAnalytics({ trades }: { trades: Trade[] }) {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-foreground">{s.trades > 0 ? s.trades : <span className="text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-3">
+                          {s.trades > 0 ? (
+                            <span className="flex items-center gap-1 text-xs">
+                              <span className="text-emerald-400 font-semibold">{s.wins}W</span>
+                              <span className="text-muted-foreground">/</span>
+                              <span className="text-red-400 font-semibold">{s.losses}L</span>
+                              {s.be > 0 && (
+                                <>
+                                  <span className="text-muted-foreground">/</span>
+                                  <span className="text-yellow-400 font-semibold">{s.be}BE</span>
+                                </>
+                              )}
+                            </span>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </td>
                         <td className="px-4 py-3">
                           {s.trades > 0 ? (
                             <span className={s.winRate >= 60 ? "text-emerald-400" : s.winRate >= 40 ? "text-yellow-400" : "text-red-400"}>
