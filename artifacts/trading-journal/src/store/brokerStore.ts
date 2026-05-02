@@ -1,6 +1,10 @@
 import { create } from "zustand";
 
-export type BrokerType = "mt5" | "alpaca" | "oanda" | "ibkr" | "tradovate" | "ctrader" | "custom";
+export type BrokerType =
+  | "mt5" | "alpaca" | "oanda" | "ibkr" | "tradovate" | "ctrader"
+  | "binance" | "coinbase" | "kraken" | "bybit" | "okx" | "kucoin"
+  | "custom";
+
 export type BrokerStatus = "idle" | "testing" | "connected" | "error";
 
 export interface BrokerConnection {

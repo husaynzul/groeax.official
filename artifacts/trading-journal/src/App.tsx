@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEffect } from "react";
 import AppLayout from "@/components/layout/AppLayout";
+import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import Trades from "@/pages/Trades";
 import Journal from "@/pages/Journal";
@@ -27,21 +28,43 @@ function AppRoutes() {
   }, [hydrate]);
 
   return (
-    <AppLayout>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/trades" component={Trades} />
-        <Route path="/journal" component={Journal} />
-        <Route path="/analytics" component={Analytics} />
-        <Route path="/calculator" component={Calculator} />
-        <Route path="/ai-coach" component={AICoach} />
-        <Route path="/news" component={News} />
-        <Route path="/replay" component={Replay} />
-        <Route path="/chart" component={Chart} />
-        <Route path="/brokers" component={Brokers} />
-        <Route component={NotFound} />
-      </Switch>
-    </AppLayout>
+    <Switch>
+      {/* Landing page — no sidebar layout */}
+      <Route path="/" component={Landing} />
+
+      {/* App — all wrapped in sidebar layout */}
+      <Route path="/dashboard">
+        <AppLayout><Dashboard /></AppLayout>
+      </Route>
+      <Route path="/trades">
+        <AppLayout><Trades /></AppLayout>
+      </Route>
+      <Route path="/journal">
+        <AppLayout><Journal /></AppLayout>
+      </Route>
+      <Route path="/analytics">
+        <AppLayout><Analytics /></AppLayout>
+      </Route>
+      <Route path="/calculator">
+        <AppLayout><Calculator /></AppLayout>
+      </Route>
+      <Route path="/ai-coach">
+        <AppLayout><AICoach /></AppLayout>
+      </Route>
+      <Route path="/news">
+        <AppLayout><News /></AppLayout>
+      </Route>
+      <Route path="/replay">
+        <AppLayout><Replay /></AppLayout>
+      </Route>
+      <Route path="/chart">
+        <AppLayout><Chart /></AppLayout>
+      </Route>
+      <Route path="/brokers">
+        <AppLayout><Brokers /></AppLayout>
+      </Route>
+      <Route component={NotFound} />
+    </Switch>
   );
 }
 

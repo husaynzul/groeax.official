@@ -20,16 +20,16 @@ import { cn } from "@/lib/utils";
 import AddTradeModal from "@/components/trades/AddTradeModal";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/trades", label: "Trades", icon: BookOpen },
-  { href: "/journal", label: "Journal", icon: CalendarDays },
-  { href: "/analytics", label: "Analytics", icon: BarChart2 },
-  { href: "/calculator", label: "Risk Calc", icon: Calculator },
-  { href: "/ai-coach", label: "AI Coach", icon: Bot },
-  { href: "/news", label: "Market News", icon: Newspaper },
-  { href: "/replay", label: "Replay", icon: Rewind },
-  { href: "/chart",   label: "Live Chart", icon: CandlestickChart },
-  { href: "/brokers", label: "Brokers",    icon: Link2 },
+  { href: "/dashboard", label: "Dashboard",   icon: LayoutDashboard },
+  { href: "/trades",    label: "Trades",      icon: BookOpen },
+  { href: "/journal",   label: "Journal",     icon: CalendarDays },
+  { href: "/analytics", label: "Analytics",   icon: BarChart2 },
+  { href: "/calculator",label: "Risk Calc",   icon: Calculator },
+  { href: "/ai-coach",  label: "AI Coach",    icon: Bot },
+  { href: "/news",      label: "Market News", icon: Newspaper },
+  { href: "/replay",    label: "Replay",      icon: Rewind },
+  { href: "/chart",     label: "Live Chart",  icon: CandlestickChart },
+  { href: "/brokers",   label: "Brokers",     icon: Link2 },
 ];
 
 export default function Sidebar() {
@@ -45,7 +45,8 @@ export default function Sidebar() {
           collapsed ? "w-[60px]" : "w-[220px]"
         )}
       >
-        <div className="flex items-center gap-2 px-4 py-5 border-b border-sidebar-border min-h-[64px]">
+        <Link href="/dashboard"
+          className="flex items-center gap-2 px-4 py-5 border-b border-sidebar-border min-h-[64px] hover:opacity-80 transition-opacity">
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/20 shrink-0">
             <TrendingUp className="w-4 h-4 text-primary" />
           </div>
@@ -54,7 +55,7 @@ export default function Sidebar() {
               TradeLog
             </span>
           )}
-        </div>
+        </Link>
 
         <div className="flex-1 flex flex-col gap-1 p-2 pt-3">
           <button
