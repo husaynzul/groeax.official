@@ -13,6 +13,7 @@ import {
   Bot,
   Newspaper,
   Rewind,
+  CandlestickChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddTradeModal from "@/components/trades/AddTradeModal";
@@ -26,6 +27,7 @@ const navItems = [
   { href: "/ai-coach", label: "AI Coach", icon: Bot },
   { href: "/news", label: "Market News", icon: Newspaper },
   { href: "/replay", label: "Replay", icon: Rewind },
+  { href: "/chart",  label: "Live Chart", icon: CandlestickChart },
 ];
 
 export default function Sidebar() {
