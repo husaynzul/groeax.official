@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { useTradeStore } from "@/store/tradeStore";
 import { computeAnalytics } from "@/engine/analyticsEngine";
+import TradingSessions from "@/components/dashboard/TradingSessions";
+import StreakCard from "@/components/dashboard/StreakCard";
 import {
   ComposedChart,
   AreaChart,
@@ -694,8 +696,14 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* ── Trading Sessions ── */}
+      <TradingSessions />
+
       {/* ── Calendar heatmap ── */}
       <CalendarHeatmap tradesByDate={analytics.tradesByDate} />
+
+      {/* ── Streak Card ── */}
+      <StreakCard trades={trades} />
 
       {/* ── Charts row ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

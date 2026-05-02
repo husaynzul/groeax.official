@@ -28,7 +28,7 @@ import {
 import { useTradeStore } from "@/store/tradeStore";
 import { calcNetProfit, calcNetLoss, calcRR } from "@/engine/riskEngine";
 import { useMemo, useState } from "react";
-import { Trade, PRIMARY_STRATEGIES, PATTERN_TYPES } from "@/types";
+import { Trade, PRIMARY_STRATEGIES, PATTERN_TYPES, TRADING_SESSIONS, TradingSession, SESSION_LABELS, detectSession } from "@/types";
 
 const FOREX_PAIRS = [
   "EUR/USD", "GBP/USD", "USD/JPY", "USD/CHF",
@@ -66,6 +66,9 @@ export default function AddTradeModal({ open, onClose, editTrade }: Props) {
 
   const [selectedPatterns, setSelectedPatterns] = useState<string[]>(
     editTrade?.patterns ?? []
+  );
+  const [selectedSession, setSelectedSession] = useState<TradingSession | undefined>(
+    editTrade?.session ?? detectSession()
   );
 
   const form = useForm<FormValues>({
@@ -122,7 +125,7 @@ export default function AddTradeModal({ open, onClose, editTrade }: Props) {
     const rr = calcRR(np, nl);
 
     if (editTrade) {
-      updateTrade(editTrade.id, { ...values, netProfit: np, netLoss: nl, rr, patterns: selectedPatterns });
+      updateTrade(editTrade.id, { ...values, netProfit: np, netLoss: nl, rr, patterns: selectedPatterns, session: selectedSession });
     } else {
       const trade: Trade = {
         id: crypto.randomUUID(),
@@ -131,11 +134,13 @@ export default function AddTradeModal({ open, onClose, editTrade }: Props) {
         netLoss: nl,
         rr,
         patterns: selectedPatterns,
+        session: selectedSession,
       };
       addTrade(trade);
     }
     form.reset();
     setSelectedPatterns([]);
+    setSelectedSession(detectSession());
     onClose();
   }
 
@@ -349,6 +354,40 @@ export default function AddTradeModal({ open, onClose, editTrade }: Props) {
                     {p}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* ── Session ── */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                Session <span className="text-muted-foreground text-xs">(optional)</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {TRADING_SESSIONS.map((s) => {
+                  const colors: Record<string, string> = {
+                    ASIA: "bg-cyan-500/20 text-cyan-400 border-cyan-500/40",
+                    TOKYO: "bg-violet-500/20 text-violet-400 border-violet-500/40",
+                    LONDON: "bg-blue-500/20 text-blue-400 border-blue-500/40",
+                    NEW_YORK: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40",
+                  };
+                  const flags: Record<string, string> = {
+                    ASIA: "🌏", TOKYO: "🗼", LONDON: "🇬🇧", NEW_YORK: "🗽",
+                  };
+                  const active = selectedSession === s;
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setSelectedSession(active ? undefined : s)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                        active ? colors[s] : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                      }`}
+                    >
+                      <span>{flags[s]}</span>
+                      {SESSION_LABELS[s]}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
