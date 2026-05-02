@@ -1,0 +1,187 @@
+🧠 1. High-Level Architecture (Hard Separation Model)
+            ┌─────────────────────────┐
+            │     USER / UI LAYER     │
+            └──────────┬──────────────┘
+                       │
+                       ▼
+        ┌────────────────────────────────┐
+        │   ORCHESTRATION / API GATEWAY  │
+        └──────────┬─────────────────────┘
+                   │
+   ┌───────────────┼────────────────┐
+   ▼               ▼                ▼
+┌──────────┐  ┌────────────┐  ┌──────────────┐
+│ RAW DATA  │  │ ANALYTICS  │  │ MARKET DATA  │
+│ LAYER     │  │ ENGINE     │  │ FEED         │
+└────┬─────┘  └────┬───────┘  └────┬─────────┘
+     │             │               │
+     └──────┬──────┴───────┬──────┘
+            ▼              ▼
+      ┌─────────────────────────┐
+      │  TRUTH VALIDATION LAYER │  ← (CRITICAL)
+      └──────────┬──────────────┘
+                 ▼
+      ┌─────────────────────────┐
+      │  FEATURE / METRIC LAYER │
+      └──────────┬──────────────┘
+                 ▼
+      ┌─────────────────────────┐
+      │   LLM INTERPRETER ONLY  │
+      └─────────────────────────┘
+🧱 2. Core Principle (Non-negotiable rule)
+❌ LLM is NEVER allowed to:
+calculate P&L
+compute winrate
+infer strategy performance
+detect outliers
+assume missing data
+✅ LLM is ONLY allowed to:
+explain precomputed metrics
+summarize validated results
+generate insights from structured JSON
+🔒 3. Truth Validation Layer (MOST IMPORTANT COMPONENT)
+
+This is your “anti-hallucination firewall”.
+
+Responsibilities:
+Validate trade schema
+Check duplicates
+Ensure chronological consistency
+Validate P&L math
+Confirm R definition correctness
+Flag missing fields
+Output:
+{
+  "data_status": "VALID | INVALID | PARTIAL",
+  "issues": [
+    "missing timestamps",
+    "R definition inconsistent"
+  ],
+  "approved_for_analysis": true
+}
+
+👉 If NOT approved → LLM never runs.
+
+📊 4. Analytics Engine (Deterministic Only)
+
+This is pure math layer:
+
+Computes:
+Win rate
+Expectancy
+Profit factor
+Drawdown (needs timestamps)
+R distribution
+Strategy breakdown
+Outlier detection (z-score / IQR)
+Important rule:
+
+NO natural language here. Only structured output.
+
+Example:
+
+{
+  "win_rate": 0.5,
+  "expectancy": 37493.63,
+  "profit_factor": 5859.38,
+  "outliers": ["trade_id_1"]
+}
+⚠️ 5. Feature Engineering Layer
+
+Converts raw trades into ML-ready signals:
+
+session (London / NY / Asia)
+volatility regime
+setup type (FVG / OB)
+risk per trade (R units)
+holding time
+slippage
+
+👉 Still NO LLM here.
+
+🧠 6. LLM INTERPRETER (STRICT SANDBOX)
+Input to LLM:
+
+ONLY this:
+
+{
+  "validated": true,
+  "metrics": {...},
+  "warnings": [...],
+  "constraints": {
+    "sample_size": 4,
+    "inference_allowed": false
+  }
+}
+Allowed behavior:
+explain why winrate is meaningless
+summarize performance
+highlight risk issues
+suggest next data collection steps
+Forbidden:
+recalculating numbers
+inventing trends
+guessing strategy quality
+🚨 7. Anti-Hallucination Guardrails
+Rule A: Confidence Lock
+
+If:
+
+trades < 30
+
+Then:
+
+NO strategy evaluation
+ONLY descriptive stats
+Rule B: Missing Data Lock
+
+If missing:
+
+timestamps → no drawdown
+risk size → no expectancy
+R definition → no performance analysis
+Rule C: Outlier Transparency Rule
+
+Always show:
+
+WITH outlier
+WITHOUT outlier
+
+No exception.
+
+🧩 8. Orchestration Logic (Decision Flow)
+IF data_invalid:
+    STOP
+
+IF data_valid AND trades < 30:
+    ALLOW only descriptive analytics
+
+IF trades >= 30:
+    ALLOW statistical inference
+
+SEND ONLY FINAL JSON TO LLM
+📉 9. Why this design eliminates hallucination
+
+Because:
+
+✔ LLM cannot see raw noise
+✔ LLM cannot compute metrics
+✔ LLM cannot assume missing values
+✔ Every number is pre-verified
+
+👉 Hallucination is not “reduced”
+👉 It is structurally IMPOSSIBLE
+
+💡 10. Real-world analogy
+Component	Role
+Analytics Engine	Accountant
+Validation Layer	Auditor
+LLM	Financial advisor (only explaining reports)
+🧠 Final verdict
+
+If you implement this:
+
+Your system becomes quant-grade safe
+No fake insights possible
+No overconfidence
+No misinterpretation of small datasets

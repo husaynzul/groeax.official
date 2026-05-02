@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useTradeStore } from "@/store/tradeStore";
 import { computeAnalytics } from "@/engine/analyticsEngine";
+import SessionAnalytics from "@/components/analytics/SessionAnalytics";
 import {
   ComposedChart, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ScatterChart, Scatter, Cell,
@@ -609,6 +610,9 @@ export default function Analytics() {
           ))}
         </div>
       </motion.div>
+
+      {/* ── Session Performance ── */}
+      <SessionAnalytics trades={trades} />
 
       {/* ── Win rate by R:R bucket ── */}
       <motion.div custom={10} initial="hidden" animate="show" variants={FADE_UP} className="glass-card p-5">
