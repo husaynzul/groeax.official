@@ -51,7 +51,11 @@ function computeDayOfWeekStats(trades: Trade[]) {
   }));
 
   for (const t of trades) {
-    const d = new Date(t.date + "T12:00:00").getDay();
+    if (!t.date) continue;
+    const parsed = new Date(t.date + "T12:00:00");
+    if (isNaN(parsed.getTime())) continue;
+    const d = parsed.getDay();
+    if (d < 0 || d > 6 || !stats[d]) continue;
     stats[d].total++;
     const pnl = t.outcome === "WIN" ? t.netProfit : t.outcome === "LOSS" ? -t.netLoss : 0;
     stats[d].pnl += pnl;

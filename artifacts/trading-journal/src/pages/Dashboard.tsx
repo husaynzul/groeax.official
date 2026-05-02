@@ -845,6 +845,7 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {[...trades]
+                  .filter((t) => t.date && !isNaN(new Date(t.date).getTime()))
                   .sort(
                     (a, b) =>
                       new Date(b.date).getTime() - new Date(a.date).getTime()

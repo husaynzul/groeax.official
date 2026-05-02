@@ -73,7 +73,7 @@ export default function ChartPage() {
   const [strategyName, setStrategyName] = useState<string | undefined>();
 
   const [sseStatus, setSseStatus]   = useState<"connecting"|"open"|"closed">("closed");
-  const [sseSource, setSseSource]   = useState<"binance"|"simulated"|"">("");
+  const [sseSource, setSseSource]   = useState<"binance"|"yahoo"|"simulated"|"">("");
   const [currentPrice, setCurrentPrice] = useState(0);
   const [priceLines, setPriceLines] = useState<ChartPriceLines>({});
   const [openOrdersCount, setOpenOrdersCount] = useState(0);
@@ -277,6 +277,7 @@ export default function ChartPage() {
   const decimals = PAIR_DECIMALS[pair] ?? 5;
 
   const isBinanceLive = sseSource === "binance" && sseStatus === "open";
+  const isYahooLive   = sseSource === "yahoo"   && sseStatus === "open";
   const isSimLive     = sseSource === "simulated" && sseStatus === "open";
 
   return (
@@ -333,12 +334,16 @@ export default function ChartPage() {
           <div className={`flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider rounded-full px-2 py-0.5 border ${
             isBinanceLive
               ? "text-yellow-400 border-yellow-500/30 bg-yellow-500/10"
+              : isYahooLive
+              ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
               : isSimLive
               ? "text-blue-400 border-blue-500/30 bg-blue-500/10"
               : "text-muted-foreground border-border"
           }`}>
             {isBinanceLive ? (
               <><span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse inline-block" /> Binance Live</>
+            ) : isYahooLive ? (
+              <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" /> Yahoo Live</>
             ) : isSimLive ? (
               <><Radio className="w-3 h-3" /> Simulated</>
             ) : (

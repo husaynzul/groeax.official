@@ -1,437 +1,712 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { useTradeStore } from "@/store/tradeStore";
-import { Trade, SESSION_LABELS, TradingSession } from "@/types";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, ReferenceLine,
-} from "recharts";
-import { motion, AnimatePresence } from "framer-motion";
+  createChart, ColorType, CrosshairMode, LineStyle,
+  type IChartApi, type ISeriesApi, type Time,
+} from "lightweight-charts";
 import {
-  SkipBack, SkipForward, Play, Pause, ChevronLeft, ChevronRight,
-  TrendingUp, TrendingDown, Minus, Clock, Layers, Tag, FileText,
-  Rewind,
+  Play, Pause, SkipBack, SkipForward, ChevronLeft, ChevronRight,
+  TrendingUp, TrendingDown, Zap, X, BarChart2, Clock, Trophy,
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { calcEMA, calcRSI, toLinePts } from "@/lib/indicators";
 
-const fmtMoney = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(n);
+/* ── Types ──────────────────────────────────────────────────────────── */
+interface Bar { time: number; open: number; high: number; low: number; close: number; volume: number }
 
-const SESSION_COLORS: Record<TradingSession, string> = {
-  ASIA: "text-cyan-400", TOKYO: "text-violet-400",
-  LONDON: "text-blue-400", NEW_YORK: "text-emerald-400",
-};
-const SESSION_FLAGS: Record<TradingSession, string> = {
-  ASIA: "🌏", TOKYO: "🗼", LONDON: "🇬🇧", NEW_YORK: "🗽",
-};
-
-const SPEEDS = [0.5, 1, 2, 4] as const;
-type Speed = (typeof SPEEDS)[number];
-
-interface EquityPoint { date: string; equity: number; idx: number }
-
-function buildEquityCurve(trades: Trade[], upTo: number): EquityPoint[] {
-  let eq = 0;
-  return trades.slice(0, upTo + 1).map((t, i) => {
-    eq += (t.netProfit ?? 0) - (t.netLoss ?? 0);
-    return { date: t.date, equity: +eq.toFixed(2), idx: i };
-  });
+interface VirtualTrade {
+  id: string;
+  direction: "BUY" | "SELL";
+  entry: number;
+  sl: number | null;
+  tp: number | null;
+  size: number;
+  entryTime: number;
+  exitTime?: number;
+  exitPrice?: number;
+  pnl?: number;
+  result?: "WIN" | "LOSS" | "BE" | "OPEN";
 }
 
-const ChartTooltip = ({ active, payload }: { active?: boolean; payload?: { payload: EquityPoint }[] }) => {
-  if (!active || !payload?.length) return null;
-  const d = payload[0].payload;
-  return (
-    <div className="bg-card border border-border rounded-lg px-3 py-2 text-xs shadow-lg">
-      <p className="text-muted-foreground mb-0.5">Trade {d.idx + 1}</p>
-      <p className={`font-semibold ${d.equity >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-        {d.equity >= 0 ? "+" : ""}{fmtMoney(d.equity)}
-      </p>
-    </div>
-  );
+interface SessionStats { wins: number; losses: number; be: number; totalPnl: number }
+
+const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+const SPEEDS = [0.5, 1, 2, 4, 8] as const;
+type Speed = (typeof SPEEDS)[number];
+
+const CATEGORIES = {
+  Forex:   ["EURUSD","GBPUSD","USDJPY","AUDUSD","USDCAD","USDCHF","NZDUSD","EURJPY","GBPJPY","EURGBP","EURAUD","EURCAD","GBPAUD","GBPCAD","AUDCAD","AUDNZD","CADJPY","CHFJPY","USDMXN","USDSEK"],
+  Metals:  ["XAUUSD","XAGUSD","XPTUSD","XPDUSD","WTIUSD","BRENTUSD"],
+  Crypto:  ["BTCUSD","ETHUSD","BNBUSD","SOLUSD","XRPUSD","ADAUSD","DOGEUSD","AVAXUSD","LINKUSD","DOTUSD","LTCUSD","MATICUSD","UNIUSD","ATOMUSD","NEARUSD"],
+  Stocks:  ["AAPL","MSFT","GOOGL","AMZN","META","NVDA","TSLA","AMD","NFLX","JPM","GS","BAC","DIS","INTC","COIN"],
+  Indices: ["SPX","SPY","QQQ","NDX","DJI","GER40","UK100","JPN225","VIX"],
+};
+const ALL_PAIRS = (Object.values(CATEGORIES) as string[][]).flat();
+const TIMEFRAMES = ["M1","M5","M15","M30","H1","H4","D1"] as const;
+
+function pairDecimals(pair: string): number {
+  const jpy = ["USDJPY","EURJPY","GBPJPY","CADJPY","CHFJPY","AUDJPY","NZDJPY"];
+  if (jpy.includes(pair)) return 3;
+  const two = [...CATEGORIES.Crypto,...CATEGORIES.Stocks,...CATEGORIES.Metals,...CATEGORIES.Indices];
+  if (two.includes(pair)) return 2;
+  if (pair === "XRPUSD" || pair === "ADAUSD" || pair === "MATICUSD") return 4;
+  return 5;
+}
+
+function fmtP(v: number, pair: string) { return v.toFixed(pairDecimals(pair)); }
+function fmtMoney(n: number) { return `${n >= 0 ? "+" : ""}$${Math.abs(n).toFixed(2)}`; }
+
+const CHART_OPTS = {
+  layout: { background: { type: ColorType.Solid, color: "#0f1117" }, textColor: "#8899aa" },
+  grid: { vertLines: { color: "rgba(255,255,255,0.04)" }, horzLines: { color: "rgba(255,255,255,0.04)" } },
+  crosshair: { mode: CrosshairMode.Normal },
+  rightPriceScale: { borderColor: "rgba(255,255,255,0.08)" },
+  timeScale: { borderColor: "rgba(255,255,255,0.08)", timeVisible: true, secondsVisible: false },
+  handleScroll: true, handleScale: true,
 };
 
+/* ── Main Component ─────────────────────────────────────────────────── */
 export default function Replay() {
-  const trades = useTradeStore((s) => s.trades);
+  const [pair, setPair] = useState("EURUSD");
+  const [tf, setTf]   = useState<string>("H1");
+  const [catTab, setCatTab] = useState<keyof typeof CATEGORIES>("Forex");
 
-  const sorted = useMemo(
-    () => [...trades].sort((a, b) => a.date.localeCompare(b.date)),
-    [trades]
-  );
+  const [allBars, setAllBars] = useState<Bar[]>([]);
+  const [dataSource, setDataSource] = useState<string>("—");
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState<string | null>(null);
 
-  const [idx, setIdx] = useState(0);
+  const [visibleCount, setVisibleCount] = useState(60);
   const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState<Speed>(1);
-  const [revealed, setRevealed] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [speed, setSpeed]     = useState<Speed>(1);
 
-  const total = sorted.length;
-  const current = sorted[idx] ?? null;
-  const equityCurve = useMemo(() => buildEquityCurve(sorted, idx), [sorted, idx]);
-  const currentEquity = equityCurve[equityCurve.length - 1]?.equity ?? 0;
+  // Virtual trading
+  const [direction, setDirection] = useState<"BUY" | "SELL">("BUY");
+  const [size, setSize]     = useState("0.10");
+  const [slEnabled, setSlEnabled] = useState(true);
+  const [tpEnabled, setTpEnabled] = useState(true);
+  const [slInput, setSlInput] = useState("");
+  const [tpInput, setTpInput] = useState("");
+  const [activeTrade, setActiveTrade] = useState<VirtualTrade | null>(null);
+  const [closedTrades, setClosedTrades] = useState<VirtualTrade[]>([]);
 
-  const pnl = current ? (current.netProfit ?? 0) - (current.netLoss ?? 0) : 0;
-  const outcome = current?.outcome;
+  // Chart refs
+  const mainDivRef = useRef<HTMLDivElement>(null);
+  const rsiDivRef  = useRef<HTMLDivElement>(null);
+  const mainChart  = useRef<IChartApi | null>(null);
+  const rsiChart   = useRef<IChartApi | null>(null);
+  const candleSeries = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const ema9Series   = useRef<ISeriesApi<"Line"> | null>(null);
+  const ema21Series  = useRef<ISeriesApi<"Line"> | null>(null);
+  const rsiSeries    = useRef<ISeriesApi<"Line"> | null>(null);
+  const obSeries     = useRef<ISeriesApi<"Line"> | null>(null);
+  const osSeries     = useRef<ISeriesApi<"Line"> | null>(null);
+  const volSeries    = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const entryLine    = useRef<ReturnType<ISeriesApi<"Line">["createPriceLine"]> | null>(null);
+  const slLine       = useRef<ReturnType<ISeriesApi<"Line">["createPriceLine"]> | null>(null);
+  const tpLine       = useRef<ReturnType<ISeriesApi<"Line">["createPriceLine"]> | null>(null);
 
-  const goTo = useCallback((i: number) => {
-    setIdx(Math.max(0, Math.min(i, total - 1)));
-    setRevealed(false);
-  }, [total]);
+  const playIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  /* ── Pre-computed indicators ──────────────────────────────────────── */
+  const indicators = useMemo(() => {
+    if (!allBars.length) return null;
+    const closes = allBars.map((b) => b.close);
+    const times  = allBars.map((b) => b.time);
+    return {
+      ema9:  toLinePts(times, calcEMA(closes, 9)),
+      ema21: toLinePts(times, calcEMA(closes, 21)),
+      rsi14: toLinePts(times, calcRSI(closes, 14)),
+    };
+  }, [allBars]);
+
+  /* ── Fetch data ───────────────────────────────────────────────────── */
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setAllBars([]);
+    setVisibleCount(60);
+    setActiveTrade(null);
+    setClosedTrades([]);
+    setPlaying(false);
+
+    fetch(`${BASE}/api/chart/candles?pair=${pair}&tf=${tf}&limit=500`)
+      .then((r) => r.json())
+      .then((d: { bars: Bar[]; source: string }) => {
+        if (cancelled) return;
+        setAllBars(d.bars ?? []);
+        setDataSource(d.source ?? "unknown");
+        setVisibleCount(Math.min(80, (d.bars ?? []).length));
+      })
+      .catch((e) => { if (!cancelled) setError(String(e)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [pair, tf]);
+
+  /* ── Chart init ───────────────────────────────────────────────────── */
+  useEffect(() => {
+    if (!mainDivRef.current || !rsiDivRef.current) return;
+
+    const mc = createChart(mainDivRef.current, {
+      ...CHART_OPTS,
+      width:  mainDivRef.current.clientWidth,
+      height: mainDivRef.current.clientHeight,
+    });
+
+    const rc = createChart(rsiDivRef.current, {
+      layout:     CHART_OPTS.layout,
+      grid:       CHART_OPTS.grid,
+      rightPriceScale: { ...CHART_OPTS.rightPriceScale, scaleMargins: { top: 0.1, bottom: 0.1 } },
+      timeScale:  { ...CHART_OPTS.timeScale, visible: false },
+      crosshair:  { mode: CrosshairMode.Hidden },
+      handleScroll: false,
+      handleScale:  false,
+      width:  rsiDivRef.current.clientWidth,
+      height: rsiDivRef.current.clientHeight,
+    });
+
+    const cs = mc.addCandlestickSeries({
+      upColor: "#26a69a", downColor: "#ef5350",
+      borderUpColor: "#26a69a", borderDownColor: "#ef5350",
+      wickUpColor: "#26a69a", wickDownColor: "#ef5350",
+    });
+
+    const vs = mc.addHistogramSeries({
+      priceFormat: { type: "volume" },
+      priceScaleId: "vol",
+    });
+    mc.priceScale("vol").applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
+
+    const e9  = mc.addLineSeries({ color: "#f59e0b", lineWidth: 1, crosshairMarkerVisible: false, priceLineVisible: false, lastValueVisible: false });
+    const e21 = mc.addLineSeries({ color: "#06b6d4", lineWidth: 1, crosshairMarkerVisible: false, priceLineVisible: false, lastValueVisible: false });
+
+    const rsi = rc.addLineSeries({
+      color: "#a78bfa", lineWidth: 2,
+      crosshairMarkerVisible: false, priceLineVisible: false, lastValueVisible: true,
+    });
+
+    // Overbought / oversold bands in RSI chart
+    const ob = rc.addLineSeries({ color: "rgba(239,68,68,0.4)",  lineWidth: 1, lineStyle: LineStyle.Dashed, priceLineVisible: false, crosshairMarkerVisible: false, lastValueVisible: false });
+    const os = rc.addLineSeries({ color: "rgba(16,185,129,0.4)", lineWidth: 1, lineStyle: LineStyle.Dashed, priceLineVisible: false, crosshairMarkerVisible: false, lastValueVisible: false });
+    obSeries.current = ob;
+    osSeries.current = os;
+
+    // Time-scale sync
+    mc.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+      if (range) rc.timeScale().setVisibleLogicalRange(range);
+    });
+
+    mainChart.current   = mc;
+    rsiChart.current    = rc;
+    candleSeries.current = cs;
+    volSeries.current    = vs;
+    ema9Series.current   = e9;
+    ema21Series.current  = e21;
+    rsiSeries.current    = rsi;
+
+    // Resize observer
+    const ro = new ResizeObserver(() => {
+      if (mainDivRef.current) mc.applyOptions({ width: mainDivRef.current.clientWidth, height: mainDivRef.current.clientHeight });
+      if (rsiDivRef.current)  rc.applyOptions({ width: rsiDivRef.current.clientWidth,  height: rsiDivRef.current.clientHeight });
+    });
+    if (mainDivRef.current) ro.observe(mainDivRef.current);
+    if (rsiDivRef.current)  ro.observe(rsiDivRef.current);
+
+    return () => {
+      ro.disconnect();
+      mc.remove();
+      rc.remove();
+      mainChart.current = null; rsiChart.current = null;
+      candleSeries.current = null; volSeries.current = null;
+      ema9Series.current = null; ema21Series.current = null;
+      rsiSeries.current = null;
+      obSeries.current = null;
+      osSeries.current = null;
+    };
+  }, []);
+
+  /* ── Update chart data ────────────────────────────────────────────── */
+  useEffect(() => {
+    if (!allBars.length || !candleSeries.current || !indicators) return;
+    const slice = allBars.slice(0, visibleCount);
+
+    candleSeries.current.setData(
+      slice.map((b) => ({ time: b.time as Time, open: b.open, high: b.high, low: b.low, close: b.close }))
+    );
+    volSeries.current?.setData(
+      slice.map((b) => ({
+        time: b.time as Time, value: b.volume,
+        color: b.close >= b.open ? "rgba(38,166,154,0.35)" : "rgba(239,83,80,0.35)",
+      }))
+    );
+    ema9Series.current?.setData(indicators.ema9.slice(0, visibleCount));
+    ema21Series.current?.setData(indicators.ema21.slice(0, visibleCount));
+    rsiSeries.current?.setData(indicators.rsi14.slice(0, visibleCount));
+
+    // RSI overbought / oversold bands
+    if (slice.length > 0) {
+      const obData = slice.map((b) => ({ time: b.time as Time, value: 70 }));
+      const osData = slice.map((b) => ({ time: b.time as Time, value: 30 }));
+      obSeries.current?.setData(obData);
+      osSeries.current?.setData(osData);
+    }
+
+    mainChart.current?.timeScale().scrollToRealTime();
+  }, [allBars, visibleCount, indicators]);
+
+  /* ── Price lines for active trade ───────────────────────────────────── */
+  useEffect(() => {
+    if (!candleSeries.current) return;
+    const cs = candleSeries.current;
+
+    // Remove old
+    if (entryLine.current) { try { cs.removePriceLine(entryLine.current); } catch { /* */ } entryLine.current = null; }
+    if (slLine.current)    { try { cs.removePriceLine(slLine.current);    } catch { /* */ } slLine.current    = null; }
+    if (tpLine.current)    { try { cs.removePriceLine(tpLine.current);    } catch { /* */ } tpLine.current    = null; }
+
+    if (!activeTrade) return;
+    entryLine.current = cs.createPriceLine({ price: activeTrade.entry,    color: "#ffffff",  lineWidth: 1, lineStyle: LineStyle.Solid,  axisLabelVisible: true, title: activeTrade.direction });
+    if (activeTrade.sl) slLine.current = cs.createPriceLine({ price: activeTrade.sl, color: "#ef4444", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "SL" });
+    if (activeTrade.tp) tpLine.current = cs.createPriceLine({ price: activeTrade.tp, color: "#10b981", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "TP" });
+  }, [activeTrade]);
+
+  /* ── Playback ─────────────────────────────────────────────────────── */
+  const total = allBars.length;
 
   const stepForward = useCallback(() => {
-    if (idx < total - 1) { goTo(idx + 1); }
-    else { setPlaying(false); }
-  }, [idx, total, goTo]);
+    setVisibleCount((c) => {
+      if (c >= total) { setPlaying(false); return c; }
+      return c + 1;
+    });
+  }, [total]);
 
-  const stepBack = useCallback(() => goTo(idx - 1), [idx, goTo]);
+  const stepBack = useCallback(() => {
+    setVisibleCount((c) => Math.max(1, c - 1));
+  }, []);
 
   useEffect(() => {
-    if (!playing) { if (intervalRef.current) clearInterval(intervalRef.current); return; }
-    intervalRef.current = setInterval(stepForward, 1500 / speed);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    if (!playing) { if (playIntervalRef.current) clearInterval(playIntervalRef.current); return; }
+    const ms = Math.max(100, 1200 / speed);
+    playIntervalRef.current = setInterval(stepForward, ms);
+    return () => { if (playIntervalRef.current) clearInterval(playIntervalRef.current); };
   }, [playing, speed, stepForward]);
 
+  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") stepForward();
-      else if (e.key === "ArrowLeft") stepBack();
+      if (e.target instanceof HTMLInputElement) return;
+      if (e.key === "ArrowRight") { e.preventDefault(); stepForward(); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); stepBack(); }
       else if (e.key === " ") { e.preventDefault(); setPlaying((p) => !p); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [stepForward, stepBack]);
 
-  if (total === 0) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center gap-4 text-center p-8">
-        <Rewind className="w-12 h-12 text-muted-foreground/30" />
-        <h2 className="text-lg font-semibold text-foreground">No trades to replay</h2>
-        <p className="text-sm text-muted-foreground max-w-sm">
-          Add some trades first, then come back here to step through them like a TradingView replay session.
-        </p>
-      </div>
+  /* ── Check SL/TP hit on each new candle ──────────────────────────── */
+  useEffect(() => {
+    if (!activeTrade || !allBars.length || visibleCount < 1) return;
+    const bar = allBars[visibleCount - 1];
+    if (!bar || bar.time === activeTrade.entryTime) return;
+
+    const { direction: dir, sl, tp, entry, size } = activeTrade;
+    let hit: "SL" | "TP" | null = null;
+    let exitPrice = bar.close;
+
+    if (dir === "BUY") {
+      if (sl && bar.low <= sl)   { hit = "SL"; exitPrice = sl; }
+      else if (tp && bar.high >= tp) { hit = "TP"; exitPrice = tp; }
+    } else {
+      if (sl && bar.high >= sl)  { hit = "SL"; exitPrice = sl; }
+      else if (tp && bar.low <= tp)  { hit = "TP"; exitPrice = tp; }
+    }
+
+    if (hit) {
+      const pipMult = pairDecimals(pair) === 5 ? 10000 : pairDecimals(pair) === 3 ? 100 : 1;
+      const rawPips = dir === "BUY" ? (exitPrice - entry) * pipMult : (entry - exitPrice) * pipMult;
+      const pnl = parseFloat((rawPips * size * 10).toFixed(2));
+      const result: VirtualTrade["result"] = pnl > 0 ? "WIN" : pnl < 0 ? "LOSS" : "BE";
+      const closed: VirtualTrade = { ...activeTrade, exitTime: bar.time, exitPrice, pnl, result };
+      setClosedTrades((prev) => [...prev, closed]);
+      setActiveTrade(null);
+    }
+  }, [visibleCount, allBars, activeTrade, pair]);
+
+  /* ── Place order ─────────────────────────────────────────────────── */
+  const placeOrder = useCallback(() => {
+    if (!allBars.length || visibleCount < 1 || activeTrade) return;
+    const bar = allBars[visibleCount - 1];
+    const entry = bar.close;
+    const dec = pairDecimals(pair);
+    const sl = slEnabled && slInput ? parseFloat(slInput) : null;
+    const tp = tpEnabled && tpInput ? parseFloat(tpInput) : null;
+    setActiveTrade({
+      id: `replay_${Date.now()}`,
+      direction,
+      entry,
+      sl,
+      tp,
+      size: parseFloat(size) || 0.10,
+      entryTime: bar.time,
+      result: "OPEN",
+    });
+    // Pre-fill SL/TP defaults if not set
+    const df = direction === "BUY"
+      ? { sl: +(entry - 50 / 10 ** dec).toFixed(dec), tp: +(entry + 100 / 10 ** dec).toFixed(dec) }
+      : { sl: +(entry + 50 / 10 ** dec).toFixed(dec), tp: +(entry - 100 / 10 ** dec).toFixed(dec) };
+    if (slEnabled && !slInput) setSlInput(df.sl.toString());
+    if (tpEnabled && !tpInput) setTpInput(df.tp.toString());
+  }, [allBars, visibleCount, activeTrade, direction, size, pair, slEnabled, tpEnabled, slInput, tpInput]);
+
+  const closeActiveTrade = useCallback(() => {
+    if (!activeTrade || !allBars.length || visibleCount < 1) return;
+    const bar = allBars[visibleCount - 1];
+    const exitPrice = bar.close;
+    const { direction: dir, entry, size } = activeTrade;
+    const pipMult = pairDecimals(pair) === 5 ? 10000 : pairDecimals(pair) === 3 ? 100 : 1;
+    const rawPips = dir === "BUY" ? (exitPrice - entry) * pipMult : (entry - exitPrice) * pipMult;
+    const pnl = parseFloat((rawPips * size * 10).toFixed(2));
+    const result: VirtualTrade["result"] = pnl > 0 ? "WIN" : pnl < 0 ? "LOSS" : "BE";
+    setClosedTrades((prev) => [...prev, { ...activeTrade, exitTime: bar.time, exitPrice, pnl, result }]);
+    setActiveTrade(null);
+  }, [activeTrade, allBars, visibleCount, pair]);
+
+  /* ── Session stats ──────────────────────────────────────────────────── */
+  const stats: SessionStats = useMemo(() => {
+    return closedTrades.reduce(
+      (acc, t) => ({
+        wins:     acc.wins     + (t.result === "WIN"  ? 1 : 0),
+        losses:   acc.losses   + (t.result === "LOSS" ? 1 : 0),
+        be:       acc.be       + (t.result === "BE"   ? 1 : 0),
+        totalPnl: acc.totalPnl + (t.pnl ?? 0),
+      }),
+      { wins: 0, losses: 0, be: 0, totalPnl: 0 },
     );
-  }
+  }, [closedTrades]);
 
-  const outcomeConfig = {
-    WIN:  { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/25", icon: TrendingUp,   label: "WIN" },
-    LOSS: { color: "text-red-400",     bg: "bg-red-500/10 border-red-500/25",         icon: TrendingDown, label: "LOSS" },
-    BE:   { color: "text-yellow-400",  bg: "bg-yellow-500/10 border-yellow-500/25",   icon: Minus,        label: "BREAKEVEN" },
-  };
-  const oc = outcome ? outcomeConfig[outcome] : null;
+  /* ── Current bar info ─────────────────────────────────────────────── */
+  const currentBar = allBars[visibleCount - 1];
+  const currentRSI = indicators?.rsi14[visibleCount - 1]?.value;
+  const currentEMA9 = indicators?.ema9[visibleCount - 1]?.value;
+  const currentEMA21 = indicators?.ema21[visibleCount - 1]?.value;
 
+  const livePnl = useMemo(() => {
+    if (!activeTrade || !currentBar) return null;
+    const { direction: dir, entry, size: sz } = activeTrade;
+    const pipMult = pairDecimals(pair) === 5 ? 10000 : pairDecimals(pair) === 3 ? 100 : 1;
+    const rawPips = dir === "BUY"
+      ? (currentBar.close - entry) * pipMult
+      : (entry - currentBar.close) * pipMult;
+    return parseFloat((rawPips * sz * 10).toFixed(2));
+  }, [activeTrade, currentBar, pair]);
+
+  const sourceLabel = dataSource === "binance" ? "Binance Live"
+    : dataSource === "yahoo" ? "Yahoo Finance Live"
+    : "Simulated";
+  const sourceDot = dataSource === "simulated" ? "bg-yellow-400" : "bg-emerald-400";
+
+  /* ── Default SL/TP when pair/direction changes ───────────────────── */
+  useEffect(() => {
+    if (!currentBar) return;
+    const dec = pairDecimals(pair);
+    const e = currentBar.close;
+    if (direction === "BUY") {
+      setSlInput(+(e - 50 / 10 ** dec).toFixed(dec) + "");
+      setTpInput(+(e + 100 / 10 ** dec).toFixed(dec) + "");
+    } else {
+      setSlInput(+(e + 50 / 10 ** dec).toFixed(dec) + "");
+      setTpInput(+(e - 100 / 10 ** dec).toFixed(dec) + "");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pair, direction]);
+
+  /* ── Render ──────────────────────────────────────────────────────── */
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between px-6 pt-5 pb-3 shrink-0">
-        <div>
-          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Rewind className="w-5 h-5 text-primary" />
-            Trade Replay
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Step through your trades like a TradingView replay session · Use ← → or Space
-          </p>
+    <div className="flex flex-col h-full overflow-hidden bg-background">
+
+      {/* ── HEADER ── */}
+      <div className="shrink-0 flex items-center gap-3 px-4 py-2 border-b border-border bg-card/60">
+        <BarChart2 className="w-4 h-4 text-primary shrink-0" />
+        <span className="font-bold text-sm text-foreground">Bar Replay</span>
+
+        {/* Category tabs */}
+        <div className="flex items-center gap-0.5 bg-secondary/40 rounded-lg p-0.5 ml-2">
+          {(Object.keys(CATEGORIES) as (keyof typeof CATEGORIES)[]).map((cat) => (
+            <button key={cat}
+              onClick={() => { setCatTab(cat); const first = CATEGORIES[cat][0]; if (first) setPair(first); }}
+              className={`text-[11px] px-2 py-0.5 rounded-md font-medium transition-all ${catTab === cat ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >{cat}</button>
+          ))}
         </div>
-        <div className="flex items-center gap-2">
-          {/* Speed selector */}
-          <div className="flex items-center gap-1 bg-secondary/50 border border-border rounded-lg p-0.5">
-            {SPEEDS.map((s) => (
-              <button
-                key={s}
-                onClick={() => setSpeed(s)}
-                className={`text-xs px-2 py-1 rounded-md font-mono font-semibold transition-all ${speed === s ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                {s}×
-              </button>
-            ))}
-          </div>
+
+        {/* Pair select */}
+        <select
+          value={pair}
+          onChange={(e) => setPair(e.target.value)}
+          className="text-xs bg-secondary/40 border border-border rounded-lg px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+        >
+          {CATEGORIES[catTab].map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+
+        {/* Timeframe */}
+        <div className="flex items-center gap-0.5 bg-secondary/40 rounded-lg p-0.5">
+          {TIMEFRAMES.map((t) => (
+            <button key={t} onClick={() => setTf(t)}
+              className={`text-[11px] px-2 py-0.5 rounded-md font-mono font-semibold transition-all ${tf === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >{t}</button>
+          ))}
         </div>
+
+        {/* Source badge */}
+        <span className="ml-auto flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+          <span className={`w-1.5 h-1.5 rounded-full ${sourceDot} animate-pulse`} />
+          {loading ? "Loading…" : sourceLabel}
+        </span>
       </div>
 
-      {/* ── Main content: chart + trade card ── */}
-      <div className="flex-1 overflow-y-auto px-6 space-y-4 pb-2">
-        {/* Equity curve */}
-        <div className="glass-card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Cumulative P&L</p>
-              <p className={`text-2xl font-bold mt-0.5 ${currentEquity >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                {currentEquity >= 0 ? "+" : ""}{fmtMoney(currentEquity)}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground">Trade</p>
-              <p className="text-lg font-bold text-foreground">{idx + 1} <span className="text-muted-foreground text-sm font-normal">/ {total}</span></p>
-            </div>
+      {/* ── BODY: charts + right panel ── */}
+      <div className="flex flex-1 overflow-hidden min-h-0">
+
+        {/* ── LEFT: chart area ── */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+          {/* Main candle chart */}
+          <div className="relative flex-[5] min-h-0">
+            {loading && (
+              <div className="absolute inset-0 flex items-center justify-center z-10 bg-background/60">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
+                  Fetching {pair} {tf} data…
+                </div>
+              </div>
+            )}
+            {error && (
+              <div className="absolute inset-0 flex items-center justify-center z-10">
+                <p className="text-sm text-red-400">{error}</p>
+              </div>
+            )}
+            <div ref={mainDivRef} className="w-full h-full" />
           </div>
-          <ResponsiveContainer width="100%" height={160}>
-            <AreaChart data={equityCurve} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-              <defs>
-                <linearGradient id="replayGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={currentEquity >= 0 ? "#10b981" : "#ef4444"} stopOpacity={0.18} />
-                  <stop offset="100%" stopColor={currentEquity >= 0 ? "#10b981" : "#ef4444"} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-              <XAxis dataKey="idx" hide />
-              <YAxis tick={{ fontSize: 10, fill: "hsl(215 20% 45%)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} width={56} />
-              <ReferenceLine y={0} stroke="rgba(255,255,255,0.12)" strokeDasharray="4 4" />
-              <Tooltip content={<ChartTooltip />} />
-              <Area
-                type="monotone"
-                dataKey="equity"
-                stroke={currentEquity >= 0 ? "#10b981" : "#ef4444"}
-                strokeWidth={2}
-                fill="url(#replayGrad)"
-                isAnimationActive={false}
-                dot={(props) => {
-                  if (props.index !== equityCurve.length - 1) return <g key={props.key} />;
-                  return (
-                    <circle
-                      key={props.key}
-                      cx={props.cx}
-                      cy={props.cy}
-                      r={5}
-                      fill={currentEquity >= 0 ? "#10b981" : "#ef4444"}
-                      stroke="#0f1117"
-                      strokeWidth={2}
-                    />
-                  );
-                }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
 
-        {/* Current trade card */}
-        <AnimatePresence mode="wait">
-          {current && (
-            <motion.div
-              key={current.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-              className="glass-card p-5 space-y-4"
-            >
-              {/* Trade header */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${oc ? oc.bg : "bg-secondary/40 border-border text-muted-foreground"}`}>
-                    {oc ? (
-                      <span className={`flex items-center gap-1 ${oc.color}`}>
-                        <oc.icon className="w-3 h-3" />
-                        {oc.label}
-                      </span>
-                    ) : "PENDING"}
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-foreground">{current.pair}</p>
-                    <p className={`text-xs font-semibold ${current.direction === "BUY" ? "text-emerald-400" : "text-red-400"}`}>
-                      {current.direction}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className={`text-2xl font-bold ${pnl > 0 ? "text-emerald-400" : pnl < 0 ? "text-red-400" : "text-yellow-400"}`}>
-                    {pnl > 0 ? "+" : pnl < 0 ? "-" : ""}{fmtMoney(Math.abs(pnl))}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {current.date ? format(parseISO(current.date), "MMM d, yyyy") : "—"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Metrics grid */}
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 pt-2 border-t border-border">
-                {[
-                  { label: "Entry",      val: current.entryPrice?.toFixed(5) ?? "—" },
-                  { label: "Stop Loss",  val: current.stopLoss?.toFixed(5) ?? "—",   color: "text-red-400" },
-                  { label: "Take Profit",val: current.takeProfit?.toFixed(5) ?? "—", color: "text-emerald-400" },
-                  { label: "Lot Size",   val: current.lotSize?.toString() ?? "—" },
-                  { label: "R:R",        val: current.rr ? `${current.rr.toFixed(2)}R` : "—", color: current.rr >= 2 ? "text-emerald-400" : current.rr >= 1 ? "text-yellow-400" : "text-red-400" },
-                  { label: "Gross Win",  val: current.netProfit > 0 ? `+${fmtMoney(current.netProfit)}` : "—", color: "text-emerald-400" },
-                ].map(({ label, val, color }) => (
-                  <div key={label}>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
-                    <p className={`text-sm font-semibold mt-0.5 ${color ?? "text-foreground"}`}>{val}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Tags row */}
-              <div className="flex flex-wrap gap-2 items-center">
-                {current.session && (
-                  <span className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs border border-border ${SESSION_COLORS[current.session as TradingSession]}`}>
-                    {SESSION_FLAGS[current.session as TradingSession]} {SESSION_LABELS[current.session as TradingSession]}
-                  </span>
-                )}
-                {current.strategy && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-xs border border-border text-muted-foreground">
-                    <Layers className="w-3 h-3" />{current.strategy}
-                  </span>
-                )}
-                {(current.patterns ?? []).map((p) => (
-                  <span key={p} className="flex items-center gap-1 px-2 py-0.5 rounded-md text-xs border border-border text-muted-foreground">
-                    <Tag className="w-3 h-3" />{p}
-                  </span>
-                ))}
-              </div>
-
-              {/* Notes */}
-              {current.notes && (
-                <div className="pt-2 border-t border-border">
-                  <div className="flex items-start gap-2">
-                    <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
-                    <p className="text-sm text-muted-foreground leading-relaxed">{current.notes}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Reveal outcome button */}
-              {!revealed && !outcome && (
-                <button
-                  onClick={() => setRevealed(true)}
-                  className="w-full py-2 rounded-lg border border-dashed border-border text-xs text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
-                >
-                  Reveal outcome →
-                </button>
-              )}
-            </motion.div>
+          {/* Candle OHLC info bar */}
+          {currentBar && (
+            <div className="shrink-0 flex items-center gap-4 px-3 py-1 bg-card/40 border-t border-border text-[10px] font-mono text-muted-foreground">
+              <span className="text-foreground font-semibold">{pair}</span>
+              <span>O <span className="text-foreground">{fmtP(currentBar.open, pair)}</span></span>
+              <span>H <span className="text-emerald-400">{fmtP(currentBar.high, pair)}</span></span>
+              <span>L <span className="text-red-400">{fmtP(currentBar.low, pair)}</span></span>
+              <span>C <span className={currentBar.close >= currentBar.open ? "text-emerald-400" : "text-red-400"}>{fmtP(currentBar.close, pair)}</span></span>
+              {currentEMA9  && <span>EMA9  <span className="text-yellow-400">{fmtP(currentEMA9, pair)}</span></span>}
+              {currentEMA21 && <span>EMA21 <span className="text-cyan-400">{fmtP(currentEMA21, pair)}</span></span>}
+              {currentRSI   && <span>RSI <span className={currentRSI > 70 ? "text-red-400" : currentRSI < 30 ? "text-emerald-400" : "text-foreground"}>{currentRSI.toFixed(1)}</span></span>}
+              <span className="ml-auto flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(currentBar.time * 1000).toLocaleString()}</span>
+            </div>
           )}
-        </AnimatePresence>
 
-        {/* Running stats row */}
-        {idx > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="grid grid-cols-2 sm:grid-cols-4 gap-3"
-          >
-            {(() => {
-              const reviewed = sorted.slice(0, idx + 1).filter((t) => t.outcome);
-              const wins = reviewed.filter((t) => t.outcome === "WIN").length;
-              const losses = reviewed.filter((t) => t.outcome === "LOSS").length;
-              const wr = wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : 0;
-              const avgPnL = reviewed.length > 0
-                ? reviewed.reduce((acc, t) => acc + (t.netProfit ?? 0) - (t.netLoss ?? 0), 0) / reviewed.length
-                : 0;
-              const avgRR = reviewed.length > 0
-                ? reviewed.reduce((acc, t) => acc + (t.rr ?? 0), 0) / reviewed.length
-                : 0;
-              return [
-                { label: "Win Rate",  val: `${wr}%`,             color: wr >= 60 ? "text-emerald-400" : wr >= 40 ? "text-yellow-400" : "text-red-400" },
-                { label: "W / L",     val: `${wins}W / ${losses}L`, color: "text-foreground" },
-                { label: "Avg R:R",   val: `${avgRR.toFixed(2)}R`, color: avgRR >= 2 ? "text-emerald-400" : avgRR >= 1 ? "text-yellow-400" : "text-red-400" },
-                { label: "Avg P&L",   val: `${avgPnL >= 0 ? "+" : ""}${fmtMoney(avgPnL)}`, color: avgPnL >= 0 ? "text-emerald-400" : "text-red-400" },
-              ].map(({ label, val, color }) => (
-                <div key={label} className="glass-card p-3">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
-                  <p className={`text-lg font-bold mt-1 ${color}`}>{val}</p>
-                </div>
-              ));
-            })()}
-          </motion.div>
-        )}
-      </div>
-
-      {/* ── TradingView-style replay bar ── */}
-      <div className="shrink-0 border-t border-border bg-card/80 backdrop-blur-sm px-6 py-3">
-        {/* Scrubber timeline */}
-        <div className="mb-3 relative">
-          <div className="relative h-2 bg-secondary rounded-full cursor-pointer overflow-hidden"
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const pct = (e.clientX - rect.left) / rect.width;
-              goTo(Math.round(pct * (total - 1)));
-            }}
-          >
-            <div
-              className="absolute left-0 top-0 h-full rounded-full transition-all"
-              style={{ width: `${total > 1 ? (idx / (total - 1)) * 100 : 100}%`, background: currentEquity >= 0 ? "#10b981" : "#ef4444" }}
-            />
+          {/* RSI sub-chart */}
+          <div className="shrink-0 h-[110px] border-t border-border relative">
+            <span className="absolute top-1 left-2 text-[9px] text-muted-foreground z-10 select-none">RSI(14)</span>
+            <div ref={rsiDivRef} className="w-full h-full" />
           </div>
-          {/* Tick marks */}
-          <div className="flex justify-between mt-1 px-0.5">
-            {sorted.map((t, i) => (
-              <button
-                key={t.id}
-                onClick={() => goTo(i)}
-                title={`Trade ${i + 1}: ${t.pair}`}
-                className={`w-1 h-1 rounded-full transition-all ${
-                  i < idx ? (t.outcome === "WIN" ? "bg-emerald-500" : t.outcome === "LOSS" ? "bg-red-500" : "bg-yellow-500")
-                  : i === idx ? "bg-white scale-125"
-                  : "bg-muted-foreground/20"
-                }`}
+
+          {/* ── CONTROLS BAR ── */}
+          <div className="shrink-0 border-t border-border bg-card/80 px-4 py-2">
+            {/* Scrubber */}
+            <div className="mb-2">
+              <input type="range" min={1} max={Math.max(total, 2)} value={visibleCount}
+                onChange={(e) => { setVisibleCount(Number(e.target.value)); setPlaying(false); }}
+                className="w-full h-1.5 rounded-full appearance-none bg-secondary cursor-pointer accent-primary"
               />
-            ))}
+              <div className="flex justify-between text-[9px] text-muted-foreground mt-0.5">
+                <span>{allBars[0] ? new Date(allBars[0].time * 1000).toLocaleDateString() : "—"}</span>
+                <span className="font-semibold text-foreground">{visibleCount} / {total} candles</span>
+                <span>{currentBar ? new Date(currentBar.time * 1000).toLocaleDateString() : "—"}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-2">
+              {/* Speed */}
+              <div className="flex items-center gap-0.5 bg-secondary/50 rounded-lg p-0.5">
+                {SPEEDS.map((s) => (
+                  <button key={s} onClick={() => setSpeed(s)}
+                    className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold transition-all ${speed === s ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  >{s}×</button>
+                ))}
+              </div>
+
+              {/* Playback buttons */}
+              <div className="flex items-center gap-1">
+                <button onClick={() => { setVisibleCount(1); setPlaying(false); }}
+                  className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors" title="Restart">
+                  <SkipBack className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={stepBack} disabled={visibleCount <= 1}
+                  className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-30">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button onClick={() => setPlaying((p) => !p)}
+                  className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1.5 text-xs font-semibold shadow-md"
+                  title="Play/Pause (Space)">
+                  {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                  {playing ? "Pause" : "Play"}
+                </button>
+                <button onClick={stepForward} disabled={visibleCount >= total}
+                  className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-30">
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <button onClick={() => { setVisibleCount(total); setPlaying(false); }}
+                  className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors" title="Jump to latest">
+                  <SkipForward className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <span className="text-[10px] text-muted-foreground">← → Space</span>
+            </div>
           </div>
         </div>
 
-        {/* Controls row */}
-        <div className="flex items-center justify-between gap-3">
-          {/* Left: date + trade info */}
-          <div className="flex items-center gap-2 min-w-[140px]">
-            <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+        {/* ── RIGHT: virtual trade panel ── */}
+        <div className="w-72 shrink-0 border-l border-border flex flex-col overflow-y-auto">
+
+          {/* ── ORDER ENTRY ── */}
+          <div className="p-3 border-b border-border space-y-3">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Virtual Trade</p>
+
+            {/* BUY / SELL */}
+            <div className="grid grid-cols-2 gap-1.5">
+              <button onClick={() => setDirection("BUY")}
+                className={`py-2 rounded-lg text-sm font-bold transition-all border ${direction === "BUY" ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-400" : "border-border text-muted-foreground hover:border-emerald-500/30"}`}>
+                <TrendingUp className="w-3.5 h-3.5 inline mr-1" />BUY
+              </button>
+              <button onClick={() => setDirection("SELL")}
+                className={`py-2 rounded-lg text-sm font-bold transition-all border ${direction === "SELL" ? "bg-red-500/20 border-red-500/60 text-red-400" : "border-border text-muted-foreground hover:border-red-500/30"}`}>
+                <TrendingDown className="w-3.5 h-3.5 inline mr-1" />SELL
+              </button>
+            </div>
+
+            {/* Size */}
             <div>
-              <p className="text-xs font-semibold text-foreground">
-                {current?.date ? format(parseISO(current.date), "MMM d, yyyy") : "—"}
-              </p>
-              <p className="text-[10px] text-muted-foreground">{current?.pair ?? "—"} · {current?.direction ?? "—"}</p>
+              <label className="text-[10px] text-muted-foreground">Lot Size</label>
+              <input value={size} onChange={(e) => setSize(e.target.value)}
+                className="w-full mt-0.5 bg-secondary/40 border border-border rounded-lg px-2 py-1.5 text-sm text-right text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
             </div>
-          </div>
 
-          {/* Center: playback controls */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => goTo(0)}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-              title="First trade"
+            {/* SL */}
+            <div>
+              <div className="flex items-center justify-between mb-0.5">
+                <label className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <button onClick={() => setSlEnabled((v) => !v)}
+                    className={`w-3 h-3 rounded-sm border transition-colors ${slEnabled ? "bg-red-500 border-red-500" : "border-border"}`} />
+                  Stop Loss
+                </label>
+              </div>
+              <input value={slInput} onChange={(e) => setSlInput(e.target.value)} disabled={!slEnabled}
+                className="w-full bg-secondary/40 border border-border rounded-lg px-2 py-1.5 text-sm text-right text-red-400 focus:outline-none focus:ring-1 focus:ring-red-500/50 disabled:opacity-40" />
+            </div>
+
+            {/* TP */}
+            <div>
+              <div className="flex items-center justify-between mb-0.5">
+                <label className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <button onClick={() => setTpEnabled((v) => !v)}
+                    className={`w-3 h-3 rounded-sm border transition-colors ${tpEnabled ? "bg-emerald-500 border-emerald-500" : "border-border"}`} />
+                  Take Profit
+                </label>
+              </div>
+              <input value={tpInput} onChange={(e) => setTpInput(e.target.value)} disabled={!tpEnabled}
+                className="w-full bg-secondary/40 border border-border rounded-lg px-2 py-1.5 text-sm text-right text-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 disabled:opacity-40" />
+            </div>
+
+            {/* Place order */}
+            <button onClick={placeOrder} disabled={!!activeTrade || !allBars.length}
+              className={`w-full py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-md
+                ${direction === "BUY"
+                  ? "bg-emerald-500 hover:bg-emerald-400 text-white disabled:bg-emerald-500/30 disabled:text-emerald-500/50"
+                  : "bg-red-500 hover:bg-red-400 text-white disabled:bg-red-500/30 disabled:text-red-500/50"
+                } disabled:cursor-not-allowed`}
             >
-              <SkipBack className="w-4 h-4" />
-            </button>
-            <button
-              onClick={stepBack}
-              disabled={idx === 0}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              title="Previous (←)"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setPlaying((p) => !p)}
-              className="p-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-lg"
-              title="Play/Pause (Space)"
-            >
-              {playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-            </button>
-            <button
-              onClick={stepForward}
-              disabled={idx === total - 1}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              title="Next (→)"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => goTo(total - 1)}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-              title="Last trade"
-            >
-              <SkipForward className="w-4 h-4" />
+              <Zap className="w-4 h-4" />
+              {activeTrade ? "Trade Active" : `Place ${direction}`}
             </button>
           </div>
 
-          {/* Right: counter */}
-          <div className="flex items-center gap-2 min-w-[140px] justify-end">
-            <div className="text-right">
-              <p className="text-xs font-mono font-semibold text-foreground">
-                {String(idx + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
-              </p>
-              <p className="text-[10px] text-muted-foreground">{speed}× speed</p>
+          {/* ── ACTIVE TRADE ── */}
+          {activeTrade && (
+            <div className="p-3 border-b border-border space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Active Position</span>
+                <button onClick={closeActiveTrade} className="text-[10px] text-red-400 hover:text-red-300 flex items-center gap-0.5">
+                  <X className="w-3 h-3" />Close
+                </button>
+              </div>
+              <div className={`p-2.5 rounded-lg border ${activeTrade.direction === "BUY" ? "border-emerald-500/30 bg-emerald-500/5" : "border-red-500/30 bg-red-500/5"}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-xs font-bold ${activeTrade.direction === "BUY" ? "text-emerald-400" : "text-red-400"}`}>
+                    {activeTrade.direction} {pair}
+                  </span>
+                  <span className={`text-sm font-bold ${(livePnl ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                    {livePnl != null ? fmtMoney(livePnl) : "—"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-1 text-[10px]">
+                  <div><span className="text-muted-foreground">Entry</span><br /><span className="font-mono">{fmtP(activeTrade.entry, pair)}</span></div>
+                  <div><span className="text-red-400">SL</span><br /><span className="font-mono">{activeTrade.sl ? fmtP(activeTrade.sl, pair) : "—"}</span></div>
+                  <div><span className="text-emerald-400">TP</span><br /><span className="font-mono">{activeTrade.tp ? fmtP(activeTrade.tp, pair) : "—"}</span></div>
+                </div>
+              </div>
             </div>
-            <div className={`w-2 h-2 rounded-full ${playing ? "bg-primary animate-pulse" : "bg-muted-foreground/30"}`} />
+          )}
+
+          {/* ── SESSION STATS ── */}
+          <div className="p-3 border-b border-border">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <Trophy className="w-3 h-3" />Session
+              </span>
+              {closedTrades.length > 0 && (
+                <button onClick={() => setClosedTrades([])} className="text-[9px] text-muted-foreground hover:text-foreground">Reset</button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "Win / Loss", val: `${stats.wins}W / ${stats.losses}L`, color: stats.wins > stats.losses ? "text-emerald-400" : "text-foreground" },
+                { label: "Win Rate",   val: stats.wins + stats.losses > 0 ? `${Math.round(stats.wins / (stats.wins + stats.losses) * 100)}%` : "—", color: stats.wins / Math.max(1, stats.wins + stats.losses) >= 0.5 ? "text-emerald-400" : "text-red-400" },
+                { label: "Net P&L",    val: stats.totalPnl !== 0 ? fmtMoney(stats.totalPnl) : "$0.00", color: stats.totalPnl >= 0 ? "text-emerald-400" : "text-red-400" },
+                { label: "Trades",     val: String(closedTrades.length + (activeTrade ? 1 : 0)), color: "text-foreground" },
+              ].map(({ label, val, color }) => (
+                <div key={label} className="bg-secondary/30 rounded-lg p-2">
+                  <p className="text-[9px] text-muted-foreground">{label}</p>
+                  <p className={`text-sm font-bold mt-0.5 ${color}`}>{val}</p>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* ── CLOSED TRADES LOG ── */}
+          {closedTrades.length > 0 && (
+            <div className="p-3 flex-1">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Trade Log</p>
+              <div className="space-y-1.5">
+                {[...closedTrades].reverse().map((t) => (
+                  <div key={t.id} className={`flex items-center justify-between p-2 rounded-lg text-[10px] border ${t.result === "WIN" ? "border-emerald-500/20 bg-emerald-500/5" : t.result === "LOSS" ? "border-red-500/20 bg-red-500/5" : "border-border"}`}>
+                    <span className={`font-bold ${t.direction === "BUY" ? "text-emerald-400" : "text-red-400"}`}>{t.direction}</span>
+                    <span className="text-muted-foreground font-mono">{fmtP(t.entry, pair)}</span>
+                    <span className="text-muted-foreground">→</span>
+                    <span className="font-mono">{t.exitPrice ? fmtP(t.exitPrice, pair) : "—"}</span>
+                    <span className={`font-bold ${(t.pnl ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>{t.pnl != null ? fmtMoney(t.pnl) : "—"}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!closedTrades.length && !activeTrade && (
+            <div className="flex-1 flex flex-col items-center justify-center gap-2 p-4 text-center">
+              <BarChart2 className="w-8 h-8 text-muted-foreground/20" />
+              <p className="text-xs text-muted-foreground">Press Play then place virtual trades to practice your strategy</p>
+              <p className="text-[10px] text-muted-foreground/60">← → Space to control playback</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

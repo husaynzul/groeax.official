@@ -1,11 +1,19 @@
 import { Router, type Request, type Response } from "express";
-import { generateHistory, getNextCandle, PAIRS, TIMEFRAMES, getPairsByCategory } from "../services/candleGenerator.js";
+import {
+  generateHistory, getNextCandle,
+  PAIRS, TIMEFRAMES, getPairsByCategory,
+} from "../services/candleGenerator.js";
 import { STRATEGIES } from "../services/backtestEngine.js";
 import {
   BINANCE_SUPPORTED,
   fetchBinanceHistory,
   fetchLatestBinanceCandle,
 } from "../services/binanceService.js";
+import {
+  YAHOO_SUPPORTED,
+  fetchYahooHistory,
+  fetchLatestYahooBar,
+} from "../services/yahooFinanceService.js";
 
 const router = Router();
 
@@ -26,13 +34,23 @@ router.get("/chart/candles", async (req, res) => {
       const bars = await fetchBinanceHistory(pair, tf, limit);
       res.json({ pair, tf, count: bars.length, bars, source: "binance" });
     } catch {
-      const bars = generateHistory(pair, tf, limit);
-      res.json({ pair, tf, count: bars.length, bars, source: "simulated" });
+      res.json({ pair, tf, count: 0, bars: generateHistory(pair, tf, limit), source: "simulated" });
     }
-  } else {
-    const bars = generateHistory(pair, tf, limit);
-    res.json({ pair, tf, count: bars.length, bars, source: "simulated" });
+    return;
   }
+
+  if (YAHOO_SUPPORTED.has(pair)) {
+    try {
+      const bars = await fetchYahooHistory(pair, tf, limit);
+      res.json({ pair, tf, count: bars.length, bars, source: "yahoo" });
+    } catch {
+      res.json({ pair, tf, count: 0, bars: generateHistory(pair, tf, limit), source: "simulated" });
+    }
+    return;
+  }
+
+  const bars = generateHistory(pair, tf, limit);
+  res.json({ pair, tf, count: bars.length, bars, source: "simulated" });
 });
 
 // ── Server-Sent Events live feed ──────────────────────────────────────
@@ -40,12 +58,11 @@ const TF_INTERVAL_MS: Record<string, number> = {
   M1: 2500, M5: 3500, M15: 5000, M30: 6000,
   H1: 7000, H4: 9000, D1: 12000,
 };
+const YAHOO_POLL_MS = 15_000; // Yahoo Finance is rate-limited; poll every 15s
 
 function startGBMStream(
-  req: Request,
-  res: Response,
-  pair: string,
-  tf: string,
+  req: Request, res: Response,
+  pair: string, tf: string,
   push: (d: unknown) => void,
 ) {
   const history = generateHistory(pair, tf, 300);
@@ -57,7 +74,7 @@ function startGBMStream(
     try {
       const next = getNextCandle(latestBar, pair, tf);
       latestBar = next;
-      push({ type: "candle", pair, tf, bar: next });
+      push({ type: "candle", pair, tf, bar: next, source: "simulated" });
     } catch { /* ignore */ }
   }, ms);
 
@@ -82,6 +99,7 @@ router.get("/chart/live", async (req, res) => {
     try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch { /* ignore */ }
   };
 
+  // ── Binance crypto ──
   if (BINANCE_SUPPORTED.has(pair)) {
     try {
       const history = await fetchBinanceHistory(pair, tf, 300);
@@ -90,7 +108,7 @@ router.get("/chart/live", async (req, res) => {
       const timer = setInterval(async () => {
         try {
           const bar = await fetchLatestBinanceCandle(pair, tf);
-          if (bar) push({ type: "candle", pair, tf, bar });
+          if (bar) push({ type: "candle", pair, tf, bar, source: "binance" });
         } catch { /* ignore */ }
       }, 2000);
 
@@ -100,12 +118,42 @@ router.get("/chart/live", async (req, res) => {
 
       req.on("close", () => { clearInterval(timer); clearInterval(heartbeat); });
     } catch {
-      // Binance unavailable — fall back to GBM simulation
       startGBMStream(req, res, pair, tf, push);
     }
-  } else {
-    startGBMStream(req, res, pair, tf, push);
+    return;
   }
+
+  // ── Yahoo Finance forex / stocks / metals / indices ──
+  if (YAHOO_SUPPORTED.has(pair)) {
+    try {
+      const history = await fetchYahooHistory(pair, tf, 300);
+      push({ type: "history", pair, tf, bars: history, source: "yahoo" });
+
+      let lastBarTime = history.length ? history[history.length - 1].time : 0;
+
+      const timer = setInterval(async () => {
+        try {
+          const bar = await fetchLatestYahooBar(pair, tf);
+          if (bar && bar.time >= lastBarTime) {
+            lastBarTime = bar.time;
+            push({ type: "candle", pair, tf, bar, source: "yahoo" });
+          }
+        } catch { /* ignore */ }
+      }, YAHOO_POLL_MS);
+
+      const heartbeat = setInterval(() => {
+        try { res.write(": ping\n\n"); } catch { /* ignore */ }
+      }, 20_000);
+
+      req.on("close", () => { clearInterval(timer); clearInterval(heartbeat); });
+    } catch {
+      startGBMStream(req, res, pair, tf, push);
+    }
+    return;
+  }
+
+  // ── Simulated fallback ──
+  startGBMStream(req, res, pair, tf, push);
 });
 
 // ── Backtest ──────────────────────────────────────────────────────────
