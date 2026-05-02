@@ -15,6 +15,7 @@ import News from "@/pages/News";
 import Replay from "@/pages/Replay";
 import Chart from "@/pages/Chart";
 import Brokers from "@/pages/Brokers";
+import Positions from "@/pages/Positions";
 import NotFound from "@/pages/not-found";
 import { useTradeStore } from "@/store/tradeStore";
 
@@ -62,6 +63,9 @@ function AppRoutes() {
       </Route>
       <Route path="/brokers">
         <AppLayout><Brokers /></AppLayout>
+      </Route>
+      <Route path="/positions">
+        <AppLayout><Positions /></AppLayout>
       </Route>
       <Route component={NotFound} />
     </Switch>

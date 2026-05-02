@@ -15,6 +15,7 @@ import {
   Rewind,
   CandlestickChart,
   Link2,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddTradeModal from "@/components/trades/AddTradeModal";
@@ -29,6 +30,7 @@ const navItems = [
   { href: "/news",      label: "Market News", icon: Newspaper },
   { href: "/replay",    label: "Replay",      icon: Rewind },
   { href: "/chart",     label: "Live Chart",  icon: CandlestickChart },
+  { href: "/positions", label: "Positions",   icon: Layers },
   { href: "/brokers",   label: "Brokers",     icon: Link2 },
 ];
 

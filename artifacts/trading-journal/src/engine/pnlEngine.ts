@@ -145,6 +145,85 @@ function buildUpdate(
   };
 }
 
+// ── Open positions ────────────────────────────────────────────────────
+
+export interface OpenPosition {
+  pair: string;
+  direction: "LONG" | "SHORT";
+  totalQty: number;
+  avgEntryPrice: number;
+  openDate: string;       // date of the oldest unmatched leg
+  tradeIds: string[];
+}
+
+/** Returns still-open (unmatched) positions after FIFO matching. */
+export function extractOpenPositions(trades: Trade[]): OpenPosition[] {
+  const result: OpenPosition[] = [];
+
+  const byPair = new Map<string, Trade[]>();
+  for (const t of trades) {
+    if (!byPair.has(t.pair)) byPair.set(t.pair, []);
+    byPair.get(t.pair)!.push(t);
+  }
+
+  for (const [pair, pairTrades] of byPair) {
+    const sorted = [...pairTrades].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    const longQueue: QueueEntry[] = [];
+    const shortQueue: QueueEntry[] = [];
+
+    for (const t of sorted) {
+      const qty = t.lotSize;
+      const price = t.entryPrice;
+
+      if (t.direction === "BUY") {
+        let remaining = qty;
+        while (remaining > 0 && shortQueue.length > 0) {
+          const oldest = shortQueue[0];
+          const matched = Math.min(remaining, oldest.qty);
+          oldest.qty -= matched;
+          remaining -= matched;
+          if (oldest.qty <= 1e-9) shortQueue.shift();
+        }
+        if (remaining > 1e-9) {
+          longQueue.push({ id: t.id, price, qty: remaining, date: t.date, stopLoss: t.stopLoss, takeProfit: t.takeProfit, notes: t.notes ?? "" });
+        }
+      } else {
+        let remaining = qty;
+        while (remaining > 0 && longQueue.length > 0) {
+          const oldest = longQueue[0];
+          const matched = Math.min(remaining, oldest.qty);
+          oldest.qty -= matched;
+          remaining -= matched;
+          if (oldest.qty <= 1e-9) longQueue.shift();
+        }
+        if (remaining > 1e-9) {
+          shortQueue.push({ id: t.id, price, qty: remaining, date: t.date, stopLoss: t.stopLoss, takeProfit: t.takeProfit, notes: t.notes ?? "" });
+        }
+      }
+    }
+
+    for (const dir of ["LONG", "SHORT"] as const) {
+      const queue = dir === "LONG" ? longQueue : shortQueue;
+      if (queue.length === 0) continue;
+      const totalQty = queue.reduce((s, e) => s + e.qty, 0);
+      const avgEntry = queue.reduce((s, e) => s + e.price * e.qty, 0) / totalQty;
+      result.push({
+        pair,
+        direction: dir,
+        totalQty: parseFloat(totalQty.toFixed(8)),
+        avgEntryPrice: parseFloat(avgEntry.toFixed(8)),
+        openDate: queue[0].date,
+        tradeIds: queue.map(e => e.id),
+      });
+    }
+  }
+
+  return result;
+}
+
 /** Convenience: takes a list of trades, runs the engine, returns a new array
  *  with the matched trades updated in-place. Unmatched trades are untouched. */
 export function applyPnLToTrades(trades: Trade[]): Trade[] {
