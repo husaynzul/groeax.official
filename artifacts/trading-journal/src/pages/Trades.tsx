@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useTradeStore } from "@/store/tradeStore";
 import { computeAnalytics } from "@/engine/analyticsEngine";
-import { format } from "date-fns";
+import { fmtTradeDate } from "@/lib/dateUtils";
 import { Plus, Search, Trash2, Edit2, ChevronUp, ChevronDown, Upload, Download } from "lucide-react";
 import AddTradeModal from "@/components/trades/AddTradeModal";
 import TradeDetailDrawer from "@/components/trades/TradeDetailDrawer";
@@ -255,7 +255,7 @@ export default function Trades() {
                     className="border-b border-border/40 hover:bg-accent/20 transition-colors cursor-pointer group"
                   >
                     <td className="py-2.5 px-4 text-xs text-muted-foreground">
-                      {t.date ? format(new Date(t.date + "T12:00:00"), "MM/dd/yyyy") : "—"}
+                      {fmtTradeDate(t.date, "MM/dd/yyyy")}
                     </td>
                     <td className="py-2.5 px-4 text-xs font-medium">{t.pair}</td>
                     <td className="py-2.5 px-4">

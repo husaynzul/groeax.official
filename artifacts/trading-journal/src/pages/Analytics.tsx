@@ -12,7 +12,7 @@ import {
   Activity, Crosshair, TrendingDown, Info, Trophy, AlertTriangle,
   Zap, PieChartIcon, BarChart2, TrendingUp,
 } from "lucide-react";
-import { format } from "date-fns";
+import { fmtTradeDate } from "@/lib/dateUtils";
 
 const FADE_UP = {
   hidden: { opacity: 0, y: 14 },
@@ -43,7 +43,7 @@ const DrawdownTooltip = ({ active, payload }: { active?: boolean; payload?: { va
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-card border border-border rounded-lg px-3 py-2 text-xs shadow-lg">
-      <p className="text-muted-foreground mb-1">{format(new Date(payload[0].payload.date + "T12:00:00"), "MMM d, yyyy")}</p>
+      <p className="text-muted-foreground mb-1">{fmtTradeDate(payload[0].payload.date, "MMM d, yyyy")}</p>
       <p className="text-red-400 font-semibold">-{fmtMoney(payload[0].value)}</p>
     </div>
   );
@@ -53,7 +53,7 @@ const EquityTooltip = ({ active, payload }: { active?: boolean; payload?: { valu
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-card border border-border rounded-lg px-3 py-2 text-xs shadow-lg">
-      <p className="text-muted-foreground mb-1">{format(new Date(payload[0].payload.date + "T12:00:00"), "MMM d, yyyy")}</p>
+      <p className="text-muted-foreground mb-1">{fmtTradeDate(payload[0].payload.date, "MMM d, yyyy")}</p>
       <p className={`font-semibold ${payload[0].value >= 0 ? "text-emerald-400" : "text-red-400"}`}>{fmtMoney(payload[0].value)}</p>
     </div>
   );
@@ -393,7 +393,7 @@ export default function Analytics() {
               </defs>
               <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.05)" vertical={false} />
               <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#64748b" }}
-                tickFormatter={(v) => format(new Date(v + "T12:00:00"), "MMM d")}
+                tickFormatter={(v) => fmtTradeDate(v, "MMM d")}
                 axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 9, fill: "#64748b" }}
                 tickFormatter={(v) => `$${v.toFixed(0)}`} axisLine={false} tickLine={false} width={52} />
@@ -503,7 +503,7 @@ export default function Analytics() {
               </defs>
               <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.05)" vertical={false} />
               <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#64748b" }}
-                tickFormatter={(v) => format(new Date(v + "T12:00:00"), "MMM d")}
+                tickFormatter={(v) => fmtTradeDate(v, "MMM d")}
                 axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 9, fill: "#64748b" }}
                 tickFormatter={(v) => v === 0 ? "$0" : `-$${Math.abs(v).toFixed(0)}`}

@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { useTradeStore } from "@/store/tradeStore";
 import { computeAnalytics } from "@/engine/analyticsEngine";
 import {
-  format,
   startOfMonth,
+  format,
   endOfMonth,
   eachDayOfInterval,
   getDay,
@@ -11,6 +11,7 @@ import {
   startOfWeek,
   endOfWeek,
 } from "date-fns";
+import { fmtTradeDate } from "@/lib/dateUtils";
 import { Trade } from "@/types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -261,7 +262,7 @@ export default function Journal() {
       {selectedDate && analytics.tradesByDate[selectedDate] && (
         <div className="mt-4 glass-card p-4">
           <h3 className="text-sm font-medium mb-3">
-            Trades on {format(new Date(selectedDate + "T12:00:00"), "EEEE, MMM d, yyyy")}
+            Trades on {fmtTradeDate(selectedDate, "EEEE, MMM d, yyyy")}
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

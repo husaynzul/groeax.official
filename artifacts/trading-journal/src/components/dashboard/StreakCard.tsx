@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Trade } from "@/types";
 import { Flame, TrendingDown, BarChart2, Calendar } from "lucide-react";
+import { toDate } from "@/lib/dateUtils";
 
 interface Props { trades: Trade[] }
 
@@ -52,8 +53,8 @@ function computeDayOfWeekStats(trades: Trade[]) {
 
   for (const t of trades) {
     if (!t.date) continue;
-    const parsed = new Date(t.date + "T12:00:00");
-    if (isNaN(parsed.getTime())) continue;
+    const parsed = toDate(t.date);
+    if (!parsed) continue;
     const d = parsed.getDay();
     if (d < 0 || d > 6 || !stats[d]) continue;
     stats[d].total++;

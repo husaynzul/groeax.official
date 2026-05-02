@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Upload, X, CheckCircle, AlertTriangle, FileText, ChevronRight } from "lucide-react";
 import { parseCSV, ParsedCSVResult } from "@/utils/csvParser";
 import { Trade } from "@/types";
-import { format } from "date-fns";
+import { fmtTradeDate } from "@/lib/dateUtils";
 
 const fmtMoney = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(n);
@@ -178,7 +178,7 @@ export default function CSVImportModal({ open, onClose, onImport }: Props) {
                       <tbody>
                         {result.trades.slice(0, 8).map((t, i) => (
                           <tr key={i} className="border-t border-border/40">
-                            <td className="py-1.5 px-3 text-muted-foreground">{format(new Date(t.date + "T12:00:00"), "MMM d")}</td>
+                            <td className="py-1.5 px-3 text-muted-foreground">{fmtTradeDate(t.date, "MMM d")}</td>
                             <td className="py-1.5 px-3 font-medium">{t.pair}</td>
                             <td className="py-1.5 px-3">
                               <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${t.direction === "BUY" ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}`}>

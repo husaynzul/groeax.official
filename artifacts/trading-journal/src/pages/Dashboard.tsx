@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { fmtTradeDate, toDate } from "@/lib/dateUtils";
 import { useTradeStore } from "@/store/tradeStore";
 import OpenPositions from "@/components/dashboard/OpenPositions";
 import { computeAnalytics } from "@/engine/analyticsEngine";
@@ -441,10 +442,7 @@ function CalendarHeatmap({
       {selectedDate && tradesByDate[selectedDate] && (
         <div className="mt-3 pt-3 border-t border-border">
           <p className="text-xs font-medium text-muted-foreground mb-2">
-            {format(
-              new Date(selectedDate + "T12:00:00"),
-              "MMM d, yyyy"
-            )}
+            {fmtTradeDate(selectedDate, "MMM d, yyyy")}
           </p>
           <div className="space-y-1.5 max-h-36 overflow-y-auto">
             {tradesByDate[selectedDate].map((t) => (
@@ -498,8 +496,8 @@ export default function Dashboard() {
     const now = new Date();
     return trades.reduce((acc, t) => {
       if (!t.date) return acc;
-      const tradeDate = new Date(t.date + "T12:00:00");
-      if (isNaN(tradeDate.getTime()) || !isSameMonth(tradeDate, now)) return acc;
+      const tradeDate = toDate(t.date);
+      if (!tradeDate || !isSameMonth(tradeDate, now)) return acc;
       if (t.outcome === "WIN") return acc + t.netProfit;
       if (t.outcome === "LOSS") return acc - t.netLoss;
       return acc;
@@ -737,7 +735,7 @@ export default function Dashboard() {
                 <XAxis
                   dataKey="date"
                   tick={{ fontSize: 9, fill: "#64748b" }}
-                  tickFormatter={(v) => format(new Date(v + "T12:00:00"), "MMM d")}
+                  tickFormatter={(v) => fmtTradeDate(v, "MMM d")}
                   axisLine={false} tickLine={false}
                 />
                 <YAxis
@@ -792,7 +790,7 @@ export default function Dashboard() {
                 <XAxis
                   dataKey="date"
                   tick={{ fontSize: 9, fill: "#64748b" }}
-                  tickFormatter={(v) => format(new Date(v + "T12:00:00"), "MMM d")}
+                  tickFormatter={(v) => fmtTradeDate(v, "MMM d")}
                   axisLine={false} tickLine={false}
                 />
                 <YAxis
@@ -857,9 +855,7 @@ export default function Dashboard() {
                       className="border-b border-border/40 hover:bg-accent/30 transition-colors"
                     >
                       <td className="py-2 text-muted-foreground text-xs">
-                        {t.date && !isNaN(new Date(t.date + "T12:00:00").getTime())
-                          ? format(new Date(t.date + "T12:00:00"), "MM/dd/yy")
-                          : "—"}
+                        {fmtTradeDate(t.date, "MM/dd/yy")}
                       </td>
                       <td className="py-2 font-medium text-xs">{t.pair}</td>
                       <td className="py-2">

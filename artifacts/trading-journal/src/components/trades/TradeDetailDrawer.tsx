@@ -6,7 +6,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Trade } from "@/types";
-import { format } from "date-fns";
+import { fmtTradeDate } from "@/lib/dateUtils";
 import {
   TrendingUp,
   TrendingDown,
@@ -138,7 +138,7 @@ export default function TradeDetailDrawer({
               </SheetTitle>
               <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
                 <Calendar className="w-3 h-3" />
-                {format(new Date(trade.date + "T12:00:00"), "EEEE, MMM d yyyy")}
+                {fmtTradeDate(trade.date, "EEEE, MMM d yyyy")}
               </p>
             </div>
             <div className="flex items-center gap-2 mt-1">
