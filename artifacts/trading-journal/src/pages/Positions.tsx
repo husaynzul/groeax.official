@@ -94,6 +94,8 @@ export default function Positions() {
 
   useEffect(() => {
     void fetchPrices();
+    const timer = setInterval(() => void fetchPrices(), 30_000);
+    return () => clearInterval(timer);
   }, [fetchPrices]);
 
   const rows: PositionRow[] = useMemo(() => {
