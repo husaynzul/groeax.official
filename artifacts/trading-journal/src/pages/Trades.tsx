@@ -255,7 +255,7 @@ export default function Trades() {
                     className="border-b border-border/40 hover:bg-accent/20 transition-colors cursor-pointer group"
                   >
                     <td className="py-2.5 px-4 text-xs text-muted-foreground">
-                      {format(new Date(t.date + "T12:00:00"), "MM/dd/yyyy")}
+                      {t.date ? format(new Date(t.date + "T12:00:00"), "MM/dd/yyyy") : "—"}
                     </td>
                     <td className="py-2.5 px-4 text-xs font-medium">{t.pair}</td>
                     <td className="py-2.5 px-4">
