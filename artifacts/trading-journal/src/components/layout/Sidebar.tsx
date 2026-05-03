@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import AddTradeModal from "@/components/trades/AddTradeModal";
 import { useMT5Store } from "@/store/mt5Store";
+import groeaxLogo from "@assets/image_1777793677793_1777793731333.jpeg";
 
 const navItems = [
   { href: "/dashboard",    label: "Dashboard",    icon: LayoutDashboard },
@@ -66,9 +67,7 @@ export default function Sidebar({ onSignOut, userName }: { onSignOut?: () => voi
       >
         <Link href="/dashboard"
           className="flex items-center gap-2 px-4 py-5 border-b border-sidebar-border min-h-[64px] hover:opacity-80 transition-opacity">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/20 shrink-0">
-            <TrendingUp className="w-4 h-4 text-primary" />
-          </div>
+          <img src={groeaxLogo} alt="Groeax logo" className="w-8 h-8 object-contain shrink-0" />
           {!collapsed && (
             <span className="font-semibold text-sm tracking-wide text-foreground">
               Groeax

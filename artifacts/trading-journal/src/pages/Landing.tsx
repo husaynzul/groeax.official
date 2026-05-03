@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "wouter";
+import groeaxLogo from "@assets/image_1777793677793_1777793731333.jpeg";
 import {
   ChevronRight, TrendingUp, BarChart2, Bot, Shield,
   Zap, Activity, ArrowUpRight, Globe, BookOpen,
@@ -135,9 +136,7 @@ export default function Landing() {
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between
         px-6 py-4 bg-[#030712]/80 backdrop-blur-xl border-b border-white/5">
         <Link href="/dashboard" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-          <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-            <TrendingUp className="w-4 h-4 text-primary" />
-          </div>
+          <img src={groeaxLogo} alt="Groeax logo" className="w-8 h-8 object-contain" />
           <span className="font-bold text-lg tracking-tight">Groeax</span>
         </Link>
 
