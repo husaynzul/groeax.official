@@ -279,6 +279,19 @@ router.post("/auth/subscribe", async (req, res) => {
       status: paymentStatus,
     });
 
+    // Send email to USER with subscription details
+    void sendPaymentEmail({
+      userName: currentUser.name,
+      userEmail: email ?? currentUser.email,
+      plan: `${subscribePlan.replace("_", " ").toUpperCase()} — ${amountDisplay} USDT`,
+      amount: amountDisplay,
+      txHash: txHash?.trim(),
+      screenshotUrl,
+      status: paymentStatus,
+      paymentId: payment.id,
+    }, email ?? currentUser.email);
+
+    // Also send to admin
     const adminEmail = process.env.ADMIN_EMAIL ?? currentUser.email;
     void sendPaymentEmail({
       userName: currentUser.name,
