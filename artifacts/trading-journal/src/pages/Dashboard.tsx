@@ -20,7 +20,9 @@ import {
   PolarGrid,
   PolarAngleAxis,
   Radar,
-  PieCell,
+  PieChart,
+  Pie,
+  Cell,
   ReferenceLine,
 } from "recharts";
 import { motion } from "framer-motion";
@@ -104,8 +106,8 @@ function MonthlyGoalCard({ monthlyPnL, goal, onSetGoal }: { monthlyPnL: number; 
             <ResponsiveContainer width={100} height={100}>
               <PieChart>
                 <Pie data={donutData} cx="50%" cy="50%" innerRadius={32} outerRadius={44} startAngle={90} endAngle={-270} dataKey="value" strokeWidth={0} isAnimationActive animationDuration={900}>
-                  <PieCell fill={ringColor} />
-                  <PieCell fill="rgba(255,255,255,0.05)" />
+                  <Cell fill={ringColor} />
+                  <Cell fill="rgba(255,255,255,0.05)" />
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
@@ -249,7 +251,7 @@ export default function Dashboard() {
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="glass-card p-4 hover:border-white/15 transition-colors">
           <div className="flex items-center gap-2 mb-4"><BarChart2 className="w-3.5 h-3.5 text-primary" /><h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Net Daily P&amp;L</h2></div>
-          {analytics.dailyPnL.length > 0 ? <ResponsiveContainer width="100%" height={200}><BarChart data={analytics.dailyPnL} margin={{ top: 8, right: 8, bottom: 4, left: 0 }} barCategoryGap="30%"><CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.05)" vertical={false} /><XAxis dataKey="date" tick={{ fontSize: 9, fill: "#64748b" }} tickFormatter={(v) => fmtTradeDate(v, "MMM d")} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 9, fill: "#64748b" }} tickFormatter={(v) => `$${Number(v).toFixed(0)}`} axisLine={false} tickLine={false} width={48} /><ReferenceLine y={0} stroke="rgba(255,255,255,0.35)" strokeWidth={2} /><Tooltip content={undefined} /><Bar dataKey="pnl" radius={[3, 3, 0, 0]} isAnimationActive animationDuration={800} maxBarSize={36}>{analytics.dailyPnL.map((entry, i) => <PieCell key={i} fill={entry.pnl >= 0 ? "#22c55e" : "#ef4444"} fillOpacity={1} />)}</Bar></BarChart></ResponsiveContainer> : <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">No trade data yet</div>}
+          {analytics.dailyPnL.length > 0 ? <ResponsiveContainer width="100%" height={200}><BarChart data={analytics.dailyPnL} margin={{ top: 8, right: 8, bottom: 4, left: 0 }} barCategoryGap="30%"><CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.05)" vertical={false} /><XAxis dataKey="date" tick={{ fontSize: 9, fill: "#64748b" }} tickFormatter={(v) => fmtTradeDate(v, "MMM d")} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 9, fill: "#64748b" }} tickFormatter={(v) => `$${Number(v).toFixed(0)}`} axisLine={false} tickLine={false} width={48} /><ReferenceLine y={0} stroke="rgba(255,255,255,0.35)" strokeWidth={2} /><Tooltip content={undefined} /><Bar dataKey="pnl" radius={[3, 3, 0, 0]} isAnimationActive animationDuration={800} maxBarSize={36}>{analytics.dailyPnL.map((entry, i) => <Cell key={i} fill={entry.pnl >= 0 ? "#22c55e" : "#ef4444"} fillOpacity={1} />)}</Bar></BarChart></ResponsiveContainer> : <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">No trade data yet</div>}
         </motion.div>
       </div>
 
