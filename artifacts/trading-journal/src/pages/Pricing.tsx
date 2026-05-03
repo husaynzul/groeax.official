@@ -10,6 +10,7 @@ import groeaxLogo from "@assets/WhatsApp_Image_2026-05-03_at_12.44.10_PM_1777794
 
 const BINANCE_WALLET = "THrybvwth3eDpXVnZwBRohZ7AB3bY4Cqjs";
 const BINANCE_ID = "520572397";
+const PAYMENT_AMOUNT = "90 USDT";
 
 const FREE_FEATURES = [
   { icon: Activity, label: "Trade Journal & P&L tracking" },
@@ -289,27 +290,28 @@ export default function Pricing() {
             </div>
 
             <div className="space-y-4 mb-6">
-              <div className="bg-violet-500/10 border border-violet-500/25 rounded-lg p-3 text-sm text-violet-300">
-                <p className="font-semibold mb-1">Binance ID: {BINANCE_ID}</p>
-                <p className="text-xs text-violet-300/70">Send exactly 90 USDT (TRC20) to the wallet below</p>
-              </div>
-
-              <div>
-                <p className="text-sm text-white/50 mb-2">Wallet Address:</p>
-                <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-3">
-                  <code className="text-xs text-white/80 flex-1 break-all font-mono">{BINANCE_WALLET}</code>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(BINANCE_WALLET);
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 2000);
-                    }}
-                    className="shrink-0 p-1.5 hover:bg-white/10 rounded text-white/40 hover:text-white transition-colors"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
+              <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-lg p-4 space-y-3">
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-emerald-400 font-semibold mb-1">Binance ID</p>
+                  <p className="text-lg font-bold text-white">{BINANCE_ID}</p>
                 </div>
-                {copied && <p className="text-xs text-emerald-400 mt-1">✓ Copied to clipboard</p>}
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-emerald-400 font-semibold mb-2">Send {PAYMENT_AMOUNT} (USDT TRC20)</p>
+                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5">
+                    <code className="text-xs text-white/80 flex-1 break-all font-mono">{BINANCE_WALLET}</code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(BINANCE_WALLET);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                      className="shrink-0 p-1.5 hover:bg-white/10 rounded text-white/40 hover:text-white transition-colors"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+                  {copied && <p className="text-xs text-emerald-400 mt-1.5">✓ Copied to clipboard</p>}
+                </div>
               </div>
 
               <div>
