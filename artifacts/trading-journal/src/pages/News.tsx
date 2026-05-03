@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { format, parseISO, isToday, isTomorrow, isPast, differenceInMinutes } from "date-fns";
 import { Newspaper, RefreshCw, AlertTriangle, Clock, Filter, Globe } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,6 +12,8 @@ interface CalEvent {
   previous?: string;
   actual?: string;
 }
+
+type NewsTimezone = "PKT" | "IST" | "GST" | "UK" | "EST" | "PST";
 
 const IMPACT_CONFIG = {
   High:    { color: "text-red-400",    bg: "bg-red-500/15",    border: "border-red-500/30",    dot: "bg-red-400",    label: "HIGH"   },
@@ -31,6 +33,15 @@ const TIME_ZONE_GROUPS = [
   { value: "singapore", label: "Singapore" },
 ];
 
+const NEWS_TIMEZONES: Array<{ value: NewsTimezone; label: string; display: string; tz: string }> = [
+  { value: "PKT", label: "Pakistan (PKT)", display: "PKT", tz: "Asia/Karachi" },
+  { value: "IST", label: "India (IST)", display: "IST", tz: "Asia/Kolkata" },
+  { value: "GST", label: "UAE (GST)", display: "GST", tz: "Asia/Dubai" },
+  { value: "UK", label: "UK (GMT/BST)", display: "UK", tz: "Europe/London" },
+  { value: "EST", label: "USA (EST)", display: "EST", tz: "America/New_York" },
+  { value: "PST", label: "USA (PST)", display: "PST", tz: "America/Los_Angeles" },
+];
+
 const FLAG: Record<string, string> = {
   USD: "🇺🇸", EUR: "🇪🇺", GBP: "🇬🇧", JPY: "🇯🇵",
   AUD: "🇦🇺", CAD: "🇨🇦", CHF: "🇨🇭", NZD: "🇳🇿",
@@ -39,6 +50,19 @@ const FLAG: Record<string, string> = {
 
 function getFlag(country: string) {
   return FLAG[country] ?? "🌐";
+}
+
+function fmtTZ(date: Date, tz: string): string {
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(date);
+  } catch {
+    return format(date, "HH:mm");
+  }
 }
 
 function fmtEventTime(dateStr: string): string {
@@ -87,6 +111,7 @@ export default function News() {
   const [filterImpact, setFilterImpact] = useState<string>("High");
   const [filterCurrency, setFilterCurrency] = useState<string>("all");
   const [filterTimeZone, setFilterTimeZone] = useState<string>("all");
+  const [selectedTimezone, setSelectedTimezone] = useState<NewsTimezone>("PKT");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fetchNews = useCallback(async () => {
@@ -137,6 +162,10 @@ export default function News() {
 
   const grouped = groupByDay(filtered);
   const groupKeys = Object.keys(grouped);
+  const selectedTz = useMemo(
+    () => NEWS_TIMEZONES.find((tz) => tz.value === selectedTimezone) ?? NEWS_TIMEZONES[0],
+    [selectedTimezone]
+  );
 
   const highImpactCount = events.filter(
     (e) => e.impact === "High" && !isPast(parseISO(e.date))
@@ -228,6 +257,21 @@ export default function News() {
             ))}
           </select>
         </div>
+
+        <div className="flex items-center gap-1 p-1 rounded-lg bg-secondary/40 border border-border">
+          <Clock className="w-3 h-3 text-muted-foreground ml-1.5" />
+          <select
+            value={selectedTimezone}
+            onChange={(e) => setSelectedTimezone(e.target.value as NewsTimezone)}
+            className="text-xs bg-transparent text-muted-foreground px-2 py-1 focus:outline-none"
+          >
+            {NEWS_TIMEZONES.map((tz) => (
+              <option key={tz.value} value={tz.value}>
+                {tz.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {loading && (
@@ -280,6 +324,7 @@ export default function News() {
                     const until = timeUntil(ev.date);
                     const past = isPast(parseISO(ev.date));
                     const hasActual = !!ev.actual;
+                    const utcDate = parseISO(ev.date);
 
                     return (
                       <motion.div
@@ -296,9 +341,22 @@ export default function News() {
                         }`}
                       >
                         <div className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot} ${ev.impact === "High" && !past ? "animate-pulse" : ""}`} />
-                        <div className="w-12 text-center shrink-0">
-                          <p className="text-xs font-mono font-semibold text-foreground">{fmtEventTime(ev.date)}</p>
-                          {until && <p className="text-[9px] text-amber-400 font-bold">{until}</p>}
+                        <div className="w-16 text-center shrink-0">
+                          <p className="text-[9px] text-muted-foreground uppercase tracking-wider">UTC</p>
+                          <p className="text-xs font-mono font-semibold text-foreground">{fmtTZ(utcDate, "UTC")}</p>
+                          <p className="text-[9px] text-emerald-400/80 font-bold">{until ?? "Now"}</p>
+                        </div>
+                        <div className="w-16 text-center shrink-0">
+                          <p className="text-[9px] text-muted-foreground uppercase tracking-wider">PKT</p>
+                          <p className="text-xs font-mono font-semibold text-foreground">{fmtTZ(utcDate, "Asia/Karachi")}</p>
+                        </div>
+                        <div className="w-16 text-center shrink-0">
+                          <p className="text-[9px] text-muted-foreground uppercase tracking-wider">IST</p>
+                          <p className="text-xs font-mono font-semibold text-foreground">{fmtTZ(utcDate, "Asia/Kolkata")}</p>
+                        </div>
+                        <div className="w-16 text-center shrink-0">
+                          <p className="text-[9px] text-muted-foreground uppercase tracking-wider">{selectedTz.display}</p>
+                          <p className="text-xs font-mono font-semibold text-primary">{fmtTZ(utcDate, selectedTz.tz)}</p>
                         </div>
                         <div className="w-10 text-center shrink-0">
                           <span className="text-base">{getFlag(ev.country)}</span>
@@ -346,7 +404,7 @@ export default function News() {
       )}
 
       <p className="text-center text-[10px] text-muted-foreground/40 mt-6">
-        Data from ForexFactory · Refreshes every 5 minutes · All times in your local timezone
+        Data from ForexFactory · Refreshes every 5 minutes · Times shown in UTC and selected zones
       </p>
     </div>
   );
