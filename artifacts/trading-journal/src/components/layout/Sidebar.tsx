@@ -18,6 +18,7 @@ import {
   Brain,
   LogOut,
   Crown,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddTradeModal from "@/components/trades/AddTradeModal";
@@ -180,6 +181,16 @@ export default function Sidebar({ onSignOut, userName }: { onSignOut?: () => voi
         </div>
 
         <div className="p-2 border-t border-sidebar-border space-y-2">
+          <Link href="/account" className={cn(
+            "flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition-colors",
+            collapsed ? "justify-center px-2" : "",
+            location === "/account"
+              ? "bg-sidebar-accent text-foreground font-medium"
+              : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
+          )}>
+            <Settings className="w-4 h-4 shrink-0" />
+            {!collapsed && <span>Account</span>}
+          </Link>
           {onSignOut && !collapsed && (
             <button onClick={onSignOut} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors">
               <LogOut className="w-4 h-4" />

@@ -8,7 +8,7 @@ import {
 import { useAuthStore, apiSubscribe } from "@/store/authStore";
 import groeaxLogo from "@assets/WhatsApp_Image_2026-05-03_at_12.44.10_PM_1777794284426.jpeg";
 
-const BINANCE_WALLET = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh";
+const BINANCE_WALLET = "THrybvwth3eDpXVnZwBRohZ7AB3bY4Cqjs";
 
 const FREE_FEATURES = [
   { icon: Activity, label: "Trade Journal & P&L tracking" },
@@ -289,7 +289,7 @@ export default function Pricing() {
 
             <div className="space-y-4 mb-6">
               <div>
-                <p className="text-sm text-white/50 mb-2">Send exactly 0.0025 BTC to:</p>
+                <p className="text-sm text-white/50 mb-2">Send exactly 90 USDT (TRC20) to:</p>
                 <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-3">
                   <code className="text-xs text-white/80 flex-1 break-all font-mono">{BINANCE_WALLET}</code>
                   <button
