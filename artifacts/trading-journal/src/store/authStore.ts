@@ -104,10 +104,16 @@ export async function apiPaymentConfig(): Promise<PaymentConfig> {
 
 export type SubscribePlan = "platinum_monthly" | "platinum_yearly" | "premium_monthly" | "premium_yearly";
 
+export interface SubscribePayload {
+  email?: string;
+  txHash?: string;
+  screenshotBase64?: string;
+}
+
 export async function apiSubscribe(
   token: string,
   plan: SubscribePlan,
-  payment: { email?: string; txHash: string },
+  payment: SubscribePayload,
 ) {
   const res = await fetch(`${BASE()}/api/auth/subscribe`, {
     method: "POST",
@@ -116,5 +122,5 @@ export async function apiSubscribe(
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "Subscription failed");
-  return data.user as AuthUser;
+  return data as { user: AuthUser; status: "activated" | "pending"; message?: string };
 }

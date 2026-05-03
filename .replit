@@ -38,3 +38,9 @@ externalPort = 3003
 [[ports]]
 localPort = 21194
 externalPort = 3000
+
+[userenv]
+
+[userenv.shared]
+WHATSAPP_ADMIN_1 = "+923478618727"
+WHATSAPP_ADMIN_2 = "+923278659748"

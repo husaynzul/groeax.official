@@ -7,11 +7,15 @@ export const paymentsTable = pgTable("payments", {
   userId: serial("user_id").notNull(),
   plan: text("plan").notNull(),
   amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
-  txHash: text("tx_hash").notNull(),
+  txHash: text("tx_hash"),
   walletAddress: text("wallet_address").notNull(),
+  screenshotPath: text("screenshot_path"),
+  status: text("status").default("pending").notNull(), // pending | verified | rejected
   verified: boolean("verified").default(false).notNull(),
   verifiedAt: timestamp("verified_at"),
   verificationError: text("verification_error"),
+  userEmail: text("user_email"),
+  userName: text("user_name"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
