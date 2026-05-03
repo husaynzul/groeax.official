@@ -72,42 +72,59 @@ export async function sendPaymentEmail(info: PaymentNotification, adminEmail: st
   `;
 
   try {
-    // Using nodemailer with SMTP config from env vars
     const transporter = createEmailTransport();
     if (!transporter) {
-      logger.warn("Email notification skipped — SMTP not configured. Set EMAIL_SMTP_HOST, EMAIL_SMTP_PORT, EMAIL_SMTP_USER, EMAIL_SMTP_PASSWORD env vars.");
+      logger.warn("Email notification skipped — Gmail not configured. Set EMAIL_SMTP_USER and EMAIL_SMTP_PASSWORD env vars with valid Gmail app password.");
       return;
     }
 
+    logger.info({ to: adminEmail, from: process.env.EMAIL_SMTP_USER }, "Attempting to send payment email...");
+
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM ?? "noreply@groeax.com",
+      from: process.env.EMAIL_SMTP_USER || "noreply@groeax.com",
       to: adminEmail,
       subject: `[Groeax] Payment ${statusLabel} - ${info.userName} - ${info.amount} USDT`,
       html: htmlBody,
     });
 
-    logger.info({ adminEmail }, "Payment notification email sent");
+    logger.info({ to: adminEmail }, "✅ Payment notification email sent successfully");
   } catch (err) {
-    logger.error({ err, adminEmail }, "Failed to send payment notification email");
+    logger.error({ 
+      err: err instanceof Error ? {
+        message: err.message,
+        code: (err as any).code,
+        response: (err as any).response,
+        responseCode: (err as any).responseCode,
+      } : err,
+      to: adminEmail,
+      from: process.env.EMAIL_SMTP_USER 
+    }, "❌ Failed to send payment notification email");
   }
 }
 
 function createEmailTransport(): any {
-  const host = process.env.EMAIL_SMTP_HOST;
-  const port = process.env.EMAIL_SMTP_PORT;
   const user = process.env.EMAIL_SMTP_USER;
   const pass = process.env.EMAIL_SMTP_PASSWORD;
 
-  if (!host || !port || !user || !pass) {
+  if (!user || !pass) {
+    logger.warn("Email SMTP not configured. Set EMAIL_SMTP_USER and EMAIL_SMTP_PASSWORD env vars.");
     return null;
   }
 
   // Lazy import to avoid requiring nodemailer if not used
   const nodemailer = require("nodemailer");
-  return nodemailer.createTransport({
-    host,
-    port: parseInt(port),
-    secure: port === "465",
-    auth: { user, pass },
-  });
+  
+  // Use Gmail service directly for simpler config
+  try {
+    return nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user,
+        pass
+      }
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to create email transporter");
+    return null;
+  }
 }
