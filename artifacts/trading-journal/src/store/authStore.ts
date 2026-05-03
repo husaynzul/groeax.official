@@ -82,11 +82,11 @@ export async function apiMe(token: string) {
   return data.user as AuthUser;
 }
 
-export async function apiSubscribe(token: string, plan: "monthly" | "yearly") {
+export async function apiSubscribe(token: string, plan: "monthly" | "yearly", binance?: { email: string; txHash: string }) {
   const res = await fetch(`${BASE()}/api/auth/subscribe`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ plan }),
+    body: JSON.stringify({ plan, ...binance }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "Subscription failed");

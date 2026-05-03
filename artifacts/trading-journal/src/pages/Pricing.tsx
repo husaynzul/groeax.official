@@ -3,10 +3,12 @@ import { motion } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import {
   Check, Zap, Crown, Star, ArrowLeft, Loader2, Shield,
-  Bot, Brain, CandlestickChart, Activity, Link2, Layers,
+  Bot, Brain, CandlestickChart, Activity, Link2, Layers, X, Copy,
 } from "lucide-react";
 import { useAuthStore, apiSubscribe } from "@/store/authStore";
 import groeaxLogo from "@assets/WhatsApp_Image_2026-05-03_at_12.44.10_PM_1777794284426.jpeg";
+
+const BINANCE_WALLET = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh";
 
 const FREE_FEATURES = [
   { icon: Activity, label: "Trade Journal & P&L tracking" },
@@ -32,10 +34,18 @@ export default function Pricing() {
   const [billing, setBilling] = useState<"monthly" | "yearly">("yearly");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showBinance, setShowBinance] = useState(false);
+  const [binanceEmail, setBinanceEmail] = useState("");
+  const [txHash, setTxHash] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const subscribe = async () => {
     if (!token) {
       setLocation("/signup");
+      return;
+    }
+    if (billing === "yearly") {
+      setShowBinance(true);
       return;
     }
     setLoading(true);
@@ -46,6 +56,25 @@ export default function Pricing() {
       setLocation("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Subscription failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmBinancePayment = async () => {
+    if (!binanceEmail || !txHash.trim()) {
+      setError("Please enter your email and transaction hash.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const updatedUser = await apiSubscribe(token!, "yearly", { email: binanceEmail, txHash: txHash.trim() });
+      updateUser(updatedUser);
+      setShowBinance(false);
+      setLocation("/dashboard");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Payment confirmation failed");
     } finally {
       setLoading(false);
     }
@@ -172,9 +201,9 @@ export default function Pricing() {
             <div className="mb-2">
               {billing === "yearly" ? (
                 <>
-                  <span className="text-5xl font-black text-white">$7.92</span>
+                  <span className="text-5xl font-black text-white">$7.50</span>
                   <span className="text-white/35 text-sm ml-2">/ month</span>
-                  <p className="text-emerald-400 text-xs font-semibold mt-1">Billed $95 / year</p>
+                  <p className="text-emerald-400 text-xs font-semibold mt-1">Billed $90 / year</p>
                 </>
               ) : (
                 <>
@@ -232,6 +261,101 @@ export default function Pricing() {
           <p className="text-xs text-white/18">© 2026 Groeax · Professional trading tools for serious traders</p>
         </motion.div>
       </div>
+
+      {/* Binance Payment Modal */}
+      {showBinance && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowBinance(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            className="bg-[#0b0f18] border border-white/10 rounded-2xl p-8 max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white">Send Payment</h2>
+              <button
+                onClick={() => setShowBinance(false)}
+                className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-white/50" />
+              </button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <p className="text-sm text-white/50 mb-2">Send exactly 0.0025 BTC to:</p>
+                <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-3">
+                  <code className="text-xs text-white/80 flex-1 break-all font-mono">{BINANCE_WALLET}</code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(BINANCE_WALLET);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="shrink-0 p-1.5 hover:bg-white/10 rounded text-white/40 hover:text-white transition-colors"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
+                {copied && <p className="text-xs text-emerald-400 mt-1">✓ Copied to clipboard</p>}
+              </div>
+
+              <div>
+                <label className="text-sm text-white/50 mb-2 block">Email (for order tracking)</label>
+                <input
+                  type="email"
+                  value={binanceEmail}
+                  onChange={(e) => setBinanceEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-violet-500/50"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-white/50 mb-2 block">Transaction Hash / TX ID</label>
+                <input
+                  type="text"
+                  value={txHash}
+                  onChange={(e) => setTxHash(e.target.value)}
+                  placeholder="Paste your BTC transaction hash here"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-violet-500/50"
+                />
+              </div>
+
+              {error && (
+                <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={confirmBinancePayment}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white font-semibold text-sm transition-all disabled:opacity-60"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                {loading ? "Confirming…" : "Confirm Payment"}
+              </button>
+              <button
+                onClick={() => setShowBinance(false)}
+                className="w-full py-2.5 rounded-lg border border-white/10 text-white/50 hover:text-white text-sm font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+
+            <p className="text-[10px] text-white/25 text-center mt-4">
+              Your subscription will activate within 24 hours after we verify your payment.
+            </p>
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 }

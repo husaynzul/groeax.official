@@ -116,9 +116,14 @@ router.post("/auth/subscribe", async (req, res) => {
     const token = authHeader.slice(7);
     const payload = jwt.verify(token, JWT_SECRET) as { sub: number };
 
-    const { plan } = req.body as { plan?: "monthly" | "yearly" };
+    const { plan, email, txHash } = req.body as { plan?: string; email?: string; txHash?: string };
     if (plan !== "monthly" && plan !== "yearly") {
       res.status(400).json({ error: "Plan must be 'monthly' or 'yearly'." });
+      return;
+    }
+
+    if (plan === "yearly" && (!email || !txHash)) {
+      res.status(400).json({ error: "For yearly plan, email and transaction hash are required." });
       return;
     }
 
@@ -127,13 +132,16 @@ router.post("/auth/subscribe", async (req, res) => {
       ? new Date(now.getFullYear() + 1, now.getMonth(), now.getDate())
       : new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
 
+    req.log.info({ userId: payload.sub, plan, email, txHash }, "Subscription");
+
     const [user] = await db.update(usersTable)
       .set({ plan, planExpiresAt })
       .where(eq(usersTable.id, payload.sub))
       .returning();
 
     res.json({ user: safeUser(user) });
-  } catch {
+  } catch (err) {
+    req.log.error(err, "subscribe error");
     res.status(401).json({ error: "Invalid or expired token." });
   }
 });
