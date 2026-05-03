@@ -16,6 +16,7 @@ import {
   Link2,
   Layers,
   Brain,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddTradeModal from "@/components/trades/AddTradeModal";
@@ -49,7 +50,7 @@ const STATUS_LABEL: Record<string, string> = {
   disconnected: "MT5 Offline",
 };
 
-export default function Sidebar() {
+export default function Sidebar({ onSignOut, userName }: { onSignOut?: () => void; userName?: string }) {
   const [location] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -74,6 +75,12 @@ export default function Sidebar() {
             </span>
           )}
         </Link>
+
+        {!collapsed && userName && (
+          <div className="px-3 pt-3 text-xs text-muted-foreground">
+            Signed in as <span className="text-foreground font-medium">{userName}</span>
+          </div>
+        )}
 
         <div className="flex-1 flex flex-col gap-1 p-2 pt-3">
           <button
@@ -115,7 +122,6 @@ export default function Sidebar() {
           })}
         </div>
 
-        {/* MT5 Bridge Status */}
         <div className={cn(
           "px-3 py-2.5 mx-2 mb-1 rounded-lg bg-sidebar-accent/50 border border-sidebar-border flex items-center gap-2.5 transition-all duration-300",
           collapsed ? "justify-center px-0 bg-transparent border-transparent" : ""
@@ -128,7 +134,13 @@ export default function Sidebar() {
           )}
         </div>
 
-        <div className="p-2 border-t border-sidebar-border">
+        <div className="p-2 border-t border-sidebar-border space-y-2">
+          {onSignOut && !collapsed && (
+            <button onClick={onSignOut} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors">
+              <LogOut className="w-4 h-4" />
+              Sign out
+            </button>
+          )}
           <button
             onClick={() => setCollapsed(!collapsed)}
             className="flex items-center justify-center w-full py-2 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"
