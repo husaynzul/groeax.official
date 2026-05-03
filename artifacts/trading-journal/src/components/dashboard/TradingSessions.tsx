@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { TradingSession } from "@/types";
-import { Clock } from "lucide-react";
+import { Clock, Globe } from "lucide-react";
 
 interface TZInfo {
   city: string;
@@ -27,9 +27,9 @@ const SESSIONS: {
     startUTC: 23,
     endUTC: 8,
     tzones: [
-      { city: "Hong Kong", iana: "Asia/Hong_Kong",  abbr: "HKT"  },
-      { city: "Singapore", iana: "Asia/Singapore",  abbr: "SGT"  },
-      { city: "Sydney",    iana: "Australia/Sydney", abbr: "AEDT" },
+      { city: "Hong Kong", iana: "Asia/Hong_Kong", abbr: "HKT" },
+      { city: "Singapore", iana: "Asia/Singapore", abbr: "SGT" },
+      { city: "Sydney", iana: "Australia/Sydney", abbr: "AEDT" },
     ],
   },
   {
@@ -41,9 +41,9 @@ const SESSIONS: {
     startUTC: 0,
     endUTC: 9,
     tzones: [
-      { city: "Tokyo",  iana: "Asia/Tokyo", abbr: "JST" },
-      { city: "Seoul",  iana: "Asia/Seoul", abbr: "KST" },
-      { city: "Osaka",  iana: "Asia/Tokyo", abbr: "JST" },
+      { city: "Tokyo", iana: "Asia/Tokyo", abbr: "JST" },
+      { city: "Seoul", iana: "Asia/Seoul", abbr: "KST" },
+      { city: "Osaka", iana: "Asia/Tokyo", abbr: "JST" },
     ],
   },
   {
@@ -55,9 +55,9 @@ const SESSIONS: {
     startUTC: 8,
     endUTC: 17,
     tzones: [
-      { city: "London",    iana: "Europe/London", abbr: "GMT"  },
-      { city: "Frankfurt", iana: "Europe/Berlin", abbr: "CET"  },
-      { city: "Zurich",    iana: "Europe/Zurich", abbr: "CET"  },
+      { city: "London", iana: "Europe/London", abbr: "GMT" },
+      { city: "Frankfurt", iana: "Europe/Berlin", abbr: "CET" },
+      { city: "Zurich", iana: "Europe/Zurich", abbr: "CET" },
     ],
   },
   {
@@ -69,9 +69,9 @@ const SESSIONS: {
     startUTC: 13,
     endUTC: 22,
     tzones: [
-      { city: "New York", iana: "America/New_York", abbr: "EST"  },
-      { city: "Chicago",  iana: "America/Chicago",  abbr: "CST"  },
-      { city: "Toronto",  iana: "America/Toronto",  abbr: "EST"  },
+      { city: "New York", iana: "America/New_York", abbr: "EST" },
+      { city: "Chicago", iana: "America/Chicago", abbr: "CST" },
+      { city: "Toronto", iana: "America/Toronto", abbr: "EST" },
     ],
   },
 ];
@@ -84,13 +84,8 @@ function isSessionActive(startUTC: number, endUTC: number, utcHour: number): boo
 function sessionProgress(startUTC: number, endUTC: number, utcHour: number, utcMin: number): number {
   const totalMins = (endUTC > startUTC ? endUTC - startUTC : 24 - startUTC + endUTC) * 60;
   let elapsed = 0;
-  if (startUTC <= endUTC) {
-    elapsed = (utcHour - startUTC) * 60 + utcMin;
-  } else {
-    elapsed = utcHour >= startUTC
-      ? (utcHour - startUTC) * 60 + utcMin
-      : (24 - startUTC + utcHour) * 60 + utcMin;
-  }
+  if (startUTC <= endUTC) elapsed = (utcHour - startUTC) * 60 + utcMin;
+  else elapsed = utcHour >= startUTC ? (utcHour - startUTC) * 60 + utcMin : (24 - startUTC + utcHour) * 60 + utcMin;
   return Math.min(100, Math.max(0, (elapsed / totalMins) * 100));
 }
 
@@ -119,18 +114,6 @@ function fmtLocalTime(iana: string, now: Date): string {
   }
 }
 
-function getAbbr(iana: string, now: Date): string {
-  try {
-    const parts = new Intl.DateTimeFormat("en-US", {
-      timeZone: iana,
-      timeZoneName: "short",
-    }).formatToParts(now);
-    return parts.find((p) => p.type === "timeZoneName")?.value ?? "";
-  } catch {
-    return "";
-  }
-}
-
 export default function TradingSessions() {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -139,26 +122,21 @@ export default function TradingSessions() {
   }, []);
 
   const utcHour = now.getUTCHours();
-  const utcMin  = now.getUTCMinutes();
+  const utcMin = now.getUTCMinutes();
   const utcTime = `${String(utcHour).padStart(2, "0")}:${String(utcMin).padStart(2, "0")} UTC`;
-
   const activeSessions = SESSIONS.filter((s) => isSessionActive(s.startUTC, s.endUTC, utcHour));
   const overlap = activeSessions.length > 1;
 
   return (
-    <div className="glass-card p-4">
-      <div className="flex items-center justify-between mb-3">
+    <div className="rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.015))] backdrop-blur-xl p-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Clock className="w-3.5 h-3.5 text-primary" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sessions</span>
+          <span className="text-xs font-semibold uppercase tracking-[0.22em] text-white/45">Sessions</span>
         </div>
         <div className="flex items-center gap-1.5">
-          {overlap && (
-            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25 uppercase tracking-wider animate-pulse">
-              Overlap
-            </span>
-          )}
-          <span className="text-[10px] text-muted-foreground font-mono">{utcTime}</span>
+          {overlap && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 uppercase tracking-wider animate-pulse">Overlap</span>}
+          <span className="text-[10px] text-white/35 font-mono">{utcTime}</span>
         </div>
       </div>
 
@@ -167,61 +145,37 @@ export default function TradingSessions() {
           const active = isSessionActive(s.startUTC, s.endUTC, utcHour);
           const pct = active ? sessionProgress(s.startUTC, s.endUTC, utcHour, utcMin) : 0;
           const countdown = !active ? fmtCountdown(minsUntilOpen(s.startUTC, utcHour, utcMin)) : null;
-
           return (
-            <div
-              key={s.id}
-              className={`relative rounded-xl p-3 border transition-all ${
-                active
-                  ? `border-${s.color.split("-")[1]}-500/30 bg-${s.color.split("-")[1]}-500/5`
-                  : "border-border bg-secondary/20"
-              }`}
-            >
-              {/* Header row */}
+            <div key={s.id} className={`relative rounded-xl p-3 border transition-all overflow-hidden ${active ? "border-white/10 bg-white/[0.035]" : "border-white/5 bg-white/[0.02]"}`}>
+              <div className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-current to-transparent ${s.color} opacity-60`} />
               <div className="flex items-center justify-between mb-2">
                 <span className="text-base">{s.flag}</span>
-                <div className={`w-2 h-2 rounded-full ${active ? `bg-current ${s.color} ${s.glow} shadow-md` : "bg-muted-foreground/30"}`} />
+                <div className={`w-2 h-2 rounded-full ${active ? `bg-current ${s.color} shadow-[0_0_10px_currentColor]` : "bg-white/20"}`} />
               </div>
-
-              <p className={`text-xs font-semibold ${active ? s.color : "text-muted-foreground"}`}>{s.label}</p>
-              <p className="text-[9px] text-muted-foreground/60 mt-0.5 font-mono">
-                {String(s.startUTC).padStart(2, "0")}:00 – {String(s.endUTC).padStart(2, "0")}:00 UTC
-              </p>
-
-              {/* Timezone clocks */}
+              <p className={`text-xs font-semibold ${active ? s.color : "text-white/45"}`}>{s.label}</p>
+              <p className="text-[9px] text-white/25 mt-0.5 font-mono">{String(s.startUTC).padStart(2, "0")}:00 – {String(s.endUTC).padStart(2, "0")}:00 UTC</p>
               <div className="mt-2 space-y-0.5">
-                {s.tzones.map((tz) => {
-                  const localTime = fmtLocalTime(tz.iana, now);
-                  const abbr = getAbbr(tz.iana, now);
-                  return (
-                    <div key={tz.city} className="flex items-center justify-between">
-                      <span className="text-[9px] text-muted-foreground/70 truncate max-w-[60%]">{tz.city}</span>
-                      <span className={`text-[9px] font-mono font-semibold ${active ? s.color : "text-muted-foreground/60"}`}>
-                        {localTime} <span className="opacity-60 font-normal">{abbr}</span>
-                      </span>
-                    </div>
-                  );
-                })}
+                {s.tzones.map((tz) => (
+                  <div key={tz.city} className="flex items-center justify-between">
+                    <span className="text-[9px] text-white/35 truncate max-w-[60%]">{tz.city}</span>
+                    <span className={`text-[9px] font-mono font-semibold ${active ? s.color : "text-white/40"}`}>{fmtLocalTime(tz.iana, now)} <span className="opacity-60 font-normal">{tz.abbr}</span></span>
+                  </div>
+                ))}
               </div>
-
-              {/* Progress / countdown */}
               {active ? (
-                <div className="mt-2">
+                <div className="mt-2.5">
                   <div className="flex justify-between mb-0.5">
-                    <span className="text-[8px] text-muted-foreground">Progress</span>
+                    <span className="text-[8px] text-white/30">Progress</span>
                     <span className={`text-[8px] font-bold ${s.color}`}>{pct.toFixed(0)}%</span>
                   </div>
-                  <div className="h-1 bg-secondary rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full bg-current ${s.color} transition-all`}
-                      style={{ width: `${pct}%` }}
-                    />
+                  <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${s.color} bg-current`} style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               ) : (
-                <div className="mt-2">
-                  <p className="text-[8px] text-muted-foreground/50">Opens in</p>
-                  <p className="text-[9px] font-semibold text-muted-foreground">{countdown}</p>
+                <div className="mt-2.5 flex items-center gap-1.5 text-white/35">
+                  <Globe className="w-3 h-3" />
+                  <p className="text-[8px]">Opens in <span className="text-white/55 font-semibold">{countdown}</span></p>
                 </div>
               )}
             </div>
