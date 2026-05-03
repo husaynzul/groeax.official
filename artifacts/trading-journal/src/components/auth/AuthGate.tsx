@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Lock, Mail, UserPlus, LogIn, ShieldCheck } from "lucide-react";
+import { Mail, UserPlus, LogIn, ShieldCheck, Loader2 } from "lucide-react";
 
 const AUTH_KEY = "tradelog_auth_user";
 
@@ -54,6 +54,12 @@ export function AuthGate({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loadingDelay, setLoadingDelay] = useState(true);
+
+  useEffect(() => {
+    const id = setTimeout(() => setLoadingDelay(false), 700);
+    return () => clearTimeout(id);
+  }, []);
 
   const submit = () => {
     const cleanEmail = email.trim().toLowerCase();
@@ -64,6 +70,17 @@ export function AuthGate({
   };
 
   if (user) return <>{children}</>;
+
+  if (loadingDelay) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          Loading TradeLog…
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.12),transparent_24%),radial-gradient(circle_at_80%_0%,rgba(139,92,246,0.10),transparent_18%)] flex items-center justify-center p-6">
