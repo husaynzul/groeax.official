@@ -8,6 +8,7 @@ export interface PaymentNotification {
   txHash?: string;
   screenshotUrl?: string;
   status: "pending" | "verified";
+  paymentId?: number;
 }
 
 export async function sendPaymentEmail(info: PaymentNotification, adminEmail: string): Promise<void> {
@@ -33,6 +34,17 @@ export async function sendPaymentEmail(info: PaymentNotification, adminEmail: st
           <div style="margin-bottom: 20px;">
             <p style="color: #666; margin-bottom: 10px;"><strong>Payment Screenshot:</strong></p>
             <a href="${info.screenshotUrl}" style="display: inline-block; background: #007bff; color: white; padding: 10px 20px; border-radius: 4px; text-decoration: none;">View Screenshot</a>
+          </div>
+        ` : ""}
+
+        ${info.status === "pending" && info.paymentId ? `
+          <div style="margin-bottom: 20px; padding: 15px; background: #f0f7ff; border-radius: 4px; border: 1px solid #b3d9ff;">
+            <p style="color: #0066cc; margin-bottom: 10px; font-weight: bold;">Quick Approval</p>
+            <p style="color: #333; margin: 0 0 10px 0; font-size: 13px;">Use your admin API token to approve this payment:</p>
+            <code style="display: block; background: white; padding: 10px; border-radius: 3px; margin-bottom: 10px; font-size: 11px; color: #333; border: 1px solid #ddd; word-break: break-all;">curl -X POST https://[YOUR-DOMAIN]/api/admin/approve-payment/${info.paymentId} \\
+  -H "Content-Type: application/json" \\
+  -d '{"adminToken":"YOUR_ADMIN_API_TOKEN"}'</code>
+            <p style="color: #666; margin: 0; font-size: 12px;">Or check pending payments: GET /api/admin/pending-payments?adminToken=YOUR_TOKEN</p>
           </div>
         ` : ""}
 

@@ -288,6 +288,7 @@ router.post("/auth/subscribe", async (req, res) => {
       txHash: txHash?.trim(),
       screenshotUrl,
       status: paymentStatus,
+      paymentId: payment.id,
     }, adminEmail);
 
     if (autoVerified) {
