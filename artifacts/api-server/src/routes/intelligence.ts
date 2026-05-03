@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware, premiumMiddleware } from "../middleware/auth.js";
+import { authMiddleware, platinumMiddleware } from "../middleware/auth.js";
 import { generateTradingSignal, type TradingSignalOutput } from "./tradingSignal.js";
 
 const router = Router();
@@ -245,7 +245,7 @@ async function runFusion(): Promise<IntelligenceFeedItem[]> {
   return result;
 }
 
-router.get("/intelligence/feed", authMiddleware, premiumMiddleware, async (_req, res) => {
+router.get("/intelligence/feed", authMiddleware, platinumMiddleware, async (_req, res) => {
   try {
     if (fusionCache && Date.now() - fusionCache.ts < 60_000) {
       res.json(fusionCache.data);

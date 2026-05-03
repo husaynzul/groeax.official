@@ -10,10 +10,12 @@ import intelligenceRouter from "./intelligence.js";
 import tradingSignalRouter from "./tradingSignal.js";
 import marketIntelligenceRouter from "./marketIntelligence.js";
 import authRouter from "./auth.js";
+import paymentRouter from "./payment.js";
 
 const router: IRouter = Router();
 
 router.use(authRouter);
+router.use(paymentRouter);
 router.use(healthRouter);
 router.use(aiRouter);
 router.use(newsRouter);

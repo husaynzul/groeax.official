@@ -63,7 +63,7 @@ export default function Sidebar({ onSignOut, userName }: { onSignOut?: () => voi
   const [collapsed, setCollapsed] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const mt5Status = useMT5Store((s) => s.status);
-  const { isPremium, user } = useAuthStore();
+  const { isPlatinum, user } = useAuthStore();
 
   return (
     <>
@@ -88,7 +88,7 @@ export default function Sidebar({ onSignOut, userName }: { onSignOut?: () => voi
             <span className="truncate">
               <span className="text-foreground font-medium">{user.name}</span>
             </span>
-            {isPremium && (
+            {isPlatinum && (
               <span className="shrink-0">
                 <PremiumBadge />
               </span>
@@ -133,7 +133,7 @@ export default function Sidebar({ onSignOut, userName }: { onSignOut?: () => voi
           {!collapsed && (
             <div className="mt-3 mb-1 px-2">
               <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground/50 font-semibold flex items-center gap-1.5">
-                <Crown className="w-2.5 h-2.5" /> Premium
+                <Crown className="w-2.5 h-2.5" /> Platinum & Premium
               </p>
             </div>
           )}
@@ -151,15 +151,15 @@ export default function Sidebar({ onSignOut, userName }: { onSignOut?: () => voi
                   collapsed ? "justify-center px-2" : "",
                   isActive
                     ? "bg-sidebar-accent text-foreground font-medium"
-                    : isPremium
-                    ? "text-violet-400 hover:bg-violet-500/10 hover:text-violet-300"
+                    : isPlatinum
+                    ? "text-blue-400 hover:bg-blue-500/10 hover:text-blue-300"
                     : "text-muted-foreground/50 hover:bg-sidebar-accent hover:text-muted-foreground"
                 )}
               >
                 <Icon className="w-4 h-4 shrink-0" />
                 {!collapsed && <span>{label}</span>}
-                {!collapsed && !isPremium && !isActive && (
-                  <Crown className="ml-auto w-3 h-3 text-violet-400/50" />
+                {!collapsed && !isPlatinum && !isActive && (
+                  <Crown className="ml-auto w-3 h-3 text-blue-400/50" />
                 )}
               </Link>
             );

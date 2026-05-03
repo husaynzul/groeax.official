@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware, premiumMiddleware } from "../middleware/auth.js";
+import { authMiddleware, platinumMiddleware } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -19,7 +19,7 @@ When given trading stats, analyze: win rate, profit factor, average R:R, drawdow
 
 Format responses with clear sections when appropriate. Use bullet points for multiple insights.`;
 
-router.post("/ai/analyze", authMiddleware, premiumMiddleware, async (req, res) => {
+router.post("/ai/analyze", authMiddleware, platinumMiddleware, async (req, res) => {
   try {
     const { messages, tradingContext } = req.body;
 

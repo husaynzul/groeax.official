@@ -14,6 +14,16 @@ declare global {
   }
 }
 
+function isPaidPlan(plan: string): boolean {
+  return plan === "platinum" || plan === "premium"
+    // backwards-compat with old plan names
+    || plan === "monthly" || plan === "yearly";
+}
+
+function isPremiumPlan(plan: string): boolean {
+  return plan === "premium" || plan === "yearly";
+}
+
 export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization;
@@ -32,25 +42,38 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     req.userId = user.id;
     req.userPlan = user.plan;
     next();
-  } catch (err) {
+  } catch {
     return res.status(401).json({ error: "Invalid or expired token." });
   }
 }
 
+/** Requires Platinum OR Premium subscription */
+export function platinumMiddleware(req: Request, res: Response, next: NextFunction) {
+  if (!req.userId || !req.userPlan) {
+    return res.status(401).json({ error: "Unauthorized." });
+  }
+  if (!isPaidPlan(req.userPlan)) {
+    return res.status(403).json({
+      error: "This feature requires a Platinum or Premium subscription.",
+      code: "SUBSCRIPTION_REQUIRED",
+      plan: req.userPlan,
+    });
+  }
+  next();
+}
+
+/** Requires Premium-only subscription */
 export function premiumMiddleware(req: Request, res: Response, next: NextFunction) {
   if (!req.userId || !req.userPlan) {
     return res.status(401).json({ error: "Unauthorized." });
   }
-
-  const isPremium = req.userPlan !== "free";
-  if (!isPremium) {
+  if (!isPremiumPlan(req.userPlan)) {
     return res.status(403).json({
       error: "This feature requires a Premium subscription.",
       code: "PREMIUM_REQUIRED",
       plan: req.userPlan,
     });
   }
-
   next();
 }
 

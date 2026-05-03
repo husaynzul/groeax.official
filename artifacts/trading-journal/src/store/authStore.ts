@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type Plan = "free" | "monthly" | "yearly";
+export type Plan = "silver" | "platinum" | "premium" | "free" | "monthly" | "yearly";
 
 export interface AuthUser {
   id: number;
@@ -15,6 +15,7 @@ interface AuthStore {
   user: AuthUser | null;
   token: string | null;
   ready: boolean;
+  isPlatinum: boolean;
   isPremium: boolean;
   setAuth: (user: AuthUser, token: string) => void;
   clearAuth: () => void;
@@ -24,25 +25,32 @@ interface AuthStore {
 
 const TOKEN_KEY = "groeax_token";
 
+function deriveTiers(plan: Plan) {
+  const isPlatinum = plan === "platinum" || plan === "premium" || plan === "monthly" || plan === "yearly";
+  const isPremium = plan === "premium" || plan === "yearly";
+  return { isPlatinum, isPremium };
+}
+
 export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
   token: null,
   ready: false,
+  isPlatinum: false,
   isPremium: false,
 
   setAuth: (user, token) => {
     try { localStorage.setItem(TOKEN_KEY, token); } catch {}
-    set({ user, token, isPremium: user.plan !== "free" });
+    set({ user, token, ...deriveTiers(user.plan) });
   },
 
   clearAuth: () => {
     try { localStorage.removeItem(TOKEN_KEY); } catch {}
-    set({ user: null, token: null, isPremium: false });
+    set({ user: null, token: null, isPlatinum: false, isPremium: false });
   },
 
   setReady: () => set({ ready: true }),
 
-  updateUser: (user) => set({ user, isPremium: user.plan !== "free" }),
+  updateUser: (user) => set({ user, ...deriveTiers(user.plan) }),
 }));
 
 export function getSavedToken(): string | null {
@@ -82,11 +90,29 @@ export async function apiMe(token: string) {
   return data.user as AuthUser;
 }
 
-export async function apiSubscribe(token: string, plan: "monthly" | "yearly", binance?: { email: string; txHash: string }) {
+export interface PaymentConfig {
+  wallet: string;
+  binanceMerchantId: string;
+  plans: Record<string, { amount: string; currency: string; label: string }>;
+}
+
+export async function apiPaymentConfig(): Promise<PaymentConfig> {
+  const res = await fetch(`${BASE()}/api/payment/config`);
+  if (!res.ok) throw new Error("Failed to load payment config");
+  return res.json() as Promise<PaymentConfig>;
+}
+
+export type SubscribePlan = "platinum_monthly" | "platinum_yearly" | "premium_monthly" | "premium_yearly";
+
+export async function apiSubscribe(
+  token: string,
+  plan: SubscribePlan,
+  payment: { email?: string; txHash: string },
+) {
   const res = await fetch(`${BASE()}/api/auth/subscribe`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ plan, ...binance }),
+    body: JSON.stringify({ plan, ...payment }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "Subscription failed");

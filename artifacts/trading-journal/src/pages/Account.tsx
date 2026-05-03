@@ -1,45 +1,34 @@
+import React from "react";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "wouter";
-import { ArrowLeft, Crown, Calendar, Mail, User as UserIcon, Copy, CheckCircle, Clock, Zap } from "lucide-react";
+import { ArrowLeft, Crown, Calendar, User as UserIcon, Clock, Zap, Star } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import groeaxLogo from "@assets/WhatsApp_Image_2026-05-03_at_12.44.10_PM_1777794284426.jpeg";
 
+const PLAN_META: Record<string, { label: string; desc: string; color: string; bg: string; border: string; icon: React.ElementType }> = {
+  silver: { label: "Silver",   desc: "Free plan",             color: "text-white/50",  bg: "bg-white/5",       border: "border-white/10",       icon: Star   },
+  free:   { label: "Silver",   desc: "Free plan",             color: "text-white/50",  bg: "bg-white/5",       border: "border-white/10",       icon: Star   },
+  platinum: { label: "Platinum", desc: "Full real-time access", color: "text-blue-400",  bg: "bg-blue-500/10",   border: "border-blue-500/25",    icon: Zap    },
+  monthly:  { label: "Platinum", desc: "Full real-time access", color: "text-blue-400",  bg: "bg-blue-500/10",   border: "border-blue-500/25",    icon: Zap    },
+  premium:  { label: "Premium",  desc: "Advanced AI + Priority",color: "text-violet-400",bg: "bg-violet-500/10", border: "border-violet-500/25",  icon: Crown  },
+  yearly:   { label: "Premium",  desc: "Advanced AI + Priority",color: "text-violet-400",bg: "bg-violet-500/10", border: "border-violet-500/25",  icon: Crown  },
+};
+
 export default function Account() {
   const [, setLocation] = useLocation();
-  const { user, clearAuth } = useAuthStore();
-  const [copied, setCopied] = React.useState(false);
+  const { user, clearAuth, isPlatinum } = useAuthStore();
 
   if (!user) {
     setLocation("/login");
     return null;
   }
 
-  const planLabel = {
-    free: "Free",
-    monthly: "Premium (Monthly)",
-    yearly: "Premium (Yearly)",
-  }[user.plan];
-
-  const planColor = {
-    free: "text-white/50",
-    monthly: "text-violet-400",
-    yearly: "text-violet-400",
-  }[user.plan];
-
-  const planBgColor = {
-    free: "bg-white/5",
-    monthly: "bg-violet-500/10",
-    yearly: "bg-violet-500/10",
-  }[user.plan];
-
-  const planBorder = {
-    free: "border-white/10",
-    monthly: "border-violet-500/25",
-    yearly: "border-violet-500/25",
-  }[user.plan];
-
+  const meta = PLAN_META[user.plan] ?? PLAN_META.silver;
+  const PlanIcon = meta.icon;
   const expiryDate = user.planExpiresAt ? new Date(user.planExpiresAt) : null;
-  const daysLeft = expiryDate ? Math.max(0, Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : null;
+  const daysLeft = expiryDate
+    ? Math.max(0, Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null;
 
   return (
     <div className="min-h-screen bg-[#030712] text-white overflow-x-hidden">
@@ -61,92 +50,72 @@ export default function Account() {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-4xl font-black tracking-tight mb-8">Account Settings</h1>
 
-          {/* User Info */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-8 mb-8">
+          {/* Profile */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-8 mb-6">
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <UserIcon className="w-5 h-5 text-white/50" />
-              Profile
+              <UserIcon className="w-5 h-5 text-white/50" /> Profile
             </h2>
-
             <div className="space-y-4">
               <div>
                 <label className="text-xs uppercase tracking-widest text-white/40 font-semibold">Name</label>
                 <p className="text-lg text-white mt-1">{user.name}</p>
               </div>
-
               <div>
                 <label className="text-xs uppercase tracking-widest text-white/40 font-semibold">Email</label>
                 <p className="text-lg text-white mt-1">{user.email}</p>
               </div>
-
               <div>
                 <label className="text-xs uppercase tracking-widest text-white/40 font-semibold">Member Since</label>
                 <p className="text-lg text-white mt-1">
-                  {new Date(user.createdAt).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
+                  {new Date(user.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
                 </p>
               </div>
             </div>
           </div>
 
           {/* Plan Status */}
-          <div
-            className={`rounded-2xl border ${planBorder} ${planBgColor} p-8 mb-8`}
-          >
+          <div className={`rounded-2xl border ${meta.border} ${meta.bg} p-8 mb-6`}>
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
               <Crown className="w-5 h-5" /> Your Plan
             </h2>
-
             <div className="space-y-6">
               <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-xl ${planBgColor} border ${planBorder} flex items-center justify-center`}>
-                  {user.plan === "free" ? (
-                    <UserIcon className="w-6 h-6 text-white/40" />
-                  ) : (
-                    <Crown className="w-6 h-6 text-violet-400" />
-                  )}
+                <div className={`w-12 h-12 rounded-xl ${meta.bg} border ${meta.border} flex items-center justify-center`}>
+                  <PlanIcon className={`w-6 h-6 ${meta.color}`} />
                 </div>
                 <div>
-                  <p className={`text-2xl font-bold ${planColor}`}>{planLabel}</p>
-                  {user.plan === "free" && <p className="text-sm text-white/40 mt-1">Upgrade anytime</p>}
+                  <p className={`text-2xl font-bold ${meta.color}`}>{meta.label}</p>
+                  <p className="text-sm text-white/40 mt-0.5">{meta.desc}</p>
                 </div>
               </div>
 
-              {user.plan !== "free" && expiryDate && (
+              {isPlatinum && expiryDate && (
                 <div className="bg-white/[0.03] border border-white/8 rounded-lg p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-white/50 flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      Expires on
+                      <Calendar className="w-4 h-4" /> Expires on
                     </span>
                     <span className="font-semibold text-white">
-                      {expiryDate.toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
+                      {expiryDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                     </span>
                   </div>
                   {daysLeft !== null && (
                     <div className="flex items-center justify-between pt-2 border-t border-white/8">
                       <span className="text-sm text-white/50 flex items-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        Time remaining
+                        <Clock className="w-4 h-4" /> Time remaining
                       </span>
-                      <span className="font-semibold text-emerald-400">{daysLeft} days</span>
+                      <span className={`font-semibold ${daysLeft <= 7 ? "text-amber-400" : "text-emerald-400"}`}>
+                        {daysLeft} days
+                      </span>
                     </div>
                   )}
                 </div>
               )}
 
-              {user.plan === "free" && (
+              {!isPlatinum && (
                 <Link href="/pricing">
-                  <button className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white font-semibold text-sm transition-all shadow-lg shadow-violet-500/25">
-                    <Zap className="w-4 h-4" />
-                    Upgrade to Premium
+                  <button className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-semibold text-sm transition-all shadow-lg shadow-blue-500/25">
+                    <Zap className="w-4 h-4" /> Upgrade to Platinum or Premium
                   </button>
                 </Link>
               )}
@@ -171,5 +140,3 @@ export default function Account() {
     </div>
   );
 }
-
-import React from "react";

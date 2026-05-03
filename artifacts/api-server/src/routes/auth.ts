@@ -3,12 +3,15 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { db, usersTable, paymentsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { verifyTronPayment } from "../services/tronVerification.js";
+import { verifyTronPayment, PLAN_AMOUNTS_USDT, PLAN_AMOUNT_DISPLAY, getTargetWallet } from "../services/tronVerification.js";
 
 const router = Router();
 
 const JWT_SECRET = process.env.SESSION_SECRET ?? "groeax-dev-secret-change-in-prod";
 const JWT_EXPIRES = "30d";
+
+const VALID_PLANS = ["platinum_monthly", "platinum_yearly", "premium_monthly", "premium_yearly"] as const;
+type SubscribePlan = (typeof VALID_PLANS)[number];
 
 function signToken(userId: number) {
   return jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
@@ -23,6 +26,21 @@ function safeUser(u: typeof usersTable.$inferSelect) {
     planExpiresAt: u.planExpiresAt,
     createdAt: u.createdAt,
   };
+}
+
+/** Resolve the stored plan name from a subscribe plan key */
+function planTierName(subscribePlan: SubscribePlan): string {
+  if (subscribePlan.startsWith("platinum")) return "platinum";
+  return "premium";
+}
+
+/** Calculate expiry date based on plan period */
+function calcExpiry(subscribePlan: SubscribePlan): Date {
+  const now = new Date();
+  if (subscribePlan.endsWith("yearly")) {
+    return new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
+  }
+  return new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
 }
 
 router.post("/auth/signup", async (req, res) => {
@@ -48,7 +66,7 @@ router.post("/auth/signup", async (req, res) => {
       name: name.trim(),
       email: email.toLowerCase().trim(),
       passwordHash,
-      plan: "free",
+      plan: "silver",
     }).returning();
 
     const token = signToken(user.id);
@@ -107,6 +125,11 @@ router.get("/auth/me", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/auth/subscribe
+ * Body: { plan: "platinum_monthly" | "platinum_yearly" | "premium_monthly" | "premium_yearly", txHash: string, email?: string }
+ * ALL paid plans require blockchain-verified USDT TRC20 payment.
+ */
 router.post("/auth/subscribe", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -118,64 +141,70 @@ router.post("/auth/subscribe", async (req, res) => {
     const payload = jwt.verify(token, JWT_SECRET) as { sub: number };
 
     const { plan, email, txHash } = req.body as { plan?: string; email?: string; txHash?: string };
-    if (plan !== "monthly" && plan !== "yearly") {
-      res.status(400).json({ error: "Plan must be 'monthly' or 'yearly'." });
-      return;
-    }
 
-    if (plan === "yearly" && (!email || !txHash)) {
-      res.status(400).json({ error: "For yearly plan, email and transaction hash are required." });
-      return;
-    }
-
-    // For yearly plan: verify TRON transaction on blockchain
-    if (plan === "yearly") {
-      req.log.info({ userId: payload.sub, txHash }, "Verifying TRON payment");
-      const verification = await verifyTronPayment(txHash);
-
-      // Store payment record for audit
-      await db.insert(paymentsTable).values({
-        userId: payload.sub,
-        plan: "yearly",
-        amount: "150",
-        txHash: txHash.trim().toLowerCase(),
-        walletAddress: "THrybvwth3eDpXVnZwBRohZ7AB3bY4Cqjs",
-        verified: verification.valid,
-        verificationError: verification.error,
+    if (!plan || !VALID_PLANS.includes(plan as SubscribePlan)) {
+      res.status(400).json({
+        error: `Plan must be one of: ${VALID_PLANS.join(", ")}`,
+        valid_plans: VALID_PLANS,
       });
-
-      if (!verification.valid) {
-        req.log.warn({ userId: payload.sub, txHash, error: verification.error }, "Payment verification failed");
-        res.status(402).json({ error: verification.error, code: "PAYMENT_VERIFICATION_FAILED" });
-        return;
-      }
-
-      // Payment verified — activate subscription
-      req.log.info({ userId: payload.sub, txHash }, "Payment verified successfully");
+      return;
     }
 
-    // Activate subscription
-    const now = new Date();
-    const planExpiresAt = plan === "yearly"
-      ? new Date(now.getFullYear() + 1, now.getMonth(), now.getDate())
-      : new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+    if (!txHash?.trim()) {
+      res.status(400).json({ error: "Transaction hash is required for all paid plans." });
+      return;
+    }
+
+    const subscribePlan = plan as SubscribePlan;
+    const expectedAmount = PLAN_AMOUNTS_USDT[subscribePlan];
+    const amountDisplay = PLAN_AMOUNT_DISPLAY[subscribePlan];
+    const wallet = getTargetWallet();
+
+    req.log.info({ userId: payload.sub, plan, txHash }, "Verifying TRON payment");
+
+    const verification = await verifyTronPayment(txHash, expectedAmount);
+
+    // Audit record regardless of outcome
+    await db.insert(paymentsTable).values({
+      userId: payload.sub,
+      plan: subscribePlan,
+      amount: amountDisplay,
+      txHash: txHash.trim().toLowerCase(),
+      walletAddress: wallet,
+      verified: verification.valid,
+      verificationError: verification.error ?? null,
+    });
+
+    if (!verification.valid) {
+      req.log.warn({ userId: payload.sub, plan, txHash, error: verification.error }, "Payment verification failed");
+      res.status(402).json({
+        error: verification.error,
+        code: "PAYMENT_VERIFICATION_FAILED",
+        expected_amount: `${amountDisplay} USDT`,
+        wallet,
+      });
+      return;
+    }
+
+    req.log.info({ userId: payload.sub, plan, txHash }, "Payment verified — activating subscription");
+
+    const tierName = planTierName(subscribePlan);
+    const planExpiresAt = calcExpiry(subscribePlan);
 
     const [user] = await db.update(usersTable)
-      .set({ plan, planExpiresAt })
+      .set({ plan: tierName, planExpiresAt })
       .where(eq(usersTable.id, payload.sub))
       .returning();
 
-    if (plan === "yearly") {
-      // Update payment record as verified
-      await db.update(paymentsTable)
-        .set({ verified: true, verifiedAt: now })
-        .where(eq(paymentsTable.txHash, txHash.trim().toLowerCase()));
-    }
+    // Stamp payment record as verified
+    await db.update(paymentsTable)
+      .set({ verified: true, verifiedAt: new Date() })
+      .where(eq(paymentsTable.txHash, txHash.trim().toLowerCase()));
 
     res.json({ user: safeUser(user) });
   } catch (err) {
     req.log.error(err, "subscribe error");
-    res.status(401).json({ error: "Invalid or expired token." });
+    res.status(500).json({ error: "Internal server error." });
   }
 });
 

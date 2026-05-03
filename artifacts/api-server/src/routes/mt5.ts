@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware, premiumMiddleware } from "../middleware/auth.js";
+import { authMiddleware, platinumMiddleware } from "../middleware/auth.js";
 import { broadcastToApp, appClientCount } from "../ws/appBroadcast.js";
 
 const router = Router();
@@ -28,7 +28,7 @@ router.get("/mt5/status", (_req, res) => {
   });
 });
 
-router.post("/mt5/trade", authMiddleware, premiumMiddleware, (req, res) => {
+router.post("/mt5/trade", authMiddleware, platinumMiddleware, (req, res) => {
   const body = req.body as Partial<MT5TradePayload>;
 
   if (!body.symbol || !body.direction || !body.type) {
