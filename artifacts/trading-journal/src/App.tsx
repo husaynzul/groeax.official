@@ -1,8 +1,8 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useEffect } from "react";
+import { useEffect, ReactNode } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { useMT5Bridge } from "@/hooks/useMT5Bridge";
 import Landing from "@/pages/Landing";
@@ -18,8 +18,13 @@ import Chart from "@/pages/Chart";
 import Brokers from "@/pages/Brokers";
 import Positions from "@/pages/Positions";
 import NotFound from "@/pages/not-found";
+import Login from "@/pages/Login";
+import Signup from "@/pages/Signup";
+import Pricing from "@/pages/Pricing";
 import { useTradeStore } from "@/store/tradeStore";
-import { AuthGate, useAuthState } from "@/components/auth/AuthGate";
+import { useAuthStore } from "@/store/authStore";
+import { AuthProvider } from "@/components/auth/AuthProvider";
+import { PremiumGate } from "@/components/auth/PremiumGate";
 
 const queryClient = new QueryClient();
 
@@ -28,57 +33,69 @@ function MT5BridgeGlobal() {
   return null;
 }
 
-function AppRoutes() {
-  const hydrate = useTradeStore((s) => s.hydrate);
-  const auth = useAuthState();
+function ProtectedRoute({ children }: { children: ReactNode }) {
+  const { user, ready } = useAuthStore();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
-    hydrate();
-  }, [hydrate]);
+    if (ready && !user) setLocation("/login");
+  }, [ready, user]);
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-[#030712] flex items-center justify-center">
+        <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (!user) return null;
+  return <>{children}</>;
+}
+
+function AppRoutes() {
+  const hydrate = useTradeStore((s) => s.hydrate);
+  const { user, clearAuth } = useAuthStore();
+
+  useEffect(() => { hydrate(); }, [hydrate]);
+
+  const layout = (children: ReactNode) => (
+    <ProtectedRoute>
+      <AppLayout onSignOut={clearAuth} userName={user?.name}>
+        {children}
+      </AppLayout>
+    </ProtectedRoute>
+  );
+
+  const premiumLayout = (children: ReactNode, feature: string) => (
+    <ProtectedRoute>
+      <AppLayout onSignOut={clearAuth} userName={user?.name}>
+        <PremiumGate feature={feature}>{children}</PremiumGate>
+      </AppLayout>
+    </ProtectedRoute>
+  );
 
   return (
-    <AuthGate user={auth.user} onSignIn={auth.signIn}>
-      <>
-        <Switch>
-          <Route path="/" component={Landing} />
-          <Route path="/dashboard">
-            <AppLayout onSignOut={auth.signOut} userName={auth.user?.name}><Dashboard /></AppLayout>
-          </Route>
-          <Route path="/trades">
-            <AppLayout onSignOut={auth.signOut} userName={auth.user?.name}><Trades /></AppLayout>
-          </Route>
-          <Route path="/journal">
-            <AppLayout onSignOut={auth.signOut} userName={auth.user?.name}><Journal /></AppLayout>
-          </Route>
-          <Route path="/analytics">
-            <AppLayout onSignOut={auth.signOut} userName={auth.user?.name}><Analytics /></AppLayout>
-          </Route>
-          <Route path="/calculator">
-            <AppLayout onSignOut={auth.signOut} userName={auth.user?.name}><Calculator /></AppLayout>
-          </Route>
-          <Route path="/ai-coach">
-            <AppLayout onSignOut={auth.signOut} userName={auth.user?.name}><AICoach /></AppLayout>
-          </Route>
-          <Route path="/news">
-            <AppLayout onSignOut={auth.signOut} userName={auth.user?.name}><News /></AppLayout>
-          </Route>
-          <Route path="/intelligence">
-            <AppLayout onSignOut={auth.signOut} userName={auth.user?.name}><Intelligence /></AppLayout>
-          </Route>
-          <Route path="/chart">
-            <AppLayout onSignOut={auth.signOut} userName={auth.user?.name}><Chart /></AppLayout>
-          </Route>
-          <Route path="/brokers">
-            <AppLayout onSignOut={auth.signOut} userName={auth.user?.name}><Brokers /></AppLayout>
-          </Route>
-          <Route path="/positions">
-            <AppLayout onSignOut={auth.signOut} userName={auth.user?.name}><Positions /></AppLayout>
-          </Route>
-          <Route component={NotFound} />
-        </Switch>
-        <MT5BridgeGlobal />
-      </>
-    </AuthGate>
+    <>
+      <Switch>
+        <Route path="/" component={Landing} />
+        <Route path="/login" component={Login} />
+        <Route path="/signup" component={Signup} />
+        <Route path="/pricing" component={Pricing} />
+        <Route path="/dashboard">{layout(<Dashboard />)}</Route>
+        <Route path="/trades">{layout(<Trades />)}</Route>
+        <Route path="/journal">{layout(<Journal />)}</Route>
+        <Route path="/analytics">{layout(<Analytics />)}</Route>
+        <Route path="/calculator">{layout(<Calculator />)}</Route>
+        <Route path="/news">{layout(<News />)}</Route>
+        <Route path="/ai-coach">{premiumLayout(<AICoach />, "AI Trading Coach")}</Route>
+        <Route path="/intelligence">{premiumLayout(<Intelligence />, "Market Intelligence OS")}</Route>
+        <Route path="/chart">{premiumLayout(<Chart />, "Live Chart")}</Route>
+        <Route path="/brokers">{premiumLayout(<Brokers />, "Broker Sync")}</Route>
+        <Route path="/positions">{premiumLayout(<Positions />, "Open Positions Tracker")}</Route>
+        <Route component={NotFound} />
+      </Switch>
+      <MT5BridgeGlobal />
+    </>
   );
 }
 
@@ -86,8 +103,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "") }>
-          <AppRoutes />
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
         </WouterRouter>
         <Toaster />
       </TooltipProvider>

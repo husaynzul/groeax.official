@@ -17,21 +17,27 @@ import {
   Layers,
   Brain,
   LogOut,
+  Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddTradeModal from "@/components/trades/AddTradeModal";
 import { useMT5Store } from "@/store/mt5Store";
+import { useAuthStore } from "@/store/authStore";
+import { UpgradeBanner, PremiumBadge } from "@/components/auth/PremiumGate";
 import groeaxLogo from "@assets/WhatsApp_Image_2026-05-03_at_12.44.10_PM_1777794284426.jpeg";
 
-const navItems = [
+const FREE_ITEMS = [
   { href: "/dashboard",    label: "Dashboard",    icon: LayoutDashboard },
   { href: "/trades",       label: "Trades",       icon: BookOpen },
   { href: "/journal",      label: "Journal",      icon: CalendarDays },
   { href: "/analytics",    label: "Analytics",    icon: BarChart2 },
   { href: "/calculator",   label: "Risk Calc",    icon: Calculator },
-  { href: "/ai-coach",     label: "AI Coach",     icon: Bot },
   { href: "/news",         label: "Market News",  icon: Newspaper },
-  { href: "/intelligence", label: "Intelligence", icon: Brain, highlight: true },
+];
+
+const PREMIUM_ITEMS = [
+  { href: "/ai-coach",     label: "AI Coach",     icon: Bot },
+  { href: "/intelligence", label: "Intelligence", icon: Brain },
   { href: "/chart",        label: "Live Chart",   icon: CandlestickChart },
   { href: "/positions",    label: "Positions",    icon: Layers },
   { href: "/brokers",      label: "Brokers",      icon: Link2 },
@@ -56,6 +62,7 @@ export default function Sidebar({ onSignOut, userName }: { onSignOut?: () => voi
   const [collapsed, setCollapsed] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const mt5Status = useMT5Store((s) => s.status);
+  const { isPremium, user } = useAuthStore();
 
   return (
     <>
@@ -75,13 +82,20 @@ export default function Sidebar({ onSignOut, userName }: { onSignOut?: () => voi
           )}
         </Link>
 
-        {!collapsed && userName && (
-          <div className="px-3 pt-3 text-xs text-muted-foreground">
-            Signed in as <span className="text-foreground font-medium">{userName}</span>
+        {!collapsed && user && (
+          <div className="px-3 pt-3 pb-1 text-xs text-muted-foreground flex items-center gap-1.5">
+            <span className="truncate">
+              <span className="text-foreground font-medium">{user.name}</span>
+            </span>
+            {isPremium && (
+              <span className="shrink-0">
+                <PremiumBadge />
+              </span>
+            )}
           </div>
         )}
 
-        <div className="flex-1 flex flex-col gap-1 p-2 pt-3">
+        <div className="flex-1 flex flex-col gap-1 p-2 pt-3 overflow-y-auto">
           <button
             data-testid="button-add-trade"
             onClick={() => setAddOpen(true)}
@@ -94,7 +108,37 @@ export default function Sidebar({ onSignOut, userName }: { onSignOut?: () => voi
             {!collapsed && <span>Add Trade</span>}
           </button>
 
-          {navItems.map(({ href, label, icon: Icon, highlight }) => {
+          {FREE_ITEMS.map(({ href, label, icon: Icon }) => {
+            const isActive = location === href;
+            return (
+              <Link
+                key={href}
+                href={href}
+                data-testid={`nav-${label.toLowerCase().replace(/\s+/, "-")}`}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                  collapsed ? "justify-center px-2" : "",
+                  isActive
+                    ? "bg-sidebar-accent text-foreground font-medium"
+                    : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
+                )}
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                {!collapsed && <span>{label}</span>}
+              </Link>
+            );
+          })}
+
+          {!collapsed && (
+            <div className="mt-3 mb-1 px-2">
+              <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground/50 font-semibold flex items-center gap-1.5">
+                <Crown className="w-2.5 h-2.5" /> Premium
+              </p>
+            </div>
+          )}
+          {collapsed && <div className="my-1 border-t border-sidebar-border/40 mx-1" />}
+
+          {PREMIUM_ITEMS.map(({ href, label, icon: Icon }) => {
             const isActive = location === href;
             return (
               <Link
@@ -106,20 +150,22 @@ export default function Sidebar({ onSignOut, userName }: { onSignOut?: () => voi
                   collapsed ? "justify-center px-2" : "",
                   isActive
                     ? "bg-sidebar-accent text-foreground font-medium"
-                    : highlight
+                    : isPremium
                     ? "text-violet-400 hover:bg-violet-500/10 hover:text-violet-300"
-                    : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
+                    : "text-muted-foreground/50 hover:bg-sidebar-accent hover:text-muted-foreground"
                 )}
               >
                 <Icon className="w-4 h-4 shrink-0" />
                 {!collapsed && <span>{label}</span>}
-                {!collapsed && highlight && !isActive && (
-                  <span className="ml-auto text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-400 border border-violet-500/25 uppercase tracking-wider">AI</span>
+                {!collapsed && !isPremium && !isActive && (
+                  <Crown className="ml-auto w-3 h-3 text-violet-400/50" />
                 )}
               </Link>
             );
           })}
         </div>
+
+        {!collapsed && <UpgradeBanner />}
 
         <div className={cn(
           "px-3 py-2.5 mx-2 mb-1 rounded-lg bg-sidebar-accent/50 border border-sidebar-border flex items-center gap-2.5 transition-all duration-300",

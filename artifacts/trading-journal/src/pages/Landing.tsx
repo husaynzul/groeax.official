@@ -141,18 +141,25 @@ export default function Landing() {
         </Link>
 
         <div className="hidden md:flex items-center gap-8 text-sm text-white/45">
-          {["Features","Brokers","Pricing","Docs"].map(l => (
-            <a key={l} href="#" className="hover:text-white/80 transition-colors">{l}</a>
-          ))}
+          <a href="#features" className="hover:text-white/80 transition-colors">Features</a>
+          <a href="#brokers" className="hover:text-white/80 transition-colors">Brokers</a>
+          <Link href="/pricing" className="hover:text-white/80 transition-colors">Pricing</Link>
         </div>
 
-        <Link href="/dashboard">
-          <button className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-primary
-            text-primary-foreground text-sm font-semibold hover:bg-primary/90
-            transition-all shadow-lg shadow-primary/20">
-            Get Started <ChevronRight className="w-4 h-4" />
-          </button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/login">
+            <button className="px-4 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-all">
+              Sign in
+            </button>
+          </Link>
+          <Link href="/signup">
+            <button className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-primary
+              text-primary-foreground text-sm font-semibold hover:bg-primary/90
+              transition-all shadow-lg shadow-primary/20">
+              Get Started <ChevronRight className="w-4 h-4" />
+            </button>
+          </Link>
+        </div>
       </nav>
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}

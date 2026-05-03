@@ -9,9 +9,11 @@ import mt5Router from "./mt5.js";
 import intelligenceRouter from "./intelligence.js";
 import tradingSignalRouter from "./tradingSignal.js";
 import marketIntelligenceRouter from "./marketIntelligence.js";
+import authRouter from "./auth.js";
 
 const router: IRouter = Router();
 
+router.use(authRouter);
 router.use(healthRouter);
 router.use(aiRouter);
 router.use(newsRouter);
