@@ -13,7 +13,6 @@ import Calculator from "@/pages/Calculator";
 import Analytics from "@/pages/Analytics";
 import AICoach from "@/pages/AICoach";
 import News from "@/pages/News";
-import Replay from "@/pages/Replay";
 import Chart from "@/pages/Chart";
 import Brokers from "@/pages/Brokers";
 import Positions from "@/pages/Positions";
@@ -22,7 +21,6 @@ import { useTradeStore } from "@/store/tradeStore";
 
 const queryClient = new QueryClient();
 
-/** Keeps the MT5 WebSocket bridge alive across all pages */
 function MT5BridgeGlobal() {
   useMT5Bridge();
   return null;
@@ -37,47 +35,41 @@ function AppRoutes() {
 
   return (
     <>
-    <Switch>
-      {/* Landing page — no sidebar layout */}
-      <Route path="/" component={Landing} />
-
-      {/* App — all wrapped in sidebar layout */}
-      <Route path="/dashboard">
-        <AppLayout><Dashboard /></AppLayout>
-      </Route>
-      <Route path="/trades">
-        <AppLayout><Trades /></AppLayout>
-      </Route>
-      <Route path="/journal">
-        <AppLayout><Journal /></AppLayout>
-      </Route>
-      <Route path="/analytics">
-        <AppLayout><Analytics /></AppLayout>
-      </Route>
-      <Route path="/calculator">
-        <AppLayout><Calculator /></AppLayout>
-      </Route>
-      <Route path="/ai-coach">
-        <AppLayout><AICoach /></AppLayout>
-      </Route>
-      <Route path="/news">
-        <AppLayout><News /></AppLayout>
-      </Route>
-      <Route path="/replay">
-        <AppLayout><Replay /></AppLayout>
-      </Route>
-      <Route path="/chart">
-        <AppLayout><Chart /></AppLayout>
-      </Route>
-      <Route path="/brokers">
-        <AppLayout><Brokers /></AppLayout>
-      </Route>
-      <Route path="/positions">
-        <AppLayout><Positions /></AppLayout>
-      </Route>
-      <Route component={NotFound} />
-    </Switch>
-    <MT5BridgeGlobal />
+      <Switch>
+        <Route path="/" component={Landing} />
+        <Route path="/dashboard">
+          <AppLayout><Dashboard /></AppLayout>
+        </Route>
+        <Route path="/trades">
+          <AppLayout><Trades /></AppLayout>
+        </Route>
+        <Route path="/journal">
+          <AppLayout><Journal /></AppLayout>
+        </Route>
+        <Route path="/analytics">
+          <AppLayout><Analytics /></AppLayout>
+        </Route>
+        <Route path="/calculator">
+          <AppLayout><Calculator /></AppLayout>
+        </Route>
+        <Route path="/ai-coach">
+          <AppLayout><AICoach /></AppLayout>
+        </Route>
+        <Route path="/news">
+          <AppLayout><News /></AppLayout>
+        </Route>
+        <Route path="/chart">
+          <AppLayout><Chart /></AppLayout>
+        </Route>
+        <Route path="/brokers">
+          <AppLayout><Brokers /></AppLayout>
+        </Route>
+        <Route path="/positions">
+          <AppLayout><Positions /></AppLayout>
+        </Route>
+        <Route component={NotFound} />
+      </Switch>
+      <MT5BridgeGlobal />
     </>
   );
 }

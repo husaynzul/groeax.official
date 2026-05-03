@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { useTradeStore } from "@/store/tradeStore";
 import { usePnLRecalculator } from "@/hooks/usePnLRecalculator";
+import { useMT5Store } from "@/store/mt5Store";
 import type { Trade } from "@/types";
 
-export type MT5Status = "disconnected" | "connecting" | "connected" | "error";
+export type { MT5Status } from "@/store/mt5Store";
 
 interface MT5TradeData {
   type: "trade_open" | "trade_close";
@@ -17,14 +18,6 @@ interface MT5TradeData {
   profit: number;
   time: string;
   comment?: string;
-}
-
-export interface MT5LastTrade {
-  pair: string;
-  direction: "BUY" | "SELL";
-  type: "trade_open" | "trade_close";
-  profit: number;
-  at: number;
 }
 
 function buildTrade(ev: MT5TradeData): Trade {
@@ -52,9 +45,7 @@ function buildTrade(ev: MT5TradeData): Trade {
 export function useMT5Bridge() {
   const { addTrade } = useTradeStore();
   const { recalculate } = usePnLRecalculator();
-
-  const [status, setStatus] = useState<MT5Status>("disconnected");
-  const [lastTrade, setLastTrade] = useState<MT5LastTrade | null>(null);
+  const { setStatus, setLastTrade } = useMT5Store();
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -94,20 +85,14 @@ export function useMT5Bridge() {
         if (msg.type === "mt5_trade" && msg.data) {
           const trade = buildTrade(msg.data);
           addTrade(trade);
-          setLastTrade({
-            pair: trade.pair,
-            direction: trade.direction,
-            type: msg.data.type,
-            profit: msg.data.profit,
-            at: Date.now(),
-          });
+          setLastTrade(trade.pair);
           void recalculate();
         }
       } catch {
         // ignore malformed messages
       }
     };
-  }, [addTrade, recalculate]);
+  }, [addTrade, recalculate, setStatus, setLastTrade]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -118,6 +103,4 @@ export function useMT5Bridge() {
       wsRef.current?.close();
     };
   }, [connect]);
-
-  return { status, lastTrade };
 }

@@ -12,13 +12,13 @@ import {
   BarChart2,
   Bot,
   Newspaper,
-  Rewind,
   CandlestickChart,
   Link2,
   Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddTradeModal from "@/components/trades/AddTradeModal";
+import { useMT5Store } from "@/store/mt5Store";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard",   icon: LayoutDashboard },
@@ -28,16 +28,30 @@ const navItems = [
   { href: "/calculator",label: "Risk Calc",   icon: Calculator },
   { href: "/ai-coach",  label: "AI Coach",    icon: Bot },
   { href: "/news",      label: "Market News", icon: Newspaper },
-  { href: "/replay",    label: "Replay",      icon: Rewind },
   { href: "/chart",     label: "Live Chart",  icon: CandlestickChart },
   { href: "/positions", label: "Positions",   icon: Layers },
   { href: "/brokers",   label: "Brokers",     icon: Link2 },
 ];
 
+const STATUS_DOT: Record<string, string> = {
+  connected:    "bg-emerald-400 shadow-[0_0_6px_2px_rgba(52,211,153,0.5)]",
+  connecting:   "bg-yellow-400 animate-pulse",
+  error:        "bg-red-500",
+  disconnected: "bg-zinc-600",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  connected:    "MT5 Connected",
+  connecting:   "MT5 Connecting…",
+  error:        "MT5 Error",
+  disconnected: "MT5 Offline",
+};
+
 export default function Sidebar() {
   const [location] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const mt5Status = useMT5Store((s) => s.status);
 
   return (
     <>
@@ -92,6 +106,19 @@ export default function Sidebar() {
               </Link>
             );
           })}
+        </div>
+
+        {/* MT5 Bridge Status */}
+        <div className={cn(
+          "px-3 py-2.5 mx-2 mb-1 rounded-lg bg-sidebar-accent/50 border border-sidebar-border flex items-center gap-2.5 transition-all duration-300",
+          collapsed ? "justify-center px-0 bg-transparent border-transparent" : ""
+        )}>
+          <span className={cn("w-2 h-2 rounded-full shrink-0", STATUS_DOT[mt5Status])} />
+          {!collapsed && (
+            <span className="text-[11px] text-muted-foreground font-medium truncate">
+              {STATUS_LABEL[mt5Status]}
+            </span>
+          )}
         </div>
 
         <div className="p-2 border-t border-sidebar-border">
