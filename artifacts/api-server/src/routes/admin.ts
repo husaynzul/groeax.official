@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, usersTable, paymentsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { getAuthorizationUrl, exchangeCodeForToken } from "../services/gmailSetup.js";
 
 const router = Router();
 
@@ -137,6 +138,73 @@ router.get("/admin/pending-payments", async (req, res) => {
   } catch (err) {
     req.log.error(err, "pending payments fetch error");
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /api/admin/gmail-auth-url
+ * Returns the OAuth2 authorization URL for Gmail setup.
+ * Visit this URL, authorize, then you'll be redirected to the callback.
+ */
+router.get("/admin/gmail-auth-url", (_req, res) => {
+  const authUrl = getAuthorizationUrl();
+  res.json({
+    message: "Visit this URL to authorize Gmail access:",
+    authUrl,
+    instructions: [
+      "1. Click the link above",
+      "2. Sign in with arbinslom@gmail.com",
+      "3. Allow Groeax to send emails",
+      "4. You'll get redirected and see your GOOGLE_REFRESH_TOKEN",
+      "5. Copy that token and add it as GOOGLE_REFRESH_TOKEN env var",
+      "6. Restart the server",
+      "7. Emails will now work!",
+    ],
+  });
+});
+
+/**
+ * GET /api/admin/gmail-callback
+ * OAuth2 callback from Google. Exchanges auth code for refresh token.
+ */
+router.get("/admin/gmail-callback", async (req, res) => {
+  try {
+    const { code, error } = req.query as { code?: string; error?: string };
+
+    if (error) {
+      res.status(400).json({
+        error: `OAuth authorization failed: ${error}`,
+      });
+      return;
+    }
+
+    if (!code) {
+      res.status(400).json({ error: "Missing authorization code" });
+      return;
+    }
+
+    const tokens = await exchangeCodeForToken(code);
+
+    res.json({
+      success: true,
+      message: "✅ Gmail OAuth authorization successful!",
+      refreshToken: tokens.refresh_token,
+      instructions: [
+        "1. Copy the 'refreshToken' value above",
+        "2. Go to your Replit Secrets tab",
+        "3. Add new secret: GOOGLE_REFRESH_TOKEN = <paste token>",
+        "4. Restart the API server",
+        "5. Email notifications will now work!",
+      ],
+      nextSteps:
+        "Add GOOGLE_REFRESH_TOKEN='your-token' to environment variables",
+    });
+  } catch (err) {
+    req.log.error(err, "Gmail OAuth callback error");
+    res.status(500).json({
+      error: "Failed to complete OAuth flow",
+      details: err instanceof Error ? err.message : "Unknown error",
+    });
   }
 });
 

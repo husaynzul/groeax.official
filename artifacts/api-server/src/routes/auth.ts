@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 import { verifyTronPayment, PLAN_AMOUNTS_USDT, PLAN_AMOUNT_DISPLAY, getTargetWallet } from "../services/tronVerification.js";
 import { sendPaymentWhatsApp } from "../services/whatsappNotification.js";
 import { sendPaymentEmail } from "../services/emailNotification.js";
+import { sendPaymentViaGmail } from "../services/gmailNotification.js";
 
 const router = Router();
 
@@ -280,16 +281,31 @@ router.post("/auth/subscribe", async (req, res) => {
     });
 
     const adminEmail = process.env.ADMIN_EMAIL ?? currentUser.email;
-    void sendPaymentEmail({
-      userName: currentUser.name,
-      userEmail: email ?? currentUser.email,
-      plan: `${subscribePlan.replace("_", " ").toUpperCase()} — ${amountDisplay} USDT`,
-      amount: amountDisplay,
-      txHash: txHash?.trim(),
-      screenshotUrl,
-      status: paymentStatus,
-      paymentId: payment.id,
-    }, adminEmail);
+
+    // Try Gmail API first if refresh token exists, fallback to SMTP email
+    if (process.env.GOOGLE_REFRESH_TOKEN) {
+      void sendPaymentViaGmail({
+        userName: currentUser.name,
+        userEmail: email ?? currentUser.email,
+        plan: `${subscribePlan.replace("_", " ").toUpperCase()} — ${amountDisplay} USDT`,
+        amount: amountDisplay,
+        txHash: txHash?.trim(),
+        screenshotUrl,
+        status: paymentStatus,
+        paymentId: payment.id,
+      }, adminEmail);
+    } else {
+      void sendPaymentEmail({
+        userName: currentUser.name,
+        userEmail: email ?? currentUser.email,
+        plan: `${subscribePlan.replace("_", " ").toUpperCase()} — ${amountDisplay} USDT`,
+        amount: amountDisplay,
+        txHash: txHash?.trim(),
+        screenshotUrl,
+        status: paymentStatus,
+        paymentId: payment.id,
+      }, adminEmail);
+    }
 
     if (autoVerified) {
       res.json({ user: safeUser(updatedUser), status: "activated" });
