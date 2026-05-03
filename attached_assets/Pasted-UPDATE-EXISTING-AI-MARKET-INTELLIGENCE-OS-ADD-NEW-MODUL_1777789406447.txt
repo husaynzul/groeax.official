@@ -1,0 +1,186 @@
+UPDATE EXISTING AI MARKET INTELLIGENCE OS:
+
+ADD NEW MODULE:
+
+/services/pairIntelligenceEngine.js
+
+This module connects news → market pairs → expected impact.
+
+DO NOT REBUILD SYSTEM. EXTEND EXISTING ARCHITECTURE.
+
+---
+
+# 🧠 1. PAIR-LEVEL INTELLIGENCE ENGINE
+
+For each incoming news/event, map it to affected assets:
+
+## MAPPING LOGIC
+
+### Forex:
+- USD news → all USD pairs (EURUSD, GBPUSD, USDJPY)
+- Interest rate hikes → USD bullish
+- Inflation data → currency volatility
+
+### Crypto:
+- BTC ETF news → BTC, ETH impact
+- Regulation news → all crypto market risk
+- Exchange hack → BTC/altcoin dump
+
+### Stocks:
+- Tech news → NASDAQ / tech stocks
+- Oil news → energy sector stocks
+
+---
+
+## OUTPUT FORMAT
+
+{
+  affectedPairs: [
+    {
+      pair: "BTCUSDT",
+      impactDirection: "bullish | bearish | volatile",
+      impactStrength: 0-100,
+      expectedMove: "low | medium | high volatility"
+    }
+  ]
+}
+
+---
+
+# 🧠 2. PRICE IMPACT ESTIMATION ENGINE (NEW)
+
+Estimate “how high volatility can go”:
+
+Rules:
+- High impact news + high sentiment shift → HIGH volatility
+- Multi-source confirmation → increase impact score
+- Whale activity alignment → boost strength
+
+OUTPUT:
+
+{
+  expectedVolatility: "LOW | MEDIUM | HIGH",
+  estimatedMovePercent: "0-1% | 1-3% | 3-8% | 8%+"
+}
+
+---
+
+# 📰 3. NEWS VERIFICATION LAYER (IMPORTANT UPGRADE)
+
+Create:
+
+/services/newsVerificationEngine.js
+
+## FUNCTION:
+
+verifyNewsAuthenticity(newsItem)
+
+### Scoring:
+
+- Tier 1 sources (Reuters, Bloomberg) → HIGH TRUST
+- Tier 2 (CoinGecko, official APIs) → MEDIUM TRUST
+- Tier 3 (Twitter/Reddit) → LOW TRUST
+
+### RULES:
+
+- If only social media confirms → LOW confidence
+- If 2+ independent sources confirm → BOOST confidence
+- Remove spam / duplicate fake news
+
+OUTPUT:
+
+{
+  verified: true/false,
+  trustScore: 0-100,
+  sourceTier: 1 | 2 | 3
+}
+
+---
+
+# ⏰ 4. GLOBAL TIME ZONE SYSTEM (NEW)
+
+Add global market clock system:
+
+/services/timeSyncEngine.js
+
+## TIME ZONES TO SUPPORT:
+
+- EST (New York market)
+- UTC (global reference)
+- GMT (London forex session)
+- ASIA (Tokyo / Hong Kong session)
+- PKT (Pakistan local time)
+
+---
+
+## MARKET SESSION DETECTION
+
+System must detect:
+
+- London Session
+- New York Session
+- Asian Session
+- Overlap Sessions (HIGH volatility periods)
+
+OUTPUT:
+
+{
+  currentSession: "London | New York | Asia | Overlap",
+  volatilityExpectation: "LOW | HIGH",
+  activeMarkets: []
+}
+
+---
+
+# 📊 5. DASHBOARD UPGRADE
+
+Add new UI sections:
+
+## 🌍 GLOBAL MARKET TIME PANEL
+- Show all time zones simultaneously
+- Highlight active trading session
+- Show volatility state per session
+
+## 📈 PAIR IMPACT MATRIX
+Grid view:
+
+News → BTC | ETH | EURUSD | GOLD | NASDAQ
+
+Shows:
+- bullish / bearish / neutral impact
+
+## 🔍 VERIFIED NEWS FEED
+Only shows:
+- verified + weighted news
+- trust score badge
+- source tier indicator
+
+---
+
+# 🧠 6. FINAL INTELLIGENCE OUTPUT UPGRADE
+
+Merge everything into final object:
+
+{
+  event,
+  verifiedNews,
+  affectedPairs,
+  marketSession,
+  expectedVolatility,
+  sentiment,
+  smcSignal,
+  confidenceScore,
+  aiExplanation
+}
+
+---
+
+# 🚀 FINAL RESULT
+
+System becomes:
+
+“GLOBAL AI MARKET INTELLIGENCE + MULTI-PAIR IMPACT + VERIFIED NEWS + SESSION-AWARE TRADING ENGINE”
+
+NOT a dashboard. NOT a feed.
+
+It is a live institutional intelligence system.
