@@ -67,7 +67,7 @@ export default function Sidebar({ onSignOut, userName }: { onSignOut?: () => voi
       >
         <Link href="/dashboard"
           className="flex items-center gap-2 px-4 py-5 border-b border-sidebar-border min-h-[64px] hover:opacity-80 transition-opacity">
-          <img src={groeaxLogo} alt="Groeax logo" className="w-8 h-8 object-contain shrink-0" />
+          <img src={groeaxLogo} alt="Groeax logo" className="w-8 h-8 object-contain shrink-0" style={{ filter: "drop-shadow(0 0 8px rgba(16,185,129,0.7))" }} />
           {!collapsed && (
             <span className="font-semibold text-sm tracking-wide text-foreground">
               Groeax

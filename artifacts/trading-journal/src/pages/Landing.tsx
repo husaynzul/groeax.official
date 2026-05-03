@@ -136,7 +136,7 @@ export default function Landing() {
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between
         px-6 py-4 bg-[#030712]/80 backdrop-blur-xl border-b border-white/5">
         <Link href="/dashboard" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-          <img src={groeaxLogo} alt="Groeax logo" className="w-8 h-8 object-contain" />
+          <img src={groeaxLogo} alt="Groeax logo" className="w-8 h-8 object-contain" style={{ filter: "drop-shadow(0 0 8px rgba(16,185,129,0.7))" }} />
           <span className="font-bold text-lg tracking-tight">Groeax</span>
         </Link>
 
