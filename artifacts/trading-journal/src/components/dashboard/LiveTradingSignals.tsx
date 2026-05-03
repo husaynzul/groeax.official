@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowDownRight, ArrowUpRight, Shield, Radar, BadgeAlert } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Shield, Radar, BadgeAlert, Tag } from "lucide-react";
 
 interface TradingSignal {
+  pair: string;
+  assetClass: "forex" | "crypto" | "stocks" | "commodities";
   signalType: "LONG" | "SHORT" | "NO_TRADE";
   entryZone: { low: number; high: number } | null;
   stopLoss: number | null;
@@ -69,6 +71,19 @@ export default function LiveTradingSignals() {
         </div>
       ) : signal ? (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+          <div className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.02] p-3">
+            <div className="flex items-center gap-2">
+              <Tag className="w-4 h-4 text-primary" />
+              <div>
+                <p className="text-[9px] text-white/30 uppercase tracking-wider mb-0.5">Pair</p>
+                <p className="text-sm font-semibold text-white/90">{signal.pair}</p>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold px-2.5 py-1 rounded-full border bg-white/[0.03] text-white/60 border-white/8 capitalize">
+              {signal.assetClass}
+            </span>
+          </div>
+
           <div className="grid grid-cols-3 gap-2">
             <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
               <p className="text-[9px] text-white/30 uppercase tracking-wider mb-1">Entry Zone</p>
@@ -101,6 +116,7 @@ export default function LiveTradingSignals() {
             ))}
           </div>
           <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3 flex items-start gap-2">
+            {signal.signalType === "LONG" ? <ArrowUpRight className="w-4 h-4 text-emerald-400 mt-0.5" /> : <ArrowDownRight className="w-4 h-4 text-red-400 mt-0.5" />}
             <Shield className="w-4 h-4 text-primary mt-0.5" />
             <p className="text-xs text-white/50 leading-relaxed">{signal.aiExplanation}</p>
           </div>

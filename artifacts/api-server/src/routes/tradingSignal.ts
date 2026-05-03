@@ -3,6 +3,8 @@ import { Router } from "express";
 const router = Router();
 
 interface SMCInput {
+  pair?: string;
+  assetClass?: "forex" | "crypto" | "stocks" | "commodities";
   structure?: {
     choch?: "bullish" | "bearish" | null;
     bos?: "bullish" | "bearish" | null;
@@ -26,6 +28,8 @@ interface SMCInput {
 }
 
 interface TradingSignal {
+  pair: string;
+  assetClass: "forex" | "crypto" | "stocks" | "commodities";
   signalType: "LONG" | "SHORT" | "NO_TRADE";
   entryZone: { low: number; high: number } | null;
   stopLoss: number | null;
@@ -59,12 +63,21 @@ function chooseZone(input: SMCInput, side: "bullish" | "bearish") {
   return null;
 }
 
+function normalizePair(inputData: SMCInput): { pair: string; assetClass: TradingSignal["assetClass"] } {
+  const pair = (inputData.pair ?? "EURUSD").toUpperCase();
+  if (pair.includes("BTC") || pair.includes("ETH") || pair.includes("SOL")) return { pair, assetClass: "crypto" };
+  if (pair.includes("XAU") || pair.includes("OIL") || pair.includes("WTI") || pair.includes("BRENT")) return { pair, assetClass: "commodities" };
+  if (pair.includes("AAPL") || pair.includes("TSLA") || pair.includes("MSFT") || pair.includes("NAS") || pair.includes("SPX")) return { pair, assetClass: "stocks" };
+  return { pair, assetClass: "forex" };
+}
+
 function generateTradingSignal(inputData: SMCInput): TradingSignal {
   const structureBias = inputData.structure?.choch ?? inputData.structure?.bos ?? null;
   const sentiment = inputData.sentiment?.bias ?? "neutral";
   const price = inputData.price ?? 0;
   const sweep = inputData.liquidity?.sweep ?? null;
   const whaleConfirmed = !!inputData.whale?.confirmed;
+  const { pair, assetClass } = normalizePair(inputData);
 
   const longConditions =
     (structureBias === "bullish") &&
@@ -80,13 +93,15 @@ function generateTradingSignal(inputData: SMCInput): TradingSignal {
 
   if (side === "NO_TRADE") {
     return {
+      pair,
+      assetClass,
       signalType: "NO_TRADE",
       entryZone: null,
       stopLoss: null,
       takeProfits: [],
       confidenceScore: 0,
       riskReward: null,
-      aiExplanation: "No valid setup: structure, liquidity, and sentiment are not aligned.",
+      aiExplanation: `No valid setup for ${pair}: structure, liquidity, and sentiment are not aligned.`,
       source: "SMC_SIGNAL_ENGINE",
     };
   }
@@ -117,18 +132,22 @@ function generateTradingSignal(inputData: SMCInput): TradingSignal {
 
   if (confidenceScore < 70) {
     return {
+      pair,
+      assetClass,
       signalType: "NO_TRADE",
       entryZone: null,
       stopLoss: null,
       takeProfits: [],
       confidenceScore,
       riskReward: null,
-      aiExplanation: "Potential setup found, but confidence is below the execution threshold.",
+      aiExplanation: `Potential setup found for ${pair}, but confidence is below the execution threshold.`,
       source: "SMC_SIGNAL_ENGINE",
     };
   }
 
   return {
+    pair,
+    assetClass,
     signalType: side,
     entryZone,
     stopLoss,
@@ -137,8 +156,8 @@ function generateTradingSignal(inputData: SMCInput): TradingSignal {
     riskReward,
     aiExplanation:
       side === "LONG"
-        ? "Bullish structure, liquidity sweep below lows, and a valid demand zone align for a long setup."
-        : "Bearish structure, liquidity sweep above highs, and a valid supply zone align for a short setup.",
+        ? `Bullish structure, liquidity sweep below lows, and a valid demand zone align for a long setup on ${pair}.`
+        : `Bearish structure, liquidity sweep above highs, and a valid supply zone align for a short setup on ${pair}.`,
     source: "SMC_SIGNAL_ENGINE",
   };
 }
@@ -146,6 +165,8 @@ function generateTradingSignal(inputData: SMCInput): TradingSignal {
 function buildMockInput(): SMCInput {
   const price = 102.4;
   return {
+    pair: "BTCUSDT",
+    assetClass: "crypto",
     structure: {
       choch: "bullish",
       bos: "bullish",
