@@ -7,6 +7,8 @@ import brokerRouter from "./broker.js";
 import pricesRouter from "./prices.js";
 import mt5Router from "./mt5.js";
 import intelligenceRouter from "./intelligence.js";
+import tradingSignalRouter from "./tradingSignal.js";
+import marketIntelligenceRouter from "./marketIntelligence.js";
 
 const router: IRouter = Router();
 
@@ -18,5 +20,7 @@ router.use(brokerRouter);
 router.use(pricesRouter);
 router.use(mt5Router);
 router.use(intelligenceRouter);
+router.use(tradingSignalRouter);
+router.use(marketIntelligenceRouter);
 
 export default router;
