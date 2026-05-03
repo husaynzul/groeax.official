@@ -140,8 +140,8 @@ export default function Pricing() {
       if (result.status === "activated") {
         setLocation("/dashboard");
       } else {
-        // Pending — show success message
-        setSuccessMsg(result.message ?? "Payment received! Your subscription will be activated after verification.");
+        // Pending — redirect to verification page
+        setLocation("/payment-verification");
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Payment submission failed");

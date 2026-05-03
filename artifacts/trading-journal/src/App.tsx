@@ -22,6 +22,7 @@ import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
 import Pricing from "@/pages/Pricing";
 import Account from "@/pages/Account";
+import PaymentVerification from "@/pages/PaymentVerification";
 import { useTradeStore } from "@/store/tradeStore";
 import { useAuthStore } from "@/store/authStore";
 import { AuthProvider } from "@/components/auth/AuthProvider";
@@ -82,6 +83,7 @@ function AppRoutes() {
         <Route path="/login" component={Login} />
         <Route path="/signup" component={Signup} />
         <Route path="/pricing" component={Pricing} />
+        <Route path="/payment-verification" component={PaymentVerification} />
         <Route path="/account" component={Account} />
         <Route path="/dashboard">{layout(<Dashboard />)}</Route>
         <Route path="/trades">{layout(<Trades />)}</Route>
