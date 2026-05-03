@@ -1,7 +1,7 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Mail, UserPlus, LogIn, ShieldCheck, Loader2 } from "lucide-react";
-import groeaxLogo from "@assets/image_1777793677793_1777793731333.jpeg";
+import groeaxLogo from "@assets/WhatsApp_Image_2026-05-03_at_12.44.10_PM_1777794284426.jpeg";
 
 const AUTH_KEY = "tradelog_auth_user";
 
@@ -87,7 +87,7 @@ export function AuthGate({
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.12),transparent_24%),radial-gradient(circle_at_80%_0%,rgba(139,92,246,0.10),transparent_18%)] flex items-center justify-center p-6">
       <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#0b0f18]/95 backdrop-blur-xl shadow-[0_28px_120px_rgba(0,0,0,0.55)] p-6">
         <div className="flex items-center gap-3 mb-6">
-          <img src={groeaxLogo} alt="Groeax logo" className="w-11 h-11 object-contain rounded-2xl border border-white/10 bg-black/10" style={{ filter: "drop-shadow(0 0 12px rgba(16,185,129,0.8))" }} />
+          <img src={groeaxLogo} alt="Groeax logo" className="w-11 h-11 object-contain rounded-2xl border border-white/10 bg-black/10" />
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Groeax</h1>
             <p className="text-xs text-muted-foreground">Sign up or log in to continue</p>
