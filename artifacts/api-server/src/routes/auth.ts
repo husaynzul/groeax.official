@@ -1,8 +1,9 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, paymentsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { verifyTronPayment } from "../services/tronVerification.js";
 
 const router = Router();
 
@@ -127,17 +128,49 @@ router.post("/auth/subscribe", async (req, res) => {
       return;
     }
 
+    // For yearly plan: verify TRON transaction on blockchain
+    if (plan === "yearly") {
+      req.log.info({ userId: payload.sub, txHash }, "Verifying TRON payment");
+      const verification = await verifyTronPayment(txHash);
+
+      // Store payment record for audit
+      await db.insert(paymentsTable).values({
+        userId: payload.sub,
+        plan: "yearly",
+        amount: "90",
+        txHash: txHash.trim().toLowerCase(),
+        walletAddress: "THrybvwth3eDpXVnZwBRohZ7AB3bY4Cqjs",
+        verified: verification.valid,
+        verificationError: verification.error,
+      });
+
+      if (!verification.valid) {
+        req.log.warn({ userId: payload.sub, txHash, error: verification.error }, "Payment verification failed");
+        res.status(402).json({ error: verification.error, code: "PAYMENT_VERIFICATION_FAILED" });
+        return;
+      }
+
+      // Payment verified — activate subscription
+      req.log.info({ userId: payload.sub, txHash }, "Payment verified successfully");
+    }
+
+    // Activate subscription
     const now = new Date();
     const planExpiresAt = plan === "yearly"
       ? new Date(now.getFullYear() + 1, now.getMonth(), now.getDate())
       : new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
 
-    req.log.info({ userId: payload.sub, plan, email, txHash }, "Subscription");
-
     const [user] = await db.update(usersTable)
       .set({ plan, planExpiresAt })
       .where(eq(usersTable.id, payload.sub))
       .returning();
+
+    if (plan === "yearly") {
+      // Update payment record as verified
+      await db.update(paymentsTable)
+        .set({ verified: true, verifiedAt: now })
+        .where(eq(paymentsTable.txHash, txHash.trim().toLowerCase()));
+    }
 
     res.json({ user: safeUser(user) });
   } catch (err) {
