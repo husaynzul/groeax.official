@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowDownRight, ArrowUpRight, Shield, Radar, BadgeAlert, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Shield, Radar, BadgeAlert, TrendingUp, TrendingDown, ChevronDown, Tag } from "lucide-react";
 
 interface TradingSignal {
   pair: string;
@@ -15,27 +15,36 @@ interface TradingSignal {
   source: "SMC_SIGNAL_ENGINE";
 }
 
+const PAIRS = ["BTCUSDT", "ETHUSDT", "EURUSD", "GBPUSD", "USDJPY", "XAUUSD", "NAS100", "AAPL"];
+
 function fmt(n: number) {
   return n.toFixed(n > 100 ? 2 : 4);
 }
 
 const ASSET_CLASS_STYLE: Record<string, string> = {
-  forex:       "text-blue-400 bg-blue-500/10 border-blue-500/20",
-  crypto:      "text-violet-400 bg-violet-500/10 border-violet-500/20",
-  stocks:      "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+  forex: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+  crypto: "text-violet-400 bg-violet-500/10 border-violet-500/20",
+  stocks: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
   commodities: "text-amber-400 bg-amber-500/10 border-amber-500/20",
 };
 
 export default function LiveTradingSignals() {
   const [signal, setSignal] = useState<TradingSignal | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pair, setPair] = useState("BTCUSDT");
+
+  const pairLabel = useMemo(() => pair, [pair]);
 
   useEffect(() => {
     let mounted = true;
     const base = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
     const load = async () => {
       try {
-        const res = await fetch(`${base}/api/trading-signal`);
+        const res = await fetch(`${base}/api/trading-signal`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pair }),
+        });
         if (!res.ok) return;
         const data = (await res.json()) as TradingSignal;
         if (mounted) setSignal(data);
@@ -45,47 +54,44 @@ export default function LiveTradingSignals() {
     };
     load();
     const id = setInterval(load, 20_000);
-    return () => { mounted = false; clearInterval(id); };
-  }, []);
+    return () => {
+      mounted = false;
+      clearInterval(id);
+    };
+  }, [pair]);
 
-  const isLong  = signal?.signalType === "LONG";
+  const isLong = signal?.signalType === "LONG";
   const isShort = signal?.signalType === "SHORT";
   const isActive = isLong || isShort;
 
   return (
     <div className={`rounded-2xl border backdrop-blur-xl shadow-[0_20px_80px_rgba(0,0,0,0.35)] overflow-hidden ${
-      isLong  ? "border-emerald-500/20 bg-[linear-gradient(180deg,rgba(16,185,129,0.06),rgba(255,255,255,0.015))]" :
-      isShort ? "border-red-500/20    bg-[linear-gradient(180deg,rgba(239,68,68,0.06),rgba(255,255,255,0.015))]" :
-                "border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.015))]"
+      isLong ? "border-emerald-500/20 bg-[linear-gradient(180deg,rgba(16,185,129,0.06),rgba(255,255,255,0.015))]" :
+      isShort ? "border-red-500/20 bg-[linear-gradient(180deg,rgba(239,68,68,0.06),rgba(255,255,255,0.015))]" :
+      "border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.015))]"
     }`}>
-
-      {/* ── Hero header — pair name always visible ──────────────────────── */}
       <div className="px-4 pt-4 pb-3 border-b border-white/[0.06]">
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          {/* Left — live dot + label */}
           <div className="flex items-center gap-2">
             <Radar className="w-4 h-4 text-primary shrink-0" />
             <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/40">Live Trading Signal</span>
           </div>
-          {/* Right — signal direction badge */}
-          {isActive ? (
-            <span className={`flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full border ${
-              isLong
-                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                : "bg-red-500/15 text-red-400 border-red-500/30"
-            }`}>
-              {isLong ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-              {signal!.signalType}
-            </span>
-          ) : (
-            <span className="text-[10px] font-bold px-2.5 py-1 rounded-full border bg-white/[0.03] text-white/30 border-white/8">
-              NO TRADE
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] uppercase tracking-wider text-white/30">Pair</label>
+            <div className="relative">
+              <select
+                value={pair}
+                onChange={(e) => setPair(e.target.value)}
+                className="appearance-none rounded-full border border-white/10 bg-white/[0.04] pl-3 pr-8 py-1.5 text-[10px] font-semibold text-white/80 outline-none focus:border-primary/40"
+              >
+                {PAIRS.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+            </div>
+          </div>
         </div>
 
-        {/* Pair name — big and prominent */}
-        <div className="mt-3 flex items-end gap-3">
+        <div className="mt-3 flex items-end gap-3 flex-wrap">
           <AnimatePresence mode="wait">
             {signal ? (
               <motion.div
@@ -94,12 +100,10 @@ export default function LiveTradingSignals() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.25 }}
-                className="flex items-end gap-3"
+                className="flex items-end gap-3 flex-wrap"
               >
                 <h2 className={`text-3xl font-extrabold tracking-tight leading-none ${
-                  isLong  ? "text-emerald-300" :
-                  isShort ? "text-red-300"     :
-                             "text-white/70"
+                  isLong ? "text-emerald-300" : isShort ? "text-red-300" : "text-white/70"
                 }`}>
                   {signal.pair}
                 </h2>
@@ -111,8 +115,6 @@ export default function LiveTradingSignals() {
               <div className="h-9 w-36 rounded-lg bg-white/[0.05] animate-pulse" />
             ) : null}
           </AnimatePresence>
-
-          {/* Live pulse indicator */}
           <span className="mb-1.5 ml-auto flex items-center gap-1.5 text-[9px] text-white/25">
             <span className="relative flex h-1.5 w-1.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
@@ -123,7 +125,6 @@ export default function LiveTradingSignals() {
         </div>
       </div>
 
-      {/* ── Body ─────────────────────────────────────────────────────────── */}
       <div className="p-4">
         {loading && !signal ? (
           <div className="h-28 rounded-xl bg-white/[0.02] animate-pulse" />
@@ -137,13 +138,10 @@ export default function LiveTradingSignals() {
           </div>
         ) : signal ? (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-            {/* Entry / SL / RR */}
             <div className="grid grid-cols-3 gap-2">
               <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
                 <p className="text-[9px] text-white/30 uppercase tracking-wider mb-1">Entry Zone</p>
-                <p className="text-sm font-semibold text-white/90">
-                  {signal.entryZone ? `${fmt(signal.entryZone.low)} – ${fmt(signal.entryZone.high)}` : "—"}
-                </p>
+                <p className="text-sm font-semibold text-white/90">{signal.entryZone ? `${fmt(signal.entryZone.low)} – ${fmt(signal.entryZone.high)}` : "—"}</p>
               </div>
               <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
                 <p className="text-[9px] text-white/30 uppercase tracking-wider mb-1">Stop Loss</p>
@@ -155,7 +153,6 @@ export default function LiveTradingSignals() {
               </div>
             </div>
 
-            {/* Confidence bar */}
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[9px] text-white/30 uppercase tracking-wider">Confidence</span>
@@ -173,7 +170,6 @@ export default function LiveTradingSignals() {
               </div>
             </div>
 
-            {/* Take profits */}
             <div className="grid grid-cols-3 gap-2">
               {signal.takeProfits.slice(0, 3).map((tp, i) => (
                 <div key={i} className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.04] p-3">
@@ -183,7 +179,6 @@ export default function LiveTradingSignals() {
               ))}
             </div>
 
-            {/* AI explanation */}
             <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3 flex items-start gap-2">
               {isLong
                 ? <ArrowUpRight className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />

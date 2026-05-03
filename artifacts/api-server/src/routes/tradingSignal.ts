@@ -64,7 +64,7 @@ function chooseZone(input: SMCInput, side: "bullish" | "bearish") {
 }
 
 function normalizePair(inputData: SMCInput): { pair: string; assetClass: TradingSignal["assetClass"] } {
-  const pair = (inputData.pair ?? "EURUSD").toUpperCase();
+  const pair = (inputData.pair ?? "BTCUSDT").toUpperCase();
   if (pair.includes("BTC") || pair.includes("ETH") || pair.includes("SOL")) return { pair, assetClass: "crypto" };
   if (pair.includes("XAU") || pair.includes("OIL") || pair.includes("WTI") || pair.includes("BRENT")) return { pair, assetClass: "commodities" };
   if (pair.includes("AAPL") || pair.includes("TSLA") || pair.includes("MSFT") || pair.includes("NAS") || pair.includes("SPX")) return { pair, assetClass: "stocks" };
@@ -162,22 +162,25 @@ function generateTradingSignal(inputData: SMCInput): TradingSignal {
   };
 }
 
-function buildMockInput(): SMCInput {
-  const price = 102.4;
+function buildMockInput(pair = "BTCUSDT"): SMCInput {
+  const isStocks = pair.includes("AAPL") || pair.includes("TSLA") || pair.includes("MSFT") || pair.includes("NAS") || pair.includes("SPX");
+  const isCommodities = pair.includes("XAU") || pair.includes("OIL") || pair.includes("WTI") || pair.includes("BRENT");
+  const isCrypto = pair.includes("BTC") || pair.includes("ETH") || pair.includes("SOL");
+  const price = isStocks ? 412.6 : isCommodities ? 2312.4 : isCrypto ? 102.4 : 1.0871;
   return {
-    pair: "BTCUSDT",
-    assetClass: "crypto",
+    pair,
+    assetClass: isCrypto ? "crypto" : isCommodities ? "commodities" : isStocks ? "stocks" : "forex",
     structure: {
       choch: "bullish",
       bos: "bullish",
-      orderBlocks: [{ side: "bullish", low: 101.7, high: 102.6 }],
-      fvgs: [{ side: "bullish", low: 101.9, high: 102.3 }],
+      orderBlocks: [{ side: "bullish", low: price * 0.992, high: price * 1.002 }],
+      fvgs: [{ side: "bullish", low: price * 0.994, high: price * 1.000 }],
     },
     liquidity: {
       sweep: "below_lows",
-      clusters: [103.2, 104.1, 105.4],
-      zoneLow: 101.5,
-      zoneHigh: 102.7,
+      clusters: [price * 1.012, price * 1.022, price * 1.034],
+      zoneLow: price * 0.989,
+      zoneHigh: price * 1.003,
     },
     whale: {
       confirmed: true,
