@@ -44,3 +44,4 @@ externalPort = 3000
 [userenv.shared]
 WHATSAPP_ADMIN_1 = "+923478618727"
 WHATSAPP_ADMIN_2 = "+923278659748"
+ADMIN_EMAIL = "arbinslom@gmail.com"
