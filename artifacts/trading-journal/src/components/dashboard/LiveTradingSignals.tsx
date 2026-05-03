@@ -132,32 +132,32 @@ export default function LiveTradingSignals() {
         {loading && !signal ? (
           <div className="h-28 rounded-2xl bg-white/[0.02] animate-pulse" />
         ) : !isActive ? (
-          <div className="rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-4 text-sm text-white/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-            <div className="flex items-start gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+          <div className="rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-3.5 text-sm text-white/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+            <div className="flex items-start gap-2">
+              <div className="w-7 h-7 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
                 <BadgeAlert className="w-4 h-4 text-amber-300" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-semibold text-white/90">No valid setup{signal?.pair ? ` for ${signal.pair}` : ""}</p>
+                  <p className="text-[13px] font-semibold leading-tight text-white/90">No valid setup{signal?.pair ? ` for ${signal.pair}` : ""}</p>
                   <span className="text-[10px] px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-white/40 uppercase tracking-wider">Watchlist</span>
                 </div>
-                <p className="text-xs mt-1 leading-relaxed text-white/50">
+                <p className="text-[11px] mt-1 leading-snug text-white/50">
                   {signal?.aiExplanation || "Structure, liquidity, and sentiment are not aligned yet. We’ll surface a stronger setup as soon as the market confirms."}
                 </p>
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <div className="rounded-xl border border-white/8 bg-white/[0.02] p-2.5">
+            <div className="mt-3 grid grid-cols-3 gap-1.5">
+              <div className="rounded-xl border border-white/8 bg-white/[0.02] p-2">
                 <p className="text-[9px] uppercase tracking-wider text-white/30 mb-1">Bias</p>
                 <p className="text-xs font-medium text-white/80">Neutral</p>
               </div>
-              <div className="rounded-xl border border-white/8 bg-white/[0.02] p-2.5">
+              <div className="rounded-xl border border-white/8 bg-white/[0.02] p-2">
                 <p className="text-[9px] uppercase tracking-wider text-white/30 mb-1">Structure</p>
                 <p className="text-xs font-medium text-white/80">Not aligned</p>
               </div>
-              <div className="rounded-xl border border-white/8 bg-white/[0.02] p-2.5">
+              <div className="rounded-xl border border-white/8 bg-white/[0.02] p-2">
                 <p className="text-[9px] uppercase tracking-wider text-white/30 mb-1">Sentiment</p>
                 <p className="text-xs font-medium text-white/80">Mixed</p>
               </div>
