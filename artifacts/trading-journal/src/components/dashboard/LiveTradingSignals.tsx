@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowDownRight, ArrowUpRight, Shield, Radar, BadgeAlert, TrendingUp, TrendingDown, ChevronDown, Tag } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Shield, Radar, BadgeAlert, TrendingUp, TrendingDown, ChevronDown } from "lucide-react";
 
 interface TradingSignal {
   pair: string;
@@ -82,9 +82,9 @@ export default function LiveTradingSignals() {
               <select
                 value={pair}
                 onChange={(e) => setPair(e.target.value)}
-                className="appearance-none rounded-full border border-white/10 bg-white/[0.04] pl-3 pr-8 py-1.5 text-[10px] font-semibold text-white/80 outline-none focus:border-primary/40"
+                className="appearance-none rounded-full border border-white/10 bg-[#12151d] pl-3 pr-8 py-1.5 text-[10px] font-semibold text-white/90 outline-none focus:border-primary/40"
               >
-                {PAIRS.map((p) => <option key={p} value={p}>{p}</option>)}
+                {PAIRS.map((p) => <option key={p} value={p} className="bg-[#12151d] text-white/90">{p}</option>)}
               </select>
               <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
             </div>
