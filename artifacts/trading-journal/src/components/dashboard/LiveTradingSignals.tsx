@@ -148,7 +148,7 @@ export default function LiveTradingSignals() {
               </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-3 gap-1.5">
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-1.5">
               <div className="rounded-xl border border-white/8 bg-white/[0.02] p-2">
                 <p className="text-[9px] uppercase tracking-wider text-white/30 mb-1">Bias</p>
                 <p className="text-xs font-medium text-white/80">Neutral</p>
