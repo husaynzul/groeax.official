@@ -37,6 +37,7 @@ interface TradingSignal {
   confidenceScore: number;
   riskReward: number | null;
   aiExplanation: string;
+  setupReason?: string;
   source: "SMC_SIGNAL_ENGINE";
 }
 
@@ -92,6 +93,15 @@ function generateTradingSignal(inputData: SMCInput): TradingSignal {
   const side = longConditions ? "LONG" : shortConditions ? "SHORT" : "NO_TRADE";
 
   if (side === "NO_TRADE") {
+    const setupReason = !structureBias
+      ? "structure is missing"
+      : !sweep
+        ? "liquidity sweep is missing"
+        : sentiment === "bearish" && longConditions
+          ? "sentiment is bearish"
+          : sentiment === "bullish" && shortConditions
+            ? "sentiment is bullish"
+            : "conditions are not aligned";
     return {
       pair,
       assetClass,
@@ -101,7 +111,8 @@ function generateTradingSignal(inputData: SMCInput): TradingSignal {
       takeProfits: [],
       confidenceScore: 0,
       riskReward: null,
-      aiExplanation: `No valid setup for ${pair}: structure, liquidity, and sentiment are not aligned.`,
+      aiExplanation: `No valid setup for ${pair}: ${setupReason}.`,
+      setupReason,
       source: "SMC_SIGNAL_ENGINE",
     };
   }
@@ -141,6 +152,7 @@ function generateTradingSignal(inputData: SMCInput): TradingSignal {
       confidenceScore,
       riskReward: null,
       aiExplanation: `Potential setup found for ${pair}, but confidence is below the execution threshold.`,
+      setupReason: "confidence is below the execution threshold",
       source: "SMC_SIGNAL_ENGINE",
     };
   }

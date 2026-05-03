@@ -12,6 +12,7 @@ interface TradingSignal {
   confidenceScore: number;
   riskReward: number | null;
   aiExplanation: string;
+  setupReason?: string;
   source: "SMC_SIGNAL_ENGINE";
 }
 
@@ -143,7 +144,9 @@ export default function LiveTradingSignals() {
                   <span className="text-[10px] px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-white/40 uppercase tracking-wider">Watchlist</span>
                 </div>
                 <p className="text-[11px] mt-1 leading-snug text-white/50">
-                  {signal?.aiExplanation || "Structure, liquidity, and sentiment are not aligned yet. We’ll surface a stronger setup as soon as the market confirms."}
+                  {signal?.setupReason
+                    ? `No valid setup because ${signal.setupReason}.`
+                    : signal?.aiExplanation || "Structure, liquidity, and sentiment are not aligned yet. We’ll surface a stronger setup as soon as the market confirms."}
                 </p>
               </div>
             </div>
