@@ -5,12 +5,21 @@
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? "";
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET ?? "";
-const REDIRECT_URI = "http://localhost:8080/api/admin/gmail-callback";
+
+function getRedirectUri(): string {
+  // In Replit, use the dev domain
+  const devDomain = process.env.REPLIT_DEV_DOMAIN;
+  if (devDomain) {
+    return `https://${devDomain}/api/admin/gmail-callback`;
+  }
+  // Fallback for local development
+  return "http://localhost:8080/api/admin/gmail-callback";
+}
 
 export function getAuthorizationUrl(): string {
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
-    redirect_uri: REDIRECT_URI,
+    redirect_uri: getRedirectUri(),
     response_type: "code",
     scope: "https://www.googleapis.com/auth/gmail.send",
     access_type: "offline",
@@ -29,7 +38,7 @@ export async function exchangeCodeForToken(code: string): Promise<{
     client_secret: CLIENT_SECRET,
     code,
     grant_type: "authorization_code",
-    redirect_uri: REDIRECT_URI,
+    redirect_uri: getRedirectUri(),
   });
 
   const res = await fetch("https://oauth2.googleapis.com/token", {
