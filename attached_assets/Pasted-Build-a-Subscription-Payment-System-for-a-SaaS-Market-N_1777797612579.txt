@@ -1,0 +1,81 @@
+Build a Subscription & Payment System for a SaaS Market News Dashboard.
+
+CORE OBJECTIVE:
+Implement a tier-based subscription model with crypto payment support (USDT TRC20 + Binance payment integration via backend config).
+
+SUBSCRIPTION TIERS:
+
+1. SILVER (FREE PLAN)
+- Free access
+- Limited features only:
+  - Delayed news feed (15–30 min delay)
+  - Basic categories only (Crypto, Stocks, Forex)
+  - No AI analysis
+  - Limited API calls per hour
+  - Ads enabled (optional)
+
+2. PLATINUM PLAN ($10/month)
+- Full real-time news access
+- No delay feed
+- All categories unlocked
+- Time zone conversion feature enabled
+- Basic AI filtering enabled
+- Higher API limits
+- No ads
+
+3. PREMIUM PLAN ($105/month)
+- Everything in Platinum
+- Advanced AI market impact scoring
+- Priority news fetching (fastest updates)
+- Advanced analytics dashboard
+- Early signal detection system (crypto/forex/stock)
+- Unlimited API usage
+- VIP support badge
+
+PAYMENT SYSTEM:
+
+- Support recurring monthly & yearly subscriptions
+- Payment methods:
+  - USDT (TRC20)
+  - Binance Pay (via backend integration)
+
+IMPORTANT SECURITY RULE:
+- DO NOT hardcode wallet addresses or Binance IDs in frontend code
+- Store all payment credentials in environment variables (.env file)
+
+ENV VARIABLES (EXAMPLE):
+- BINANCE_MERCHANT_ID=YOUR_BINANCE_ID
+- USDT_TRC20_WALLET_ADDRESS=YOUR_TRON_WALLET
+- PAYMENT_WEBHOOK_SECRET=RANDOM_SECRET_KEY
+
+PAYMENT FLOW:
+1. User selects plan
+2. System generates payment invoice
+3. User sends USDT to provided TRC20 address OR Binance Pay link
+4. Backend verifies transaction via:
+   - Blockchain scan (TRC20 explorer API)
+   - OR Binance webhook confirmation
+5. On success → upgrade user subscription
+
+USER DASHBOARD FEATURES:
+- Show current plan (Silver / Platinum / Premium)
+- Renewal date
+- Upgrade button
+- Payment history log
+
+ADMIN PANEL:
+- Manage subscriptions
+- View active users
+- Manual upgrade/downgrade option
+- Revenue tracking
+
+TECH STACK:
+- Node.js backend (Express)
+- MongoDB / Firebase for user data
+- Frontend React dashboard
+- Blockchain API for TRC20 verification
+
+RULES:
+- Never expose private wallet keys in frontend
+- All payments must be verified server-side
+- All subscription logic must be backend-controlled
