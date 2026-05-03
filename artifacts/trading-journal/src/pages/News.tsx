@@ -21,6 +21,15 @@ const IMPACT_CONFIG = {
 };
 
 const MAJOR_CURRENCIES = ["ALL", "USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "NZD"];
+const TIME_ZONE_GROUPS = [
+  { value: "all", label: "All Time Zones" },
+  { value: "asia", label: "Asia" },
+  { value: "india", label: "India" },
+  { value: "pakistan", label: "Pakistan" },
+  { value: "japan", label: "Japan" },
+  { value: "china", label: "China" },
+  { value: "singapore", label: "Singapore" },
+];
 
 const FLAG: Record<string, string> = {
   USD: "🇺🇸", EUR: "🇪🇺", GBP: "🇬🇧", JPY: "🇯🇵",
@@ -77,6 +86,7 @@ export default function News() {
   const [error, setError] = useState<string | null>(null);
   const [filterImpact, setFilterImpact] = useState<string>("High");
   const [filterCurrency, setFilterCurrency] = useState<string>("all");
+  const [filterTimeZone, setFilterTimeZone] = useState<string>("all");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fetchNews = useCallback(async () => {
@@ -106,7 +116,23 @@ export default function News() {
   const filtered = events.filter((e) => {
     const impactMatch = filterImpact === "all" ? true : e.impact === filterImpact;
     const currencyMatch = filterCurrency === "all" || filterCurrency === "ALL" ? true : e.country === filterCurrency;
-    return impactMatch && currencyMatch;
+    const timeZoneMatch =
+      filterTimeZone === "all"
+        ? true
+        : filterTimeZone === "asia"
+          ? ["INR", "PKR", "JPY", "CNY", "SGD"].includes(e.country)
+          : filterTimeZone === "india"
+            ? e.country === "INR"
+            : filterTimeZone === "pakistan"
+              ? e.country === "PKR"
+              : filterTimeZone === "japan"
+                ? e.country === "JPY"
+                : filterTimeZone === "china"
+                  ? e.country === "CNY"
+                  : filterTimeZone === "singapore"
+                    ? e.country === "SGD"
+                    : true;
+    return impactMatch && currencyMatch && timeZoneMatch;
   });
 
   const grouped = groupByDay(filtered);
@@ -184,6 +210,21 @@ export default function News() {
             <option value="all">All Time Zones</option>
             {MAJOR_CURRENCIES.filter((c) => c !== "ALL").map((c) => (
               <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-1 p-1 rounded-lg bg-secondary/40 border border-border">
+          <Globe className="w-3 h-3 text-muted-foreground ml-1.5" />
+          <select
+            value={filterTimeZone}
+            onChange={(e) => setFilterTimeZone(e.target.value)}
+            className="text-xs bg-transparent text-muted-foreground px-2 py-1 focus:outline-none"
+          >
+            {TIME_ZONE_GROUPS.map((tz) => (
+              <option key={tz.value} value={tz.value}>
+                {tz.label}
+              </option>
             ))}
           </select>
         </div>
