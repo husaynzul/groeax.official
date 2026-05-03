@@ -1,0 +1,116 @@
+UPDATE EXISTING PROJECT:
+
+Add a new core module called:
+
+/services/intelligenceFusionEngine.js
+
+---
+
+## 🧠 PURPOSE
+
+This module upgrades the system from "news dashboard" to "AI Market Intelligence OS" by fusing:
+
+- News data
+- Social signals (Twitter/Reddit)
+- Crypto/forex/stock movements
+- Sentiment analysis outputs
+
+Into ONE unified intelligence stream.
+
+---
+
+## ⚙️ IMPLEMENT THESE FEATURES
+
+### 1. INTELLIGENCE FUSION PIPELINE
+
+Input: multiple raw feeds
+Output: structured intelligence event
+
+Process:
+
+- Normalize all incoming data
+- Group similar events using keyword + semantic similarity
+- Merge duplicates into single “event clusters”
+- Assign unified intelligence score
+
+---
+
+### 2. EVENT CLUSTERING SYSTEM
+
+If multiple sources report same event:
+
+Example:
+- Twitter mentions BTC crash
+- News reports BTC drops 5%
+- Crypto API shows volatility spike
+
+➡ Merge into ONE event:
+"BTC Market Volatility Spike"
+
+---
+
+### 3. FINAL INTELLIGENCE FORMAT
+
+Each output item must look like:
+
+{
+  eventTitle,
+  category,
+  sources: [],
+  sentiment: "bullish | bearish | neutral | volatile",
+  impactScore: 0-100,
+  confidenceScore: 0-100,
+  timestamp,
+  aiSummary: "1-2 line explanation of what is happening and why it matters"
+}
+
+---
+
+### 4. SMART SIGNAL ENGINE
+
+Add logic:
+
+- If impactScore > 85 → mark as BREAKING INTELLIGENCE
+- If 3+ sources confirm same event → boost confidence +20
+- If sentiment flips within 10 min → mark as MARKET SHIFT ALERT
+
+---
+
+### 5. FRONTEND INTEGRATION
+
+Add new section:
+
+🔥 "INTELLIGENCE CORE FEED"
+
+This replaces normal news feed when enabled.
+
+It must show:
+
+- Clustered market events (not raw news)
+- AI summary explanation
+- Impact bar visualization
+- Confidence indicator
+- Live updating cards
+
+---
+
+### 6. PERFORMANCE RULES
+
+- Run fusion engine every 20 seconds
+- Cache clusters for 60 seconds
+- Avoid reprocessing same event ID
+- Use lightweight similarity hashing
+
+---
+
+## 🚀 RESULT
+
+System becomes:
+
+FROM:
+- news dashboard
+
+TO:
+- AI-driven Market Intelligence OS
+- clustered market event engine
+- real-time signal fusion system
