@@ -21,7 +21,6 @@ timeoutMs = 20000
 
 [[ports]]
 localPort = 8080
-externalPort = 8080
 
 [[ports]]
 localPort = 8081
@@ -46,7 +45,7 @@ WHATSAPP_ADMIN_1 = "+923478618727"
 WHATSAPP_ADMIN_2 = "+923278659748"
 ADMIN_EMAIL = "arbinslom@gmail.com"
 EMAIL_SMTP_USER = "arbinslom@gmail.com"
-EMAIL_SMTP_PASSWORD = "ar@45/++"
+EMAIL_SMTP_PASSWORD = "escf Irtt ynkj jdyp"
 EMAIL_FROM = "Groeax Payments <noreply@groeax.com>"
 ADMIN_API_TOKEN = "groeax-admin-secret-2026"
-SENDGRID_API_KEY = "veks euig jeag vqrp"
+SENDGRID_API_KEY = "escf Irtt ynkj jdyp"
