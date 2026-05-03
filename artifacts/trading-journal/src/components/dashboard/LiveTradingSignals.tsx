@@ -132,17 +132,19 @@ export default function LiveTradingSignals() {
         {loading && !signal ? (
           <div className="h-28 rounded-2xl bg-white/[0.02] animate-pulse" />
         ) : !isActive ? (
-          <div className="rounded-2xl border border-amber-500/15 bg-[linear-gradient(180deg,rgba(245,158,11,0.07),rgba(255,255,255,0.02))] p-4 text-sm text-white/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+          <div className="rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-4 text-sm text-white/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
             <div className="flex items-start gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/15 flex items-center justify-center shrink-0">
-                <BadgeAlert className="w-4 h-4 text-amber-400" />
+              <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                <BadgeAlert className="w-4 h-4 text-amber-300" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-semibold text-white/90">No valid setup{signal?.pair ? ` for ${signal.pair}` : ""}</p>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase tracking-wider">Watchlist</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-white/40 uppercase tracking-wider">Watchlist</span>
                 </div>
-                <p className="text-xs mt-1 leading-relaxed text-white/50">{signal?.aiExplanation}</p>
+                <p className="text-xs mt-1 leading-relaxed text-white/50">
+                  {signal?.aiExplanation || "Structure, liquidity, and sentiment are not aligned yet. We’ll surface a stronger setup as soon as the market confirms."}
+                </p>
               </div>
             </div>
 
