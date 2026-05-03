@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Groeax Admin - Pending Payments</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+    .container { max-width: 1000px; margin: 0 auto; }
+    h1 { margin-bottom: 30px; color: #333; }
+    .payment { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .payment h3 { margin-bottom: 10px; }
+    .payment p { margin: 5px 0; color: #666; }
+    .payment img { max-width: 300px; margin-top: 15px; border: 1px solid #ddd; }
+    .btn { padding: 10px 15px; margin-right: 10px; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-approve { background: #4CAF50; color: white; }
+    .btn-reject { background: #f44336; color: white; }
+    .empty { text-align: center; color: #999; padding: 60px 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Groeax Admin - Pending Payments</h1>
+    <div id="payments"></div>
+  </div>
+
+  <script>
+    const token = new URLSearchParams(window.location.search).get('adminToken');
+    if (!token) {
+      document.body.innerHTML = '<h1>Error: Missing adminToken parameter</h1>';
+    } else {
+      fetch(`/api/admin/pending-payments?adminToken=${token}`)
+        .then(r => r.json())
+        .then(data => {
+          const html = data.payments.length === 0 
+            ? '<div class="empty"><h2>✓ No pending payments</h2></div>'
+            : data.payments.map(p => `
+              <div class="payment">
+                <h3>${p.userName} (${p.userEmail})</h3>
+                <p><strong>Plan:</strong> ${p.plan}</p>
+                <p><strong>Amount:</strong> ${p.amount} USDT</p>
+                ${p.txHash ? `<p><strong>TX Hash:</strong> <code>${p.txHash}</code></p>` : ''}
+                ${p.screenshotPath ? `<img src="/api/payment/screenshot/${p.screenshotPath}" alt="Screenshot">` : ''}
+                <p style="margin-top: 15px;">
+                  <button class="btn btn-approve" onclick="approve(${p.id})">✓ Approve</button>
+                  <button class="btn btn-reject" onclick="reject(${p.id})">✗ Reject</button>
+                </p>
+              </div>
+            `).join('');
+          document.getElementById('payments').innerHTML = html;
+        })
+        .catch(e => document.getElementById('payments').innerHTML = '<p>Error loading payments</p>');
+    }
+
+    function approve(id) {
+      fetch(`/api/admin/approve-payment/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminToken: token })
+      }).then(r => r.json()).then(d => {
+        alert(d.message || 'Payment approved!');
+        location.reload();
+      });
+    }
+    function reject(id) { alert('Not yet implemented'); }
+  </script>
+</body>
+</html>
