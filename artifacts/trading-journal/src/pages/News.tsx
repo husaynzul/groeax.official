@@ -20,7 +20,7 @@ const IMPACT_CONFIG = {
   Holiday: { color: "text-muted-foreground", bg: "bg-secondary/30", border: "border-border", dot: "bg-muted-foreground", label: "HOL" },
 };
 
-const MAJOR_CURRENCIES = ["USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "NZD"];
+const MAJOR_CURRENCIES = ["ALL", "USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "NZD"];
 
 const FLAG: Record<string, string> = {
   USD: "🇺🇸", EUR: "🇪🇺", GBP: "🇬🇧", JPY: "🇯🇵",
@@ -104,10 +104,8 @@ export default function News() {
   }, [fetchNews]);
 
   const filtered = events.filter((e) => {
-    const impactMatch =
-      filterImpact === "all" ? true : e.impact === filterImpact;
-    const currencyMatch =
-      filterCurrency === "all" ? true : e.country === filterCurrency;
+    const impactMatch = filterImpact === "all" ? true : e.impact === filterImpact;
+    const currencyMatch = filterCurrency === "all" || filterCurrency === "ALL" ? true : e.country === filterCurrency;
     return impactMatch && currencyMatch;
   });
 
@@ -120,7 +118,6 @@ export default function News() {
 
   return (
     <div className="p-6 max-w-4xl">
-      {/* Header */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -156,11 +153,10 @@ export default function News() {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-5">
         <div className="flex items-center gap-1 p-1 rounded-lg bg-secondary/40 border border-border">
           <Filter className="w-3 h-3 text-muted-foreground ml-1.5" />
-          {["all", "High", "Medium", "Low"].map((v) => (
+          { ["all", "High", "Medium", "Low"].map((v) => (
             <button
               key={v}
               onClick={() => setFilterImpact(v)}
@@ -171,17 +167,11 @@ export default function News() {
               }`}
             >
               {v === "all" ? "All" : v}
-              {v === "High" && (
-                <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-red-400 align-middle" />
-              )}
-              {v === "Medium" && (
-                <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-amber-400 align-middle" />
-              )}
-              {v === "Low" && (
-                <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-blue-400 align-middle" />
-              )}
+              {v === "High" && <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-red-400 align-middle" />}
+              {v === "Medium" && <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-amber-400 align-middle" />}
+              {v === "Low" && <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-blue-400 align-middle" />}
             </button>
-          ))}
+          )) }
         </div>
 
         <div className="flex items-center gap-1 p-1 rounded-lg bg-secondary/40 border border-border">
@@ -191,15 +181,14 @@ export default function News() {
             onChange={(e) => setFilterCurrency(e.target.value)}
             className="text-xs bg-transparent text-muted-foreground px-2 py-1 focus:outline-none"
           >
-            <option value="all">All Currencies</option>
-            {MAJOR_CURRENCIES.map((c) => (
+            <option value="all">All Time Zones</option>
+            {MAJOR_CURRENCIES.filter((c) => c !== "ALL").map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* Loading */}
       {loading && (
         <div className="glass-card p-12 text-center">
           <RefreshCw className="w-6 h-6 animate-spin text-primary mx-auto mb-3" />
@@ -207,7 +196,6 @@ export default function News() {
         </div>
       )}
 
-      {/* Error */}
       {error && !loading && (
         <div className="glass-card p-6 flex items-start gap-3 border-red-500/20">
           <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
@@ -224,7 +212,6 @@ export default function News() {
         </div>
       )}
 
-      {/* Events */}
       {!loading && !error && (
         <div className="space-y-5">
           {groupKeys.length === 0 ? (
@@ -267,34 +254,21 @@ export default function News() {
                             : "bg-card border-border hover:border-border/80"
                         }`}
                       >
-                        {/* Impact dot */}
                         <div className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot} ${ev.impact === "High" && !past ? "animate-pulse" : ""}`} />
-
-                        {/* Time */}
                         <div className="w-12 text-center shrink-0">
                           <p className="text-xs font-mono font-semibold text-foreground">{fmtEventTime(ev.date)}</p>
-                          {until && (
-                            <p className="text-[9px] text-amber-400 font-bold">{until}</p>
-                          )}
+                          {until && <p className="text-[9px] text-amber-400 font-bold">{until}</p>}
                         </div>
-
-                        {/* Country */}
                         <div className="w-10 text-center shrink-0">
                           <span className="text-base">{getFlag(ev.country)}</span>
                           <p className="text-[9px] font-bold text-muted-foreground">{ev.country}</p>
                         </div>
-
-                        {/* Title */}
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-foreground truncate">{ev.title}</p>
                         </div>
-
-                        {/* Impact badge */}
                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${cfg.bg} ${cfg.color} ${cfg.border}`}>
                           {cfg.label}
                         </span>
-
-                        {/* Forecast / Actual / Previous */}
                         <div className="hidden sm:flex items-center gap-3 shrink-0">
                           {ev.forecast && (
                             <div className="text-center">
