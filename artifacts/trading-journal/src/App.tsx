@@ -13,6 +13,7 @@ import Calculator from "@/pages/Calculator";
 import Analytics from "@/pages/Analytics";
 import AICoach from "@/pages/AICoach";
 import News from "@/pages/News";
+import Intelligence from "@/pages/Intelligence";
 import Chart from "@/pages/Chart";
 import Brokers from "@/pages/Brokers";
 import Positions from "@/pages/Positions";
@@ -57,6 +58,9 @@ function AppRoutes() {
         </Route>
         <Route path="/news">
           <AppLayout><News /></AppLayout>
+        </Route>
+        <Route path="/intelligence">
+          <AppLayout><Intelligence /></AppLayout>
         </Route>
         <Route path="/chart">
           <AppLayout><Chart /></AppLayout>

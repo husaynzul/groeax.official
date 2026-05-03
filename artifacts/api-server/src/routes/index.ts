@@ -6,6 +6,7 @@ import chartRouter from "./chart.js";
 import brokerRouter from "./broker.js";
 import pricesRouter from "./prices.js";
 import mt5Router from "./mt5.js";
+import intelligenceRouter from "./intelligence.js";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(chartRouter);
 router.use(brokerRouter);
 router.use(pricesRouter);
 router.use(mt5Router);
+router.use(intelligenceRouter);
 
 export default router;

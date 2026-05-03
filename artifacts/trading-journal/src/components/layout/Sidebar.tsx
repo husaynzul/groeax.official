@@ -15,22 +15,24 @@ import {
   CandlestickChart,
   Link2,
   Layers,
+  Brain,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddTradeModal from "@/components/trades/AddTradeModal";
 import { useMT5Store } from "@/store/mt5Store";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard",   icon: LayoutDashboard },
-  { href: "/trades",    label: "Trades",      icon: BookOpen },
-  { href: "/journal",   label: "Journal",     icon: CalendarDays },
-  { href: "/analytics", label: "Analytics",   icon: BarChart2 },
-  { href: "/calculator",label: "Risk Calc",   icon: Calculator },
-  { href: "/ai-coach",  label: "AI Coach",    icon: Bot },
-  { href: "/news",      label: "Market News", icon: Newspaper },
-  { href: "/chart",     label: "Live Chart",  icon: CandlestickChart },
-  { href: "/positions", label: "Positions",   icon: Layers },
-  { href: "/brokers",   label: "Brokers",     icon: Link2 },
+  { href: "/dashboard",    label: "Dashboard",    icon: LayoutDashboard },
+  { href: "/trades",       label: "Trades",       icon: BookOpen },
+  { href: "/journal",      label: "Journal",      icon: CalendarDays },
+  { href: "/analytics",    label: "Analytics",    icon: BarChart2 },
+  { href: "/calculator",   label: "Risk Calc",    icon: Calculator },
+  { href: "/ai-coach",     label: "AI Coach",     icon: Bot },
+  { href: "/news",         label: "Market News",  icon: Newspaper },
+  { href: "/intelligence", label: "Intelligence", icon: Brain, highlight: true },
+  { href: "/chart",        label: "Live Chart",   icon: CandlestickChart },
+  { href: "/positions",    label: "Positions",    icon: Layers },
+  { href: "/brokers",      label: "Brokers",      icon: Link2 },
 ];
 
 const STATUS_DOT: Record<string, string> = {
@@ -86,7 +88,7 @@ export default function Sidebar() {
             {!collapsed && <span>Add Trade</span>}
           </button>
 
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {navItems.map(({ href, label, icon: Icon, highlight }) => {
             const isActive = location === href;
             return (
               <Link
@@ -94,15 +96,20 @@ export default function Sidebar() {
                 href={href}
                 data-testid={`nav-${label.toLowerCase().replace(/\s+/, "-")}`}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors relative",
                   collapsed ? "justify-center px-2" : "",
                   isActive
                     ? "bg-sidebar-accent text-foreground font-medium"
+                    : highlight
+                    ? "text-violet-400 hover:bg-violet-500/10 hover:text-violet-300"
                     : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
                 )}
               >
                 <Icon className="w-4 h-4 shrink-0" />
                 {!collapsed && <span>{label}</span>}
+                {!collapsed && highlight && !isActive && (
+                  <span className="ml-auto text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-400 border border-violet-500/25 uppercase tracking-wider">AI</span>
+                )}
               </Link>
             );
           })}
