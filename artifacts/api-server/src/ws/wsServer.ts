@@ -4,6 +4,8 @@ import type { Server } from "http";
 import { generateHistory, getNextCandle } from "../services/candleGenerator.js";
 import type { OHLCBar } from "../services/candleGenerator.js";
 import { logger } from "../lib/logger.js";
+import { addAppClient, removeAppClient } from "./appBroadcast.js";
+import { parse } from "url";
 
 interface ClientState {
   ws: WebSocket;
@@ -83,10 +85,16 @@ function seekReplay(state: ClientState, index: number) {
 }
 
 export function setupWebSocket(server: Server) {
-  const wss = new WebSocketServer({ server, path: "/api/ws/candles" });
+  // Use noServer:true on all WebSocketServers to prevent each from claiming the
+  // 'upgrade' event exclusively. We route manually below so that a path mismatch
+  // on one server doesn't abort the handshake for others.
+  const candlesWss = new WebSocketServer({ noServer: true });
+  const mt5Wss    = new WebSocketServer({ noServer: true });
+  const appWss    = new WebSocketServer({ noServer: true });
 
-  wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
-    logger.info({ url: req.url }, "WS client connected");
+  // --- Candles handler ---
+  candlesWss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
+    logger.info({ url: req.url }, "WS client connected (candles)");
 
     const state: ClientState = {
       ws, pair: "EURUSD", tf: "H1", mode: "live",
@@ -151,18 +159,17 @@ export function setupWebSocket(server: Server) {
     ws.on("close", () => {
       stopLive(state);
       pauseReplay(state);
-      logger.info("WS client disconnected");
+      logger.info("WS client disconnected (candles)");
     });
   });
 
-  // MT5 Bridge stub — a Python script can connect here and push ticks
-  const mt5Wss = new WebSocketServer({ server, path: "/api/ws/mt5" });
+  // --- MT5 direct bridge handler ---
   mt5Wss.on("connection", (ws: WebSocket) => {
     logger.info("MT5 bridge connected");
     ws.on("message", (raw) => {
       try {
         const tick = JSON.parse(raw.toString());
-        wss.clients.forEach((client) => {
+        candlesWss.clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({ type: "mt5_tick", ...tick }));
           }
@@ -172,6 +179,39 @@ export function setupWebSocket(server: Server) {
     ws.on("close", () => logger.info("MT5 bridge disconnected"));
   });
 
-  logger.info("WebSocket servers ready: /api/ws/candles  /api/ws/mt5");
-  return wss;
+  // --- App bridge handler (frontend subscribes here) ---
+  appWss.on("connection", (ws: WebSocket) => {
+    addAppClient(ws);
+    logger.info({ total: appWss.clients.size }, "App WS client connected");
+    ws.send(JSON.stringify({ type: "connected", service: "TradeLog App Bridge" }));
+    ws.on("close", () => {
+      removeAppClient(ws);
+      logger.info({ total: appWss.clients.size }, "App WS client disconnected");
+    });
+  });
+
+  // --- Manual upgrade router ---
+  server.on("upgrade", (req: IncomingMessage, socket, head) => {
+    const pathname = parse(req.url ?? "").pathname ?? "";
+
+    if (pathname === "/api/ws/candles") {
+      candlesWss.handleUpgrade(req, socket, head, (ws) => {
+        candlesWss.emit("connection", ws, req);
+      });
+    } else if (pathname === "/api/ws/mt5") {
+      mt5Wss.handleUpgrade(req, socket, head, (ws) => {
+        mt5Wss.emit("connection", ws, req);
+      });
+    } else if (pathname === "/api/ws/app") {
+      appWss.handleUpgrade(req, socket, head, (ws) => {
+        appWss.emit("connection", ws, req);
+      });
+    } else {
+      // Unknown path — close the socket cleanly
+      socket.destroy();
+    }
+  });
+
+  logger.info("WebSocket servers ready: /api/ws/candles  /api/ws/mt5  /api/ws/app");
+  return candlesWss;
 }

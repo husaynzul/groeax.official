@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEffect } from "react";
 import AppLayout from "@/components/layout/AppLayout";
+import { useMT5Bridge } from "@/hooks/useMT5Bridge";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import Trades from "@/pages/Trades";
@@ -21,6 +22,12 @@ import { useTradeStore } from "@/store/tradeStore";
 
 const queryClient = new QueryClient();
 
+/** Keeps the MT5 WebSocket bridge alive across all pages */
+function MT5BridgeGlobal() {
+  useMT5Bridge();
+  return null;
+}
+
 function AppRoutes() {
   const hydrate = useTradeStore((s) => s.hydrate);
 
@@ -29,6 +36,7 @@ function AppRoutes() {
   }, [hydrate]);
 
   return (
+    <>
     <Switch>
       {/* Landing page — no sidebar layout */}
       <Route path="/" component={Landing} />
@@ -69,6 +77,8 @@ function AppRoutes() {
       </Route>
       <Route component={NotFound} />
     </Switch>
+    <MT5BridgeGlobal />
+    </>
   );
 }
 

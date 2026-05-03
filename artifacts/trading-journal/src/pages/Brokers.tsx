@@ -212,78 +212,132 @@ function StatusBadge({ status }: { status: BrokerConnection["status"] }) {
 }
 
 /* ── MT5 Panel ──────────────────────────────────────────────────────── */
+function getOrCreateToken(): string {
+  try {
+    const existing = localStorage.getItem("mt5_bridge_token");
+    if (existing) return existing;
+    const token = crypto.randomUUID().replace(/-/g, "").slice(0, 24);
+    localStorage.setItem("mt5_bridge_token", token);
+    return token;
+  } catch {
+    return "tradelog-bridge-token";
+  }
+}
+
 function MT5Panel() {
-  const [info, setInfo] = useState<{ wsUrl: string; pythonScript: string } | null>(null);
-  const [copied, setCopied] = useState<"url" | "script" | null>(null);
+  const [serverStatus, setServerStatus] = useState<"checking" | "ok" | "error">("checking");
+  const [copied, setCopied] = useState<string | null>(null);
+  const token = getOrCreateToken();
+  const serverUrl = `${window.location.origin}/api/mt5/trade`;
 
   useEffect(() => {
-    fetch(`${BASE}/api/broker/mt5/info`)
-      .then(r => r.json())
-      .then(d => setInfo(d))
-      .catch(() => {});
+    fetch(`${BASE}/api/mt5/status`)
+      .then(r => r.ok ? setServerStatus("ok") : setServerStatus("error"))
+      .catch(() => setServerStatus("error"));
   }, []);
 
-  const copy = (text: string, type: "url" | "script") => {
+  const copy = (text: string, key: string) => {
     navigator.clipboard.writeText(text).catch(() => {});
-    setCopied(type);
+    setCopied(key);
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const download = () => {
-    if (!info) return;
-    const blob = new Blob([info.pythonScript], { type: "text/plain" });
+  const downloadEA = () => {
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "tradelog_mt5_bridge.py";
+    a.href = `${BASE}/TradeLogBridge.mq5`;
+    a.download = "TradeLogBridge.mq5";
     a.click();
   };
 
+  const steps = [
+    { label: "Download the Expert Advisor file", action: (
+      <button onClick={downloadEA} className="flex items-center gap-1.5 text-primary text-[11px] font-semibold hover:underline">
+        <Download className="w-3 h-3" /> TradeLogBridge.mq5
+      </button>
+    )},
+    { label: 'Copy it to MetaTrader 5 → File → Open Data Folder → MQL5 → Experts', action: null },
+    { label: 'Open MetaEditor (F4) and compile the file (F7)', action: null },
+    { label: 'Go to MT5 Options (Ctrl+O) → Expert Advisors → Allow WebRequest for URL:', action: (
+      <div className="flex gap-1.5 mt-1">
+        <code className="text-[10px] font-mono bg-secondary/40 border border-border rounded px-2 py-0.5 text-emerald-400 break-all">
+          {window.location.origin}
+        </code>
+        <button onClick={() => copy(window.location.origin, "origin")} className="shrink-0 p-1 rounded hover:bg-secondary transition-colors">
+          {copied === "origin" ? <CheckCircle className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
+        </button>
+      </div>
+    )},
+    { label: 'Attach the EA to any chart. Set these inputs:', action: null },
+  ];
+
   return (
     <div className="space-y-4">
+      {/* Server status */}
+      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium ${
+        serverStatus === "ok" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+        : serverStatus === "error" ? "bg-red-500/10 border-red-500/20 text-red-400"
+        : "bg-secondary/40 border-border text-muted-foreground"
+      }`}>
+        <div className={`w-2 h-2 rounded-full ${
+          serverStatus === "ok" ? "bg-emerald-400 animate-pulse"
+          : serverStatus === "error" ? "bg-red-400"
+          : "bg-muted-foreground animate-pulse"
+        }`} />
+        {serverStatus === "ok" ? "Bridge server is online and ready"
+        : serverStatus === "error" ? "Bridge server unreachable"
+        : "Checking server…"}
+      </div>
+
+      {/* Steps */}
       <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
-        <h4 className="text-sm font-semibold">How it works</h4>
-        <ol className="space-y-2 text-xs text-muted-foreground">
-          {[
-            "Download the Python bridge script below",
-            "Install dependencies: pip install MetaTrader5 websockets",
-            "Run the script while MT5 is open",
-            "Your positions will stream live to this dashboard",
-          ].map((s, i) => (
+        <h4 className="text-sm font-semibold">Setup steps</h4>
+        <ol className="space-y-3 text-xs text-muted-foreground">
+          {steps.map((s, i) => (
             <li key={i} className="flex gap-2.5">
               <span className="shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
-              <span>{s}</span>
+              <div>
+                <span>{s.label}</span>
+                {s.action && <div className="mt-1">{s.action}</div>}
+              </div>
             </li>
           ))}
         </ol>
       </div>
-      {info && (
-        <>
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">WebSocket Bridge URL</p>
-            <div className="flex gap-2">
-              <code className="flex-1 text-[11px] font-mono bg-secondary/40 border border-border rounded-lg px-3 py-2 text-emerald-400 truncate">
-                {info.wsUrl}
-              </code>
-              <button onClick={() => copy(info.wsUrl, "url")}
-                className="shrink-0 p-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary transition-colors">
-                {copied === "url" ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
-              </button>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={download}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors">
-              <Download className="w-4 h-4" />
-              Download Python Bridge
-            </button>
-            <button onClick={() => copy(info.pythonScript, "script")}
-              className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-border bg-secondary/40 hover:bg-secondary text-xs text-muted-foreground transition-colors">
-              {copied === "script" ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              Copy
-            </button>
-          </div>
-        </>
-      )}
+
+      {/* EA inputs */}
+      <div className="space-y-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">EA Input: ServerURL</p>
+        <div className="flex gap-2">
+          <code className="flex-1 text-[11px] font-mono bg-secondary/40 border border-border rounded-lg px-3 py-2 text-sky-400 truncate">
+            {serverUrl}
+          </code>
+          <button onClick={() => copy(serverUrl, "url")}
+            className="shrink-0 p-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary transition-colors">
+            {copied === "url" ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
+          </button>
+        </div>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mt-3">EA Input: BridgeToken</p>
+        <div className="flex gap-2">
+          <code className="flex-1 text-[11px] font-mono bg-secondary/40 border border-border rounded-lg px-3 py-2 text-yellow-400 truncate">
+            {token}
+          </code>
+          <button onClick={() => copy(token, "token")}
+            className="shrink-0 p-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary transition-colors">
+            {copied === "token" ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Download button */}
+      <button onClick={downloadEA}
+        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors">
+        <Download className="w-4 h-4" />
+        Download TradeLogBridge.mq5 Expert Advisor
+      </button>
+
+      <p className="text-[10px] text-muted-foreground">
+        Once installed, every trade you open or close in MT5 will appear in your journal within seconds — automatically.
+      </p>
     </div>
   );
 }
