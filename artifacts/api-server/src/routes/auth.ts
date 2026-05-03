@@ -137,7 +137,7 @@ router.post("/auth/subscribe", async (req, res) => {
       await db.insert(paymentsTable).values({
         userId: payload.sub,
         plan: "yearly",
-        amount: "90",
+        amount: "150",
         txHash: txHash.trim().toLowerCase(),
         walletAddress: "THrybvwth3eDpXVnZwBRohZ7AB3bY4Cqjs",
         verified: verification.valid,

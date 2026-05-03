@@ -10,7 +10,7 @@ import groeaxLogo from "@assets/WhatsApp_Image_2026-05-03_at_12.44.10_PM_1777794
 
 const BINANCE_WALLET = "THrybvwth3eDpXVnZwBRohZ7AB3bY4Cqjs";
 const BINANCE_ID = "520572397";
-const PAYMENT_AMOUNT = "90 USDT";
+const PAYMENT_AMOUNT = "150 USDT";
 
 const FREE_FEATURES = [
   { icon: Activity, label: "Trade Journal & P&L tracking" },
@@ -203,9 +203,9 @@ export default function Pricing() {
             <div className="mb-2">
               {billing === "yearly" ? (
                 <>
-                  <span className="text-5xl font-black text-white">$7.50</span>
+                  <span className="text-5xl font-black text-white">$12.50</span>
                   <span className="text-white/35 text-sm ml-2">/ month</span>
-                  <p className="text-emerald-400 text-xs font-semibold mt-1">Billed $90 / year</p>
+                  <p className="text-emerald-400 text-xs font-semibold mt-1">Billed $150 / year</p>
                 </>
               ) : (
                 <>

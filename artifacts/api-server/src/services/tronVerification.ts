@@ -3,7 +3,7 @@ import { logger } from "../lib/logger.js";
 const TRONSCAN_API = "https://apilist.tronscan.org/api";
 const TRON_USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
 const TARGET_WALLET = "THrybvwth3eDpXVnZwBRohZ7AB3bY4Cqjs";
-const EXPECTED_AMOUNT = "90000000"; // 90 USDT (6 decimals)
+const EXPECTED_AMOUNT = "150000000"; // 150 USDT (6 decimals)
 
 interface TronTransaction {
   hash: string;
@@ -103,7 +103,7 @@ export async function verifyTronPayment(
     const details = transfers.map((t) => `${t.from} → ${t.to}: ${t.value} (${t.token_info?.tokenName})`).join("; ");
     return {
       valid: false,
-      error: `Payment mismatch. Expected: 90 USDT to ${TARGET_WALLET}, Found: ${details}`,
+      error: `Payment mismatch. Expected: 150 USDT to ${TARGET_WALLET}, Found: ${details}`,
     };
   }
 
