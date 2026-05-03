@@ -7,8 +7,7 @@ import { db, usersTable, paymentsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { verifyTronPayment, PLAN_AMOUNTS_USDT, PLAN_AMOUNT_DISPLAY, getTargetWallet } from "../services/tronVerification.js";
 import { sendPaymentWhatsApp } from "../services/whatsappNotification.js";
-import { sendPaymentEmail } from "../services/emailNotification.js";
-import { sendPaymentViaGmail } from "../services/gmailNotification.js";
+import { sendPaymentViaSendGrid } from "../services/sendgridNotification.js";
 
 const router = Router();
 
@@ -281,7 +280,7 @@ router.post("/auth/subscribe", async (req, res) => {
     });
 
     const adminEmail = process.env.ADMIN_EMAIL ?? currentUser.email;
-    void sendPaymentEmail({
+    void sendPaymentViaSendGrid({
       userName: currentUser.name,
       userEmail: email ?? currentUser.email,
       plan: `${subscribePlan.replace("_", " ").toUpperCase()} — ${amountDisplay} USDT`,

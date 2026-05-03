@@ -1,0 +1,106 @@
+import { logger } from "../lib/logger.js";
+
+export interface PaymentNotification {
+  userName: string;
+  userEmail: string;
+  plan: string;
+  amount: string;
+  txHash?: string;
+  screenshotUrl?: string;
+  status: "pending" | "verified";
+  paymentId?: number;
+}
+
+export async function sendPaymentViaSendGrid(
+  info: PaymentNotification,
+  adminEmail: string,
+): Promise<void> {
+  const apiKey = process.env.SENDGRID_API_KEY;
+  if (!apiKey) {
+    logger.warn("SendGrid API key not set — email notifications disabled");
+    return;
+  }
+
+  const statusEmoji = info.status === "verified" ? "✅" : "⏳";
+  const statusLabel = info.status === "verified" ? "AUTO-VERIFIED" : "PENDING REVIEW";
+
+  const htmlBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5;">
+      <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2 style="color: #333; margin-bottom: 20px;">
+          ${statusEmoji} Groeax Payment ${statusLabel}
+        </h2>
+        
+        <div style="background: #f9f9f9; padding: 15px; border-left: 4px solid #007bff; margin-bottom: 20px;">
+          <p style="margin: 8px 0;"><strong>User:</strong> ${info.userName}</p>
+          <p style="margin: 8px 0;"><strong>Email:</strong> ${info.userEmail}</p>
+          <p style="margin: 8px 0;"><strong>Plan:</strong> ${info.plan}</p>
+          <p style="margin: 8px 0;"><strong>Amount:</strong> ${info.amount} USDT</p>
+          ${info.txHash ? `<p style="margin: 8px 0;"><strong>TX Hash:</strong> <code>${info.txHash}</code></p>` : ""}
+        </div>
+
+        ${info.screenshotUrl ? `
+          <div style="margin-bottom: 20px;">
+            <p style="color: #666; margin-bottom: 10px;"><strong>Payment Screenshot:</strong></p>
+            <a href="${info.screenshotUrl}" style="display: inline-block; background: #007bff; color: white; padding: 10px 20px; border-radius: 4px; text-decoration: none;">View Screenshot</a>
+          </div>
+        ` : ""}
+
+        ${info.status === "pending" && info.paymentId ? `
+          <div style="margin-bottom: 20px; padding: 15px; background: #f0f7ff; border-radius: 4px; border: 1px solid #b3d9ff;">
+            <p style="color: #0066cc; margin-bottom: 10px; font-weight: bold;">Quick Approval</p>
+            <p style="color: #333; margin: 0 0 10px 0; font-size: 13px;">Use your admin API token to approve this payment:</p>
+            <code style="display: block; background: white; padding: 10px; border-radius: 3px; margin-bottom: 10px; font-size: 11px; color: #333; border: 1px solid #ddd; word-break: break-all;">curl -X POST https://[YOUR-DOMAIN]/api/admin/approve-payment/${info.paymentId} \\
+  -H "Content-Type: application/json" \\
+  -d '{"adminToken":"groeax-admin-secret-2026"}'</code>
+            <p style="color: #666; margin: 0; font-size: 12px;">Or check pending payments: GET /api/admin/pending-payments?adminToken=groeax-admin-secret-2026</p>
+          </div>
+        ` : ""}
+
+        <div style="background: ${info.status === "verified" ? "#d4edda" : "#fff3cd"}; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+          ${info.status === "verified"
+            ? `<p style="color: #155724; margin: 0;"><strong>✓ Status:</strong> Subscription activated automatically</p>`
+            : `<p style="color: #856404; margin: 0;"><strong>⚠ Status:</strong> Requires manual verification. Activate via admin panel.</p>`
+          }
+        </div>
+
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+        <p style="color: #999; font-size: 12px; text-align: center;">
+          This is an automated notification from Groeax Payment System
+        </p>
+      </div>
+    </div>
+  `;
+
+  try {
+    const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        personalizations: [
+          {
+            to: [{ email: adminEmail }],
+          },
+        ],
+        from: {
+          email: "noreply@groeax.com",
+          name: "Groeax Payments",
+        },
+        subject: `[Groeax] Payment ${statusLabel} - ${info.userName} - ${info.amount} USDT`,
+        html: htmlBody,
+      }),
+    });
+
+    if (response.ok) {
+      logger.info({ adminEmail }, "Payment notification sent via SendGrid");
+    } else {
+      const error = await response.text();
+      logger.error({ adminEmail, error: error }, "SendGrid request failed");
+    }
+  } catch (err) {
+    logger.error({ err, adminEmail }, "Failed to send SendGrid notification");
+  }
+}
