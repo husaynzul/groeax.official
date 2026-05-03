@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowDownRight, ArrowUpRight, Shield, Radar, BadgeAlert, TrendingUp, TrendingDown, ChevronDown } from "lucide-react";
 
@@ -33,8 +33,6 @@ export default function LiveTradingSignals() {
   const [loading, setLoading] = useState(true);
   const [pair, setPair] = useState("BTCUSDT");
 
-  const pairLabel = useMemo(() => pair, [pair]);
-
   useEffect(() => {
     let mounted = true;
     const base = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
@@ -65,16 +63,21 @@ export default function LiveTradingSignals() {
   const isActive = isLong || isShort;
 
   return (
-    <div className={`rounded-2xl border backdrop-blur-xl shadow-[0_20px_80px_rgba(0,0,0,0.35)] overflow-hidden ${
-      isLong ? "border-emerald-500/20 bg-[linear-gradient(180deg,rgba(16,185,129,0.06),rgba(255,255,255,0.015))]" :
-      isShort ? "border-red-500/20 bg-[linear-gradient(180deg,rgba(239,68,68,0.06),rgba(255,255,255,0.015))]" :
-      "border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.015))]"
+    <div className={`rounded-[24px] border backdrop-blur-xl overflow-hidden shadow-[0_24px_120px_rgba(0,0,0,0.42)] ${
+      isLong ? "border-emerald-500/20 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.10),rgba(255,255,255,0.02)_28%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.015))]" :
+      isShort ? "border-red-500/20 bg-[radial-gradient(circle_at_top,rgba(239,68,68,0.10),rgba(255,255,255,0.02)_28%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.015))]" :
+      "border-white/8 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),rgba(255,255,255,0.02)_26%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))]"
     }`}>
-      <div className="px-4 pt-4 pb-3 border-b border-white/[0.06]">
+      <div className="px-4 pt-4 pb-3 border-b border-white/[0.06] bg-white/[0.01]">
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Radar className="w-4 h-4 text-primary shrink-0" />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/40">Live Trading Signal</span>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center shadow-[0_0_18px_rgba(16,185,129,0.14)]">
+              <Radar className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/35">Live Trading Signal</p>
+              <p className="text-[11px] text-white/22 mt-0.5">Session-aware pair selection</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <label className="text-[10px] uppercase tracking-wider text-white/30">Pair</label>
@@ -82,9 +85,9 @@ export default function LiveTradingSignals() {
               <select
                 value={pair}
                 onChange={(e) => setPair(e.target.value)}
-                className="appearance-none rounded-full border border-white/10 bg-[#12151d] pl-3 pr-8 py-1.5 text-[10px] font-semibold text-white/90 outline-none focus:border-primary/40"
+                className="appearance-none rounded-full border border-white/10 bg-[#12151d] pl-3 pr-8 py-1.5 text-[10px] font-semibold text-white/90 outline-none focus:border-primary/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
               >
-                {PAIRS.map((p) => <option key={p} value={p} className="bg-[#12151d] text-white/90">{p}</option>)}
+                {PAIRS.map((p) => <option key={p} value={p} className="bg-[#12151d] text-white">{p}</option>)}
               </select>
               <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
             </div>
@@ -102,12 +105,12 @@ export default function LiveTradingSignals() {
                 transition={{ duration: 0.25 }}
                 className="flex items-end gap-3 flex-wrap"
               >
-                <h2 className={`text-3xl font-extrabold tracking-tight leading-none ${
-                  isLong ? "text-emerald-300" : isShort ? "text-red-300" : "text-white/70"
+                <h2 className={`text-[34px] font-extrabold tracking-tight leading-none ${
+                  isLong ? "text-emerald-300" : isShort ? "text-red-300" : "text-white/80"
                 }`}>
                   {signal.pair}
                 </h2>
-                <span className={`mb-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${ASSET_CLASS_STYLE[signal.assetClass] ?? ASSET_CLASS_STYLE.forex}`}>
+                <span className={`mb-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${ASSET_CLASS_STYLE[signal.assetClass] ?? ASSET_CLASS_STYLE.forex}`}>
                   {signal.assetClass}
                 </span>
               </motion.div>
@@ -127,33 +130,33 @@ export default function LiveTradingSignals() {
 
       <div className="p-4">
         {loading && !signal ? (
-          <div className="h-28 rounded-xl bg-white/[0.02] animate-pulse" />
+          <div className="h-28 rounded-2xl bg-white/[0.02] animate-pulse" />
         ) : !isActive ? (
-          <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4 text-sm text-white/45 flex items-start gap-2">
+          <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4 text-sm text-white/45 flex items-start gap-2.5">
             <BadgeAlert className="w-4 h-4 mt-0.5 text-amber-400 shrink-0" />
             <div>
-              <p className="font-medium text-white/80">No valid setup{signal?.pair ? ` for ${signal.pair}` : ""}</p>
-              <p className="text-xs mt-1">{signal?.aiExplanation}</p>
+              <p className="font-medium text-white/85">No valid setup{signal?.pair ? ` for ${signal.pair}` : ""}</p>
+              <p className="text-xs mt-1 leading-relaxed">{signal?.aiExplanation}</p>
             </div>
           </div>
         ) : signal ? (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3.5">
+            <div className="grid grid-cols-3 gap-2.5">
+              <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
                 <p className="text-[9px] text-white/30 uppercase tracking-wider mb-1">Entry Zone</p>
                 <p className="text-sm font-semibold text-white/90">{signal.entryZone ? `${fmt(signal.entryZone.low)} – ${fmt(signal.entryZone.high)}` : "—"}</p>
               </div>
-              <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+              <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
                 <p className="text-[9px] text-white/30 uppercase tracking-wider mb-1">Stop Loss</p>
                 <p className="text-sm font-semibold text-red-400">{signal.stopLoss ? fmt(signal.stopLoss) : "—"}</p>
               </div>
-              <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+              <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
                 <p className="text-[9px] text-white/30 uppercase tracking-wider mb-1">R : R</p>
                 <p className="text-sm font-semibold text-white/90">{signal.riskReward ?? "—"}</p>
               </div>
             </div>
 
-            <div>
+            <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-3.5">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[9px] text-white/30 uppercase tracking-wider">Confidence</span>
                 <span className={`text-[10px] font-bold ${signal.confidenceScore >= 80 ? "text-emerald-400" : signal.confidenceScore >= 60 ? "text-amber-400" : "text-white/50"}`}>
@@ -170,16 +173,16 @@ export default function LiveTradingSignals() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2.5">
               {signal.takeProfits.slice(0, 3).map((tp, i) => (
-                <div key={i} className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.04] p-3">
+                <div key={i} className="rounded-2xl border border-emerald-500/15 bg-emerald-500/[0.04] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
                   <p className="text-[9px] text-white/30 uppercase tracking-wider mb-1">TP {i + 1}</p>
                   <p className="text-sm font-semibold text-emerald-400">{fmt(tp)}</p>
                 </div>
               ))}
             </div>
 
-            <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3 flex items-start gap-2">
+            <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-3.5 flex items-start gap-2.5">
               {isLong
                 ? <ArrowUpRight className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 : <ArrowDownRight className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />}
