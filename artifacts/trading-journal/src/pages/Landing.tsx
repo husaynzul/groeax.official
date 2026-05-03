@@ -138,7 +138,7 @@ export default function Landing() {
           <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
             <TrendingUp className="w-4 h-4 text-primary" />
           </div>
-          <span className="font-bold text-lg tracking-tight">TradeLog</span>
+          <span className="font-bold text-lg tracking-tight">Groeax</span>
         </Link>
 
         <div className="hidden md:flex items-center gap-8 text-sm text-white/45">
@@ -391,7 +391,7 @@ export default function Landing() {
           <div className="relative z-10">
             <h2 className="text-4xl md:text-5xl font-black mb-5">Your edge starts here.</h2>
             <p className="text-white/40 text-lg mb-10 max-w-xl mx-auto">
-              Join traders who use TradeLog to review every trade, fix every mistake, and grow every month.
+            Join traders who use Groeax to review every trade, fix every mistake, and grow every month.
             </p>
             <Link href="/dashboard">
               <button className="px-10 py-4 rounded-xl bg-primary text-primary-foreground
@@ -406,7 +406,7 @@ export default function Landing() {
 
       {/* ── Footer ───────────────────────────────────────────────────── */}
       <footer className="border-t border-white/[0.05] py-8 text-center">
-        <p className="text-white/18 text-sm">© 2026 TradeLog. Professional trading tools for serious traders.</p>
+        <p className="text-white/18 text-sm">© 2026 Groeax. Professional trading tools for serious traders.</p>
       </footer>
 
       <style>{`

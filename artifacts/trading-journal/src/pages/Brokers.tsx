@@ -244,15 +244,15 @@ function MT5Panel() {
 
   const downloadEA = () => {
     const a = document.createElement("a");
-    a.href = `${BASE}/TradeLogBridge.mq5`;
-    a.download = "TradeLogBridge.mq5";
+    a.href = `${BASE}/GroeaxBridge.mq5`;
+    a.download = "GroeaxBridge.mq5";
     a.click();
   };
 
   const steps = [
     { label: "Download the Expert Advisor file", action: (
       <button onClick={downloadEA} className="flex items-center gap-1.5 text-primary text-[11px] font-semibold hover:underline">
-        <Download className="w-3 h-3" /> TradeLogBridge.mq5
+        <Download className="w-3 h-3" /> GroeaxBridge.mq5
       </button>
     )},
     { label: 'Copy it to MetaTrader 5 → File → Open Data Folder → MQL5 → Experts', action: null },
@@ -463,7 +463,7 @@ function ConnectForm({ def, onSave, onClose }: ConnectFormProps) {
               <div className="flex items-start gap-2 p-3 rounded-xl bg-secondary/30 border border-border">
                 <Shield className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  API keys are stored <strong className="text-foreground">only in your browser</strong>. They are never sent to TradeLog servers.
+                  API keys are stored <strong className="text-foreground">only in your browser</strong>. They are never sent to Groeax servers.
                 </p>
               </div>
             </>
@@ -892,7 +892,7 @@ export default function Brokers() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
               { n: "1", title: "Connect", body: "Enter your read-only API credentials. All keys are stored in your browser — never on our servers." },
-              { n: "2", title: "Sync",    body: "Pull your closed orders from any exchange into your TradeLog journal with one click." },
+              { n: "2", title: "Sync",    body: "Pull your closed orders from any exchange into your Groeax journal with one click." },
               { n: "3", title: "Analyze", body: "All synced trades appear in your journal, analytics, and AI coaching flow instantly." },
             ].map(s => (
               <div key={s.n} className="flex gap-3">

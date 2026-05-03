@@ -84,7 +84,7 @@ export default function CSVImportModal({ open, onClose, onImport }: Props) {
           {step === "upload" && (
             <div>
               <p className="text-xs text-muted-foreground mb-4">
-                Upload a CSV exported from MetaTrader, TradeZella, Notion, or any trading platform. TradeLog will auto-detect columns.
+                Upload a CSV exported from MetaTrader, TradeZella, Notion, or any trading platform. Groeax will auto-detect columns.
               </p>
               {/* Drop zone */}
               <div

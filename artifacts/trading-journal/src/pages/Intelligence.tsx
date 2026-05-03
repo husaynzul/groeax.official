@@ -702,7 +702,7 @@ export default function Intelligence() {
           </span>
           <span className="text-[10px]">Live · Fusing every 20s · {events.length} clusters · {verifiedCount} verified</span>
         </div>
-        <span className="text-[10px] text-white/20">TradeLog Intelligence OS v2.0</span>
+        <span className="text-[10px] text-white/20">Groeax Intelligence OS v2.0</span>
       </div>
     </div>
   );

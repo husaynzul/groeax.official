@@ -71,7 +71,7 @@ export default function Sidebar({ onSignOut, userName }: { onSignOut?: () => voi
           </div>
           {!collapsed && (
             <span className="font-semibold text-sm tracking-wide text-foreground">
-              TradeLog
+              Groeax
             </span>
           )}
         </Link>

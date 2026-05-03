@@ -76,7 +76,7 @@ export function AuthGate({
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Loader2 className="w-4 h-4 animate-spin text-primary" />
-          Loading TradeLog…
+          Loading Groeax…
         </div>
       </div>
     );
@@ -90,7 +90,7 @@ export function AuthGate({
             <ShieldCheck className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">TradeLog</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Groeax</h1>
             <p className="text-xs text-muted-foreground">Sign up or log in to continue</p>
           </div>
         </div>
@@ -120,7 +120,7 @@ export function AuthGate({
           <button onClick={submit} className="w-full rounded-xl bg-primary text-primary-foreground py-3 font-semibold hover:bg-primary/90 transition-colors">
             {mode === "signup" ? "Create account" : "Continue"}
           </button>
-          <p className="text-[10px] text-white/30 text-center">By continuing, you agree to use TradeLog responsibly.</p>
+          <p className="text-[10px] text-white/30 text-center">By continuing, you agree to use Groeax responsibly.</p>
         </div>
       </motion.div>
     </div>
