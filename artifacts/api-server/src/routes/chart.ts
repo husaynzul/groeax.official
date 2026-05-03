@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { authMiddleware, premiumMiddleware } from "../middleware/auth.js";
 import {
   generateHistory, getNextCandle,
   PAIRS, TIMEFRAMES, getPairsByCategory,
@@ -22,7 +23,7 @@ router.get("/chart/pairs", (_req, res) => {
   res.json({ pairs: PAIRS, timeframes: TIMEFRAMES, byCategory: getPairsByCategory() });
 });
 
-router.get("/chart/candles", async (req, res) => {
+router.get("/chart/candles", authMiddleware, premiumMiddleware, async (req, res) => {
   const pair  = String(req.query["pair"]  ?? "EURUSD");
   const tf    = String(req.query["tf"]    ?? "H1");
   const limit = Math.min(Number(req.query["limit"] ?? 500), 2000);
@@ -122,7 +123,7 @@ function startGBMStream(
   req.on("close", () => { clearInterval(tickTimer); clearInterval(heartbeat); });
 }
 
-router.get("/chart/live", async (req, res) => {
+router.get("/chart/live", authMiddleware, premiumMiddleware, async (req, res) => {
   const pair = String(req.query["pair"] ?? "EURUSD");
   const tf   = String(req.query["tf"]   ?? "H1");
 

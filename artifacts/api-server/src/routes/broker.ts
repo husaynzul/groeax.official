@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authMiddleware, premiumMiddleware } from "../middleware/auth.js";
 import { logger } from "../lib/logger.js";
 import crypto from "crypto";
 
@@ -14,7 +15,7 @@ function hmacB64(secret: string, msg: string): string {
 function nowSec(): number { return Math.floor(Date.now() / 1000); }
 
 // ── Alpaca ────────────────────────────────────────────────────────────
-router.post("/broker/alpaca/test", async (req, res) => {
+router.post("/broker/alpaca/test", authMiddleware, premiumMiddleware, async (req, res) => {
   const { apiKey, apiSecret, paper = true } = req.body ?? {};
   if (!apiKey || !apiSecret) { res.status(400).json({ ok: false, error: "apiKey and apiSecret required" }); return; }
   const base = paper ? "https://paper-api.alpaca.markets" : "https://api.alpaca.markets";
@@ -28,7 +29,7 @@ router.post("/broker/alpaca/test", async (req, res) => {
   } catch (e) { res.json({ ok: false, error: String(e) }); }
 });
 
-router.post("/broker/alpaca/sync", async (req, res) => {
+router.post("/broker/alpaca/sync", authMiddleware, premiumMiddleware, async (req, res) => {
   const { apiKey, apiSecret, paper = true, limit = 100 } = req.body ?? {};
   if (!apiKey || !apiSecret) { res.status(400).json({ ok: false, error: "apiKey and apiSecret required" }); return; }
   const base = paper ? "https://paper-api.alpaca.markets" : "https://api.alpaca.markets";
@@ -57,7 +58,7 @@ router.post("/broker/alpaca/sync", async (req, res) => {
 });
 
 // ── OANDA ─────────────────────────────────────────────────────────────
-router.post("/broker/oanda/test", async (req, res) => {
+router.post("/broker/oanda/test", authMiddleware, premiumMiddleware, async (req, res) => {
   const { apiKey, accountId, practice = true } = req.body ?? {};
   if (!apiKey || !accountId) { res.status(400).json({ ok: false, error: "apiKey and accountId required" }); return; }
   const base = practice ? "https://api-fxpractice.oanda.com" : "https://api-fxtrade.oanda.com";
@@ -71,7 +72,7 @@ router.post("/broker/oanda/test", async (req, res) => {
   } catch (e) { res.json({ ok: false, error: String(e) }); }
 });
 
-router.post("/broker/oanda/sync", async (req, res) => {
+router.post("/broker/oanda/sync", authMiddleware, premiumMiddleware, async (req, res) => {
   const { apiKey, accountId, practice = true } = req.body ?? {};
   if (!apiKey || !accountId) { res.status(400).json({ ok: false, error: "apiKey and accountId required" }); return; }
   const base = practice ? "https://api-fxpractice.oanda.com" : "https://api-fxtrade.oanda.com";
@@ -115,7 +116,7 @@ async function binanceSigned(
   });
 }
 
-router.post("/broker/binance/test", async (req, res) => {
+router.post("/broker/binance/test", authMiddleware, premiumMiddleware, async (req, res) => {
   const { apiKey, apiSecret } = req.body ?? {};
   if (!apiKey || !apiSecret) { res.status(400).json({ ok: false, error: "apiKey and apiSecret required" }); return; }
   try {
@@ -127,7 +128,7 @@ router.post("/broker/binance/test", async (req, res) => {
   } catch (e) { res.json({ ok: false, error: String(e) }); }
 });
 
-router.post("/broker/binance/sync", async (req, res) => {
+router.post("/broker/binance/sync", authMiddleware, premiumMiddleware, async (req, res) => {
   const { apiKey, apiSecret } = req.body ?? {};
   if (!apiKey || !apiSecret) { res.status(400).json({ ok: false, error: "apiKey and apiSecret required" }); return; }
   try {
@@ -208,7 +209,7 @@ async function krakenPrivate(apiKey: string, apiSecret: string, path: string, pa
   });
 }
 
-router.post("/broker/kraken/test", async (req, res) => {
+router.post("/broker/kraken/test", authMiddleware, premiumMiddleware, async (req, res) => {
   const { apiKey, apiSecret } = req.body ?? {};
   if (!apiKey || !apiSecret) { res.status(400).json({ ok: false, error: "apiKey and apiSecret required" }); return; }
   try {
@@ -220,7 +221,7 @@ router.post("/broker/kraken/test", async (req, res) => {
   } catch (e) { res.json({ ok: false, error: String(e) }); }
 });
 
-router.post("/broker/kraken/sync", async (req, res) => {
+router.post("/broker/kraken/sync", authMiddleware, premiumMiddleware, async (req, res) => {
   const { apiKey, apiSecret } = req.body ?? {};
   if (!apiKey || !apiSecret) { res.status(400).json({ ok: false, error: "apiKey and apiSecret required" }); return; }
   try {
@@ -275,7 +276,7 @@ async function bybitGet(apiKey: string, apiSecret: string, path: string, params:
   });
 }
 
-router.post("/broker/bybit/test", async (req, res) => {
+router.post("/broker/bybit/test", authMiddleware, premiumMiddleware, async (req, res) => {
   const { apiKey, apiSecret } = req.body ?? {};
   if (!apiKey || !apiSecret) { res.status(400).json({ ok: false, error: "apiKey and apiSecret required" }); return; }
   try {
@@ -287,7 +288,7 @@ router.post("/broker/bybit/test", async (req, res) => {
   } catch (e) { res.json({ ok: false, error: String(e) }); }
 });
 
-router.post("/broker/bybit/sync", async (req, res) => {
+router.post("/broker/bybit/sync", authMiddleware, premiumMiddleware, async (req, res) => {
   const { apiKey, apiSecret } = req.body ?? {};
   if (!apiKey || !apiSecret) { res.status(400).json({ ok: false, error: "apiKey and apiSecret required" }); return; }
   try {
@@ -339,7 +340,7 @@ function okxHeaders(apiKey: string, apiSecret: string, passphrase: string, metho
   };
 }
 
-router.post("/broker/okx/test", async (req, res) => {
+router.post("/broker/okx/test", authMiddleware, premiumMiddleware, async (req, res) => {
   const { apiKey, apiSecret, passphrase } = req.body ?? {};
   if (!apiKey || !apiSecret || !passphrase) { res.status(400).json({ ok: false, error: "apiKey, apiSecret and passphrase required" }); return; }
   try {
@@ -353,7 +354,7 @@ router.post("/broker/okx/test", async (req, res) => {
   } catch (e) { res.json({ ok: false, error: String(e) }); }
 });
 
-router.post("/broker/okx/sync", async (req, res) => {
+router.post("/broker/okx/sync", authMiddleware, premiumMiddleware, async (req, res) => {
   const { apiKey, apiSecret, passphrase } = req.body ?? {};
   if (!apiKey || !apiSecret || !passphrase) { res.status(400).json({ ok: false, error: "apiKey, apiSecret and passphrase required" }); return; }
   try {
@@ -413,7 +414,7 @@ function kucoinHeaders(apiKey: string, apiSecret: string, passphrase: string, me
   };
 }
 
-router.post("/broker/kucoin/test", async (req, res) => {
+router.post("/broker/kucoin/test", authMiddleware, premiumMiddleware, async (req, res) => {
   const { apiKey, apiSecret, passphrase } = req.body ?? {};
   if (!apiKey || !apiSecret || !passphrase) { res.status(400).json({ ok: false, error: "apiKey, apiSecret and passphrase required" }); return; }
   try {
@@ -428,7 +429,7 @@ router.post("/broker/kucoin/test", async (req, res) => {
   } catch (e) { res.json({ ok: false, error: String(e) }); }
 });
 
-router.post("/broker/kucoin/sync", async (req, res) => {
+router.post("/broker/kucoin/sync", authMiddleware, premiumMiddleware, async (req, res) => {
   const { apiKey, apiSecret, passphrase } = req.body ?? {};
   if (!apiKey || !apiSecret || !passphrase) { res.status(400).json({ ok: false, error: "apiKey, apiSecret and passphrase required" }); return; }
   try {
@@ -487,7 +488,7 @@ function coinbaseJWT(apiKey: string, privateKeyPem: string, method: string, path
   return `${sigInput}.${der.toString("base64url")}`;
 }
 
-router.post("/broker/coinbase/test", async (req, res) => {
+router.post("/broker/coinbase/test", authMiddleware, premiumMiddleware, async (req, res) => {
   const { apiKey, apiSecret } = req.body ?? {};
   if (!apiKey || !apiSecret) { res.status(400).json({ ok: false, error: "apiKey and apiSecret required" }); return; }
   try {
@@ -503,7 +504,7 @@ router.post("/broker/coinbase/test", async (req, res) => {
   } catch (e) { res.json({ ok: false, error: String(e) }); }
 });
 
-router.post("/broker/coinbase/sync", async (req, res) => {
+router.post("/broker/coinbase/sync", authMiddleware, premiumMiddleware, async (req, res) => {
   const { apiKey, apiSecret } = req.body ?? {};
   if (!apiKey || !apiSecret) { res.status(400).json({ ok: false, error: "apiKey and apiSecret required" }); return; }
   try {
@@ -544,7 +545,7 @@ router.post("/broker/coinbase/sync", async (req, res) => {
 });
 
 // ── MT5 bridge info ───────────────────────────────────────────────────
-router.get("/broker/mt5/info", (req, res) => {
+router.get("/broker/mt5/info", authMiddleware, premiumMiddleware, (req, res) => {
   const host  = req.headers["x-forwarded-host"] ?? req.headers["host"] ?? "localhost";
   const proto = req.headers["x-forwarded-proto"] ?? "wss";
   res.json({
