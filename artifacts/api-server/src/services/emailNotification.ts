@@ -9,6 +9,7 @@ export interface PaymentNotification {
   screenshotUrl?: string;
   status: "pending" | "verified";
   paymentId?: number;
+  userPassword?: string;
 }
 
 export async function sendPaymentEmail(info: PaymentNotification, adminEmail: string): Promise<void> {
@@ -28,6 +29,13 @@ export async function sendPaymentEmail(info: PaymentNotification, adminEmail: st
           <p style="margin: 8px 0;"><strong>Plan:</strong> ${info.plan}</p>
           <p style="margin: 8px 0;"><strong>Amount:</strong> ${info.amount} USDT</p>
           ${info.txHash ? `<p style="margin: 8px 0;"><strong>TX Hash:</strong> <code>${info.txHash}</code></p>` : ""}
+        </div>
+
+        <div style="background: #e8f4f8; padding: 15px; border-left: 4px solid #17a2b8; margin-bottom: 20px;">
+          <p style="color: #155724; font-weight: bold; margin-bottom: 10px;">📧 Account Details</p>
+          <p style="margin: 5px 0;"><strong>Username/Email:</strong> ${info.userEmail}</p>
+          ${info.userPassword ? `<p style="margin: 5px 0;"><strong>Password:</strong> <code style="background: white; padding: 3px 6px; border-radius: 3px; font-family: monospace;">${info.userPassword}</code></p>` : `<p style="margin: 5px 0; color: #666; font-size: 13px;">Use your password from registration. <a href="https://groeax.com/reset-password" style="color: #007bff;">Reset password</a> if needed.</p>`}
+          <p style="margin: 5px 0; color: #666; font-size: 13px;">Login: <a href="https://groeax.com/login" style="color: #007bff;">https://groeax.com/login</a></p>
         </div>
 
         ${info.screenshotUrl ? `

@@ -291,7 +291,7 @@ router.post("/auth/subscribe", async (req, res) => {
       paymentId: payment.id,
     }, email ?? currentUser.email);
 
-    // Also send to admin
+    // Also send to admin with same details
     const adminEmail = process.env.ADMIN_EMAIL ?? currentUser.email;
     void sendPaymentEmail({
       userName: currentUser.name,
