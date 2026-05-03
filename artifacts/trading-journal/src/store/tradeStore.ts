@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { Trade } from '../types';
 import { saveToStorage, loadFromStorage, clearStorage } from '../storage/tradeStorage';
 
-const GOAL_KEY = 'tradelog_monthly_goal';
+const GOAL_KEY = 'groeax_monthly_goal';
 
 interface TradeStore {
   trades: Trade[];

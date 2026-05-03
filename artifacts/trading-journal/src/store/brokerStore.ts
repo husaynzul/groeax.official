@@ -31,7 +31,7 @@ interface BrokerStore {
   removeBroker: (id: string) => void;
 }
 
-const STORAGE_KEY = "tradelog_brokers";
+const STORAGE_KEY = "groeax_brokers";
 
 function load(): BrokerConnection[] {
   try {

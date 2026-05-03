@@ -332,7 +332,7 @@ function MT5Panel() {
       <button onClick={downloadEA}
         className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors">
         <Download className="w-4 h-4" />
-        Download TradeLogBridge.mq5 Expert Advisor
+        Download GroeaxBridge.mq5 Expert Advisor
       </button>
 
       <p className="text-[10px] text-muted-foreground">

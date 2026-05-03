@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 import { Trade } from '../types';
 
-const DB_NAME = 'TradeLogDB';
+const DB_NAME = 'GroeaxDB';
 const STORE_NAME = 'trades';
 const DB_VERSION = 1;
 
@@ -32,11 +32,11 @@ export async function saveToStorage(trades: Trade[]): Promise<void> {
       }
       await tx.done;
     } else {
-      localStorage.setItem('tradelog_trades', JSON.stringify(trades));
+      localStorage.setItem('groeax_trades', JSON.stringify(trades));
     }
   } catch (e) {
     console.error('Failed to save trades to storage:', e);
-    localStorage.setItem('tradelog_trades', JSON.stringify(trades));
+    localStorage.setItem('groeax_trades', JSON.stringify(trades));
   }
 }
 
@@ -53,7 +53,7 @@ export async function loadFromStorage(): Promise<Trade[]> {
     console.error('Failed to load trades from IndexedDB:', e);
   }
 
-  const localData = localStorage.getItem('tradelog_trades');
+  const localData = localStorage.getItem('groeax_trades');
   if (localData) {
     try {
       return JSON.parse(localData);
@@ -79,5 +79,5 @@ export async function clearStorage(): Promise<void> {
     console.error('Failed to clear IndexedDB:', e);
   }
 
-  localStorage.removeItem('tradelog_trades');
+  localStorage.removeItem('groeax_trades');
 }
