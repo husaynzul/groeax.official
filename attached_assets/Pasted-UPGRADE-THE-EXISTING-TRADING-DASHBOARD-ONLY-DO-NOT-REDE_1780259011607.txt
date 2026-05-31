@@ -1,0 +1,220 @@
+UPGRADE THE EXISTING TRADING DASHBOARD ONLY.
+
+DO NOT REDESIGN THE ENTIRE SYSTEM.
+DO NOT REMOVE ANY CURRENT FEATURES.
+ONLY IMPROVE AND EXTEND THE CURRENT DASHBOARD.
+
+────────────────────────────
+MAIN OBJECTIVE
+────────────────────────────
+
+Transform the current dashboard into a professional trading analytics dashboard similar to:
+
+- TradeZella
+- TraderSync
+- Tradervue
+- MyFxBook Analytics
+
+Keep existing dark theme and layout style.
+
+────────────────────────────
+1. ACCOUNT BALANCE CARD
+────────────────────────────
+
+Add new account metrics section:
+
+- Starting Balance
+- Current Balance
+- Total Profit
+- Total Loss
+- Net PnL
+- Account Growth %
+
+Formula:
+
+Current Balance =
+Starting Balance +
+Total Profit -
+Total Loss
+
+Update automatically after every trade.
+
+────────────────────────────
+2. EQUITY CURVE CHART
+────────────────────────────
+
+Add professional equity curve.
+
+Show:
+
+- account growth over time
+- balance after each trade
+- drawdowns
+- recoveries
+
+Chart updates automatically.
+
+────────────────────────────
+3. ADVANCED STATISTICS
+────────────────────────────
+
+Add:
+
+- Total Trades
+- Winning Trades
+- Losing Trades
+- Win Rate %
+- Average Win
+- Average Loss
+- Profit Factor
+- Risk Reward Ratio
+- Largest Win
+- Largest Loss
+- Consecutive Wins
+- Consecutive Losses
+
+────────────────────────────
+4. SESSION ANALYTICS
+────────────────────────────
+
+Track performance by session:
+
+- Asia
+- Tokyo
+- London
+- New York
+
+Show:
+
+- win rate per session
+- total profit per session
+- trade count per session
+
+Display using charts and cards.
+
+────────────────────────────
+5. STRATEGY ANALYTICS
+────────────────────────────
+
+Track:
+
+- FVG
+- BOS
+- CHOCH
+- Order Block
+- Liquidity Grab
+- Support/Resistance
+- Trend Continuation
+- Reversal Setup
+
+Show:
+
+- win rate
+- profit
+- trade count
+
+Rank best-performing strategies.
+
+────────────────────────────
+6. PATTERN ANALYTICS
+────────────────────────────
+
+Track:
+
+- Breakout Pattern
+- Pullback Entry
+- Continuation Pattern
+- Reversal Pattern
+- Range Trading
+
+Show statistics for each pattern.
+
+────────────────────────────
+7. MONTHLY PERFORMANCE
+────────────────────────────
+
+Add:
+
+- monthly profit/loss
+- monthly growth %
+- monthly win rate
+
+Create monthly performance chart.
+
+────────────────────────────
+8. DRAWDOWN TRACKING
+────────────────────────────
+
+Calculate:
+
+- max drawdown
+- current drawdown
+- average drawdown
+
+Show warning indicators when drawdown becomes high.
+
+────────────────────────────
+9. RECENT TRADES PANEL
+────────────────────────────
+
+Create recent trades section showing:
+
+- Pair
+- Direction
+- Profit/Loss
+- Date
+- Strategy
+- Session
+
+Clickable for full trade details.
+
+────────────────────────────
+10. GOAL TRACKING
+────────────────────────────
+
+Allow user to set:
+
+- monthly target
+- account target
+
+Show:
+
+- progress %
+- remaining target
+- estimated completion
+
+────────────────────────────
+11. DASHBOARD FILTERS
+────────────────────────────
+
+Add filters:
+
+- Today
+- This Week
+- This Month
+- Last Month
+- Custom Date Range
+
+All analytics must update dynamically.
+
+────────────────────────────
+12. PROFESSIONAL UI IMPROVEMENTS
+────────────────────────────
+
+Keep current design.
+
+Improve:
+
+- card animations
+- chart visuals
+- spacing
+- typography
+- responsive behavior
+
+Maintain dark professional trading theme.
+
+────────────────────────────
+FINAL GOAL
+────────────────────────────
+
+Upgrade the existing dashboard into a professional trading performance analytics center that automatically updates from journal entries and provides institutional-grade trading statistics.

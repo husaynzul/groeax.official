@@ -1,0 +1,236 @@
+ADD AI AUTO-TRADE EXTRACTION SYSTEM TO THE EXISTING TRADE JOURNAL FORM.
+
+IMPORTANT:
+DO NOT CHANGE THE CURRENT UI DESIGN.
+ONLY UPGRADE THE EXISTING "Add New Trade" MODAL.
+
+The current form already contains:
+- Pair
+- Direction
+- Entry Price
+- Lot Size
+- Stop Loss
+- Take Profit
+- Date
+- Outcome
+- Strategy
+- Patterns
+- Session
+- Notes
+
+Now add AI-powered image upload + auto-fill functionality.
+
+────────────────────────────
+CORE OBJECTIVE
+────────────────────────────
+
+User uploads a screenshot from broker/trading app (like Exness).
+
+System automatically extracts:
+- pair
+- direction
+- entry/open price
+- close price
+- lot size
+- stop loss
+- take profit
+- date/time
+- profit/loss result
+
+Then auto-fills the trade form automatically.
+
+User should ONLY manually choose:
+- Strategy
+- Pattern
+- Session
+- Outcome (Win/Loss/BE)
+
+Everything else should auto-fill from screenshot.
+
+────────────────────────────
+1. ADD IMAGE UPLOAD SECTION
+────────────────────────────
+
+Inside "Add New Trade" modal:
+
+Add new section at top:
+
+"Upload Trade Screenshot"
+
+Features:
+- upload image button
+- drag & drop support
+- image preview before processing
+- supported:
+  - PNG
+  - JPG
+  - JPEG
+
+────────────────────────────
+2. AI OCR + EXTRACTION ENGINE
+────────────────────────────
+
+When image uploaded:
+
+Use OCR + AI parsing to detect and extract:
+
+FROM SCREENSHOT:
+- Pair (EUR/USD etc.)
+- Direction (BUY/SELL)
+- Lot Size
+- Open Price
+- Close Price
+- Stop Loss
+- Take Profit
+- Open Time
+- Close Time
+- Profit/Loss amount
+
+Detect from trading screenshots automatically.
+
+IMPORTANT:
+Do NOT hardcode values.
+Use dynamic OCR text extraction.
+
+────────────────────────────
+3. AUTO-FILL FORM LOGIC
+────────────────────────────
+
+After extraction:
+
+Automatically populate:
+- Pair
+- Direction
+- Entry Price
+- Lot Size
+- Stop Loss
+- Take Profit
+- Date
+
+Also:
+- auto-calculate outcome:
+  - Win
+  - Loss
+  - Break Even
+
+Logic:
+IF profit > 0 → WIN
+IF profit < 0 → LOSS
+IF near zero → BREAKEVEN
+
+────────────────────────────
+4. USER MANUAL INPUT ONLY FOR:
+────────────────────────────
+
+Keep manual selection for:
+- Strategy
+- Patterns
+- Session
+- Notes
+
+Everything else auto-filled.
+
+────────────────────────────
+5. SMART DETECTION RULES
+────────────────────────────
+
+Example:
+
+If screenshot contains:
+"Sell 0.01 at 1.16487"
+
+System detects:
+- Direction = SELL
+- Lot Size = 0.01
+- Entry Price = 1.16487
+
+If screenshot contains:
+"Stop Loss 1.16474"
+
+Auto-fill:
+- Stop Loss = 1.16474
+
+────────────────────────────
+6. AUTO DATE EXTRACTION
+────────────────────────────
+
+Extract:
+- Open time
+- Close time
+
+Use open time as trade date automatically.
+
+────────────────────────────
+7. AUTO PROFIT RESULT DETECTION
+────────────────────────────
+
+If screenshot shows:
+"+0.13 USD"
+
+System detects:
+- trade result = profit
+- outcome = WIN
+
+If negative:
+- outcome = LOSS
+
+────────────────────────────
+8. AUTO SAVE SYSTEM
+────────────────────────────
+
+After user selects:
+- Strategy
+- Pattern
+- Session
+
+Then clicks:
+"Add Trade"
+
+Save all extracted + selected data into database.
+
+────────────────────────────
+9. ERROR HANDLING
+────────────────────────────
+
+If AI cannot detect field:
+- leave field editable
+- highlight missing field
+- allow manual correction
+
+NEVER insert fake values.
+
+────────────────────────────
+10. UI REQUIREMENTS
+────────────────────────────
+
+Keep SAME dark trading UI design.
+
+Just add:
+- image upload area
+- AI extraction loading animation
+- auto-fill indicators
+
+Do NOT redesign whole modal.
+
+────────────────────────────
+FINAL GOAL
+────────────────────────────
+
+User uploads ONE trading screenshot.
+
+AI automatically extracts and fills:
+- pair
+- direction
+- entry price
+- lot size
+- stop loss
+- take profit
+- date
+- outcome
+
+User only selects:
+- strategy
+- pattern
+- session
+
+Then saves trade instantly.
