@@ -1,0 +1,216 @@
+ADD A FULL TRADING ACCOUNT BALANCE TRACKING SYSTEM TO THE EXISTING DASHBOARD.
+
+IMPORTANT:
+DO NOT REDESIGN THE CURRENT UI.
+ONLY EXTEND THE EXISTING DASHBOARD + TRADE SYSTEM.
+
+The current dashboard already contains:
+- Net PnL
+- Win Rate
+- Avg Win
+- Performance Score
+- Monthly Goal
+- Sessions
+- Trade Journal
+
+Now add a REAL ACCOUNT BALANCE SYSTEM.
+
+────────────────────────────
+CORE OBJECTIVE
+────────────────────────────
+
+User sets starting trading balance.
+
+Example:
+Starting Balance = $100
+
+Then every trade automatically affects the balance:
+
+- winning trade → add profit
+- losing trade → subtract loss
+- dashboard updates automatically
+
+System must behave like a real trading journal account tracker.
+
+────────────────────────────
+1. ADD STARTING BALANCE SYSTEM
+────────────────────────────
+
+Create new section:
+
+"Trading Account Balance"
+
+Allow user to:
+- set starting balance manually
+- choose:
+  - Monthly Balance
+  - Main Account Balance
+
+Fields:
+- Starting Balance
+- Current Balance
+- Total Profit
+- Total Loss
+- Net Growth %
+
+────────────────────────────
+2. AUTO BALANCE CALCULATION
+────────────────────────────
+
+Every time trade is added:
+
+IF trade outcome = WIN:
+- add profit to current balance
+
+IF trade outcome = LOSS:
+- subtract loss from current balance
+
+IF BREAKEVEN:
+- no balance change
+
+Formula:
+
+Current Balance =
+Starting Balance +
+Total Wins -
+Total Losses
+
+────────────────────────────
+3. AUTO PNL DETECTION FROM TRADE
+────────────────────────────
+
+If trade screenshot contains:
+"+0.13 USD"
+
+Automatically:
+- add +0.13 to balance
+- update Net PnL
+
+If:
+"-2.50 USD"
+
+Automatically:
+- subtract 2.50 from balance
+
+────────────────────────────
+4. DASHBOARD LIVE UPDATE
+────────────────────────────
+
+Update dashboard cards automatically:
+
+- Net PnL
+- Current Balance
+- Monthly Goal
+- Performance Score
+- Win Rate
+
+No manual calculation needed.
+
+────────────────────────────
+5. MONTHLY BALANCE TRACKING
+────────────────────────────
+
+Add monthly tracking system:
+
+Example:
+Month = May 2026
+Starting Balance = $100
+
+System tracks:
+- current monthly balance
+- monthly profit/loss
+- monthly growth %
+
+At new month:
+- allow reset OR carry forward balance
+
+────────────────────────────
+6. ACCOUNT HISTORY SYSTEM
+────────────────────────────
+
+Store balance history:
+
+- starting balance
+- every trade impact
+- balance after each trade
+
+Create:
+"Balance Timeline"
+
+Show:
+- trade-by-trade balance changes
+
+────────────────────────────
+7. BALANCE ANALYTICS
+────────────────────────────
+
+Add charts:
+
+- balance growth line chart
+- equity curve
+- drawdown chart
+- monthly performance chart
+
+────────────────────────────
+8. RISK / DRAWDOWN SYSTEM
+────────────────────────────
+
+Track:
+- max drawdown
+- current drawdown
+- largest loss
+- risk percentage
+
+Display warnings if:
+- balance drops heavily
+- drawdown exceeds safe limits
+
+────────────────────────────
+9. TRADE LINKING
+────────────────────────────
+
+Every trade must affect:
+- account balance
+- dashboard analytics
+- PnL calculations
+
+NO isolated trade entries.
+
+────────────────────────────
+10. DATABASE STORAGE
+────────────────────────────
+
+Store:
+- account balances
+- trade profit/loss
+- monthly records
+- balance history
+
+Everything must persist after refresh/login.
+
+────────────────────────────
+11. UI REQUIREMENTS
+────────────────────────────
+
+Keep SAME dark trading dashboard style.
+
+Add:
+- balance cards
+- equity chart
+- account growth analytics
+
+Do NOT redesign entire dashboard.
+
+────────────────────────────
+FINAL GOAL
+────────────────────────────
+
+Create a real trading account tracking system where:
+
+- user sets starting balance
+- every trade updates balance automatically
+- wins add money
+- losses subtract money
+- dashboard shows real account growth
+- analytics update dynamically
+- system behaves like professional trading journal software

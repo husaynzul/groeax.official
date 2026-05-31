@@ -1,0 +1,224 @@
+BUILD A FULLY FUNCTIONAL WORDPRESS-STYLE ADMIN PANEL FOR AN EXISTING SAAS WEBSITE.
+
+This is a CRITICAL FIX because the current system has no working admin panel and subscription requests are not being properly stored or displayed.
+
+DO NOT create only UI.
+This must be a REAL WORKING SYSTEM with backend + database + API integration.
+
+────────────────────────────
+CORE OBJECTIVE
+────────────────────────────
+
+Create a centralized admin CMS where:
+
+- all users are managed
+- all subscription requests are stored and visible
+- screenshots are uploaded and linked properly
+- admin can approve/reject subscriptions
+- premium system is controlled from backend only
+
+Admin panel must become the SINGLE SOURCE OF TRUTH for the entire system.
+
+────────────────────────────
+1. ADMIN PANEL STRUCTURE
+────────────────────────────
+
+Create admin panel at:
+/admin
+
+WordPress-style layout:
+
+LEFT SIDEBAR:
+- Dashboard
+- Users
+- Subscription Requests
+- Premium Users
+- Media (Screenshots)
+- Analytics
+- Settings
+
+TOP BAR:
+- Notifications
+- Admin profile
+- System status
+
+MAIN AREA:
+- dynamic content pages
+
+────────────────────────────
+2. ADMIN AUTHENTICATION (MANDATORY)
+────────────────────────────
+
+Secure admin login system:
+
+- email + password login
+- hashed passwords
+- session-based authentication
+- protected admin routes
+- logout system
+
+No admin access without authentication.
+
+────────────────────────────
+3. SUBSCRIPTION REQUEST SYSTEM (CRITICAL FIX)
+────────────────────────────
+
+When user submits subscription request:
+
+Step 1:
+- Save request in DATABASE immediately
+
+Store:
+- user ID
+- email
+- selected subscription plan
+- screenshot URL/file
+- status = "PENDING"
+- timestamp
+
+Step 2:
+- Show request inside admin panel instantly
+
+IMPORTANT RULE:
+If request is not in database → it does not exist.
+
+────────────────────────────
+4. ADMIN REQUEST INBOX
+────────────────────────────
+
+Create section:
+"Subscription Requests"
+
+Display ALL requests:
+
+- Pending
+- Approved
+- Rejected
+- Active
+
+Each request must show:
+- user info
+- plan selected
+- screenshot preview
+- status badge
+- timestamp
+
+────────────────────────────
+5. ADMIN ACTION SYSTEM
+────────────────────────────
+
+Add buttons:
+
+- APPROVE
+- REJECT
+- ACTIVATE PREMIUM
+- SUSPEND USER
+- RENEW SUBSCRIPTION
+
+On APPROVE:
+- update status = APPROVED
+- set user.premium = true
+- activate subscription plan
+
+On REJECT:
+- update status = REJECTED
+- set user.premium = false
+
+On SUSPEND:
+- revoke access immediately
+
+────────────────────────────
+6. PREMIUM SYSTEM (BACKEND CONTROL ONLY)
+────────────────────────────
+
+Frontend must NEVER control premium access.
+
+Backend rule:
+
+IF user.premium == true → unlock premium features
+ELSE → lock premium features
+
+────────────────────────────
+7. SCREENSHOT / MEDIA SYSTEM
+────────────────────────────
+
+Create media storage system:
+
+- store uploaded screenshots securely
+- generate file URLs
+- link screenshots to subscription requests
+- preview images in admin panel
+
+────────────────────────────
+8. REAL-TIME SYNC SYSTEM
+────────────────────────────
+
+All admin changes must reflect instantly:
+
+- new request appears immediately
+- approval updates instantly
+- premium activation is immediate
+
+No manual refresh dependency allowed.
+
+────────────────────────────
+9. USER MANAGEMENT SYSTEM
+────────────────────────────
+
+Admin can:
+- view all users
+- search users
+- suspend/ban users
+- change subscription plans
+- view user activity
+
+────────────────────────────
+10. ANALYTICS DASHBOARD
+────────────────────────────
+
+Show:
+
+- total users
+- premium users
+- pending requests
+- approved subscriptions
+- rejected subscriptions
+- system activity logs
+
+Include simple charts:
+- user growth chart
+- subscription distribution chart
+
+────────────────────────────
+11. SECURITY REQUIREMENTS
+────────────────────────────
+
+Implement:
+
+- admin-only protected routes
+- hashed authentication
+- secure file upload validation
+- API authorization checks
+- anti-bypass premium protection
+- input sanitization
+
+────────────────────────────
+12. EMAIL SYSTEM (OPTIONAL ONLY)
+────────────────────────────
+
+Send email notifications ONLY as backup.
+
+System MUST function fully even if email fails.
+
+────────────────────────────
+FINAL GOAL
+────────────────────────────
+
+Build a production-ready WordPress-style admin CMS where:
+
+- admin panel controls entire website
+- subscription requests are always stored and visible
+- admin can approve/reject reliably
+- premium system is fully backend controlled
+- screenshots are properly stored and linked
+- system is stable, secure, and fully functional

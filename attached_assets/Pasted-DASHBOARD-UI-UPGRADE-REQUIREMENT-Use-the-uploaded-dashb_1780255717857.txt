@@ -1,0 +1,170 @@
+DASHBOARD UI UPGRADE REQUIREMENT
+
+Use the uploaded dashboard screenshot as the PRIMARY DESIGN REFERENCE.
+
+DO NOT create a generic dashboard.
+
+The final dashboard should visually match the uploaded reference in terms of:
+
+- layout structure
+- card positioning
+- spacing
+- dark trading theme
+- sidebar style
+- analytics blocks
+- account balance section
+- trade performance section
+- statistics cards
+
+────────────────────────────
+LAYOUT REQUIREMENTS
+────────────────────────────
+
+Left Sidebar:
+- Dashboard
+- Accounts
+- Trades
+- Analytics
+- Calendar
+- Strategy
+- Reports
+- Journal
+- Settings
+
+Bottom Sidebar:
+- Current Account Card
+- Account Balance
+- Broker Name
+- Account Type
+
+────────────────────────────
+TOP DASHBOARD SECTION
+────────────────────────────
+
+Replace the current empty signal section with:
+
+ACCOUNT OVERVIEW
+
+Show:
+
+- Starting Balance
+- Current Balance
+- Net PnL
+- Account Growth %
+- Drawdown %
+- Monthly Goal Progress
+
+Professional card design similar to uploaded screenshot.
+
+────────────────────────────
+STATISTICS ROW
+────────────────────────────
+
+Create modern metric cards:
+
+- Net PnL
+- Win Rate
+- Avg Win
+- Avg Loss
+- Best Trade
+- Worst Trade
+- Profit Factor
+- Total Trades
+
+Cards must automatically update from trade data.
+
+────────────────────────────
+MAIN ANALYTICS AREA
+────────────────────────────
+
+Large center section:
+
+Equity Curve Chart
+
+Show:
+- account growth
+- balance history
+- drawdown zones
+
+This should be the main visual focus of dashboard.
+
+────────────────────────────
+RIGHT SIDE PANEL
+────────────────────────────
+
+Show:
+
+MONTHLY GOAL
+
+- target amount
+- current progress
+- remaining amount
+- percentage completion
+
+Circular progress indicator like professional trading journals.
+
+────────────────────────────
+SESSION PERFORMANCE
+────────────────────────────
+
+Create session cards:
+
+- Asia
+- Tokyo
+- London
+- New York
+
+For each session show:
+
+- trade count
+- win rate
+- profit/loss
+
+────────────────────────────
+STRATEGY ANALYTICS
+────────────────────────────
+
+Show performance for:
+
+- FVG
+- BOS
+- CHOCH
+- Order Block
+- Liquidity Grab
+- Support & Resistance
+
+Display:
+- win rate
+- total profit
+- trade count
+
+────────────────────────────
+TRADE HISTORY
+────────────────────────────
+
+Add recent trades section:
+
+- pair
+- direction
+- profit/loss
+- strategy
+- session
+- date
+
+────────────────────────────
+UI STYLE
+────────────────────────────
+
+Must match uploaded screenshot:
+
+- premium dark theme
+- trading journal style
+- glass cards
+- green/red PnL indicators
+- professional typography
+- smooth hover effects
+- modern analytics layout
+
+DO NOT redesign into another style.
+
+Use the uploaded screenshot as the design benchmark and upgrade the existing dashboard to that quality level while keeping all current functionality.
