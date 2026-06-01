@@ -27,6 +27,13 @@ import { useTradeStore } from "@/store/tradeStore";
 import { useAuthStore } from "@/store/authStore";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { PremiumGate } from "@/components/auth/PremiumGate";
+import AdminLogin from "@/pages/admin/AdminLogin";
+import AdminLayout from "@/pages/admin/AdminLayout";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminUsers from "@/pages/admin/AdminUsers";
+import AdminSubscriptions from "@/pages/admin/AdminSubscriptions";
+import AdminMedia from "@/pages/admin/AdminMedia";
+import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -96,6 +103,39 @@ function AppRoutes() {
         <Route path="/chart">{premiumLayout(<Chart />, "Live Chart")}</Route>
         <Route path="/brokers">{premiumLayout(<Brokers />, "Broker Sync")}</Route>
         <Route path="/positions">{premiumLayout(<Positions />, "Open Positions Tracker")}</Route>
+        <Route path="/admin/login" component={AdminLogin} />
+        <Route path="/admin/users">
+          <AdminLayout><AdminUsers /></AdminLayout>
+        </Route>
+        <Route path="/admin/subscriptions">
+          <AdminLayout><AdminSubscriptions /></AdminLayout>
+        </Route>
+        <Route path="/admin/premium">
+          <AdminLayout><AdminSubscriptions /></AdminLayout>
+        </Route>
+        <Route path="/admin/media">
+          <AdminLayout><AdminMedia /></AdminLayout>
+        </Route>
+        <Route path="/admin/analytics">
+          <AdminLayout><AdminAnalytics /></AdminLayout>
+        </Route>
+        <Route path="/admin/settings">
+          <AdminLayout>
+            <div className="space-y-4">
+              <h1 className="text-xl font-bold text-white">Settings</h1>
+              <div className="bg-[#13131a] border border-white/5 rounded-xl p-6">
+                <h2 className="text-sm font-semibold text-white mb-4">Admin Credentials</h2>
+                <div className="space-y-2 text-sm text-gray-400">
+                  <div>Admin email is set via <code className="text-blue-400 bg-white/5 px-1 rounded">ADMIN_EMAIL</code> environment variable</div>
+                  <div>Admin password is set via <code className="text-blue-400 bg-white/5 px-1 rounded">ADMIN_API_TOKEN</code> environment variable</div>
+                </div>
+              </div>
+            </div>
+          </AdminLayout>
+        </Route>
+        <Route path="/admin">
+          <AdminLayout><AdminDashboard /></AdminLayout>
+        </Route>
         <Route component={NotFound} />
       </Switch>
       <MT5BridgeGlobal />

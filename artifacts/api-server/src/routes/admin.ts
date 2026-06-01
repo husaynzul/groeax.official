@@ -1,6 +1,7 @@
 import { Router } from "express";
+import jwt from "jsonwebtoken";
 import { db, usersTable, paymentsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, desc, count, and, or, ilike, isNotNull } from "drizzle-orm";
 import { getAuthorizationUrl, exchangeCodeForToken } from "../services/gmailSetup.js";
 import { sendPaymentEmail } from "../services/emailNotification.js";
 import path from "path";
@@ -9,98 +10,279 @@ import { fileURLToPath } from "url";
 const router = Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const ADMIN_TOKEN = process.env.ADMIN_API_TOKEN ?? "";
+const ADMIN_TOKEN = process.env.ADMIN_API_TOKEN ?? "groeax-admin-secret-2026";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "arbinslom@gmail.com";
+const JWT_SECRET = process.env.SESSION_SECRET ?? "groeax-dev-secret-change-in-prod";
 
 function verifyAdminToken(token?: string): boolean {
-  if (!ADMIN_TOKEN) {
-    console.warn("ADMIN_API_TOKEN not set — admin endpoints disabled. Set it in env vars.");
-    return false;
-  }
+  if (!ADMIN_TOKEN) return false;
   return token === ADMIN_TOKEN;
 }
+
+function verifyAdminJwt(req: any): boolean {
+  try {
+    const header = req.headers.authorization ?? "";
+    const token = header.startsWith("Bearer ") ? header.slice(7) : "";
+    if (!token) return false;
+    const payload = jwt.verify(token, JWT_SECRET) as { admin?: boolean };
+    return payload.admin === true;
+  } catch {
+    return false;
+  }
+}
+
+function requireAdmin(req: any, res: any): boolean {
+  if (verifyAdminJwt(req)) return true;
+  res.status(401).json({ error: "Unauthorized" });
+  return false;
+}
+
+/**
+ * POST /api/admin/login
+ * Body: { email, password }
+ * Returns: { token }
+ */
+router.post("/admin/login", (req, res) => {
+  const { email, password } = req.body as { email?: string; password?: string };
+  if (!email || !password) {
+    res.status(400).json({ error: "Email and password required" });
+    return;
+  }
+  if (email !== ADMIN_EMAIL || password !== ADMIN_TOKEN) {
+    res.status(401).json({ error: "Invalid admin credentials" });
+    return;
+  }
+  const token = jwt.sign({ sub: "admin", admin: true, email }, JWT_SECRET, { expiresIn: "24h" });
+  res.json({ token, email });
+});
+
+/**
+ * GET /api/admin/stats
+ * Returns dashboard statistics
+ */
+router.get("/admin/stats", async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  try {
+    const [totalUsersResult] = await db.select({ count: count() }).from(usersTable);
+    const [premiumResult] = await db
+      .select({ count: count() })
+      .from(usersTable)
+      .where(or(eq(usersTable.plan, "premium"), eq(usersTable.plan, "platinum")));
+    const [pendingResult] = await db
+      .select({ count: count() })
+      .from(paymentsTable)
+      .where(eq(paymentsTable.status, "pending"));
+    const [approvedResult] = await db
+      .select({ count: count() })
+      .from(paymentsTable)
+      .where(eq(paymentsTable.status, "verified"));
+    const [rejectedResult] = await db
+      .select({ count: count() })
+      .from(paymentsTable)
+      .where(eq(paymentsTable.status, "rejected"));
+
+    const recentUsers = await db
+      .select({ id: usersTable.id, name: usersTable.name, email: usersTable.email, plan: usersTable.plan, createdAt: usersTable.createdAt })
+      .from(usersTable)
+      .orderBy(desc(usersTable.createdAt))
+      .limit(5);
+
+    const recentPayments = await db
+      .select({ id: paymentsTable.id, userName: paymentsTable.userName, plan: paymentsTable.plan, amount: paymentsTable.amount, status: paymentsTable.status, createdAt: paymentsTable.createdAt })
+      .from(paymentsTable)
+      .orderBy(desc(paymentsTable.createdAt))
+      .limit(5);
+
+    res.json({
+      totalUsers: Number(totalUsersResult?.count ?? 0),
+      premiumUsers: Number(premiumResult?.count ?? 0),
+      pendingPayments: Number(pendingResult?.count ?? 0),
+      approvedPayments: Number(approvedResult?.count ?? 0),
+      rejectedPayments: Number(rejectedResult?.count ?? 0),
+      recentUsers,
+      recentPayments,
+    });
+  } catch (err) {
+    req.log.error(err, "admin stats error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /api/admin/users
+ * Returns all users with optional search
+ */
+router.get("/admin/users", async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  try {
+    const { search } = req.query as { search?: string };
+    const users = search
+      ? await db
+          .select({ id: usersTable.id, name: usersTable.name, email: usersTable.email, plan: usersTable.plan, planExpiresAt: usersTable.planExpiresAt, createdAt: usersTable.createdAt })
+          .from(usersTable)
+          .where(or(ilike(usersTable.name, `%${search}%`), ilike(usersTable.email, `%${search}%`)))
+          .orderBy(desc(usersTable.createdAt))
+      : await db
+          .select({ id: usersTable.id, name: usersTable.name, email: usersTable.email, plan: usersTable.plan, planExpiresAt: usersTable.planExpiresAt, createdAt: usersTable.createdAt })
+          .from(usersTable)
+          .orderBy(desc(usersTable.createdAt));
+    res.json({ users });
+  } catch (err) {
+    req.log.error(err, "admin users error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * PUT /api/admin/users/:userId/plan
+ * Body: { plan }
+ * Updates user plan (can set to suspended, silver, platinum, premium)
+ */
+router.put("/admin/users/:userId/plan", async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  try {
+    const { userId } = req.params;
+    const { plan } = req.body as { plan?: string };
+    const VALID = ["silver", "platinum", "premium", "suspended", "free"];
+    if (!plan || !VALID.includes(plan)) {
+      res.status(400).json({ error: `Plan must be one of: ${VALID.join(", ")}` });
+      return;
+    }
+    const id = parseInt(userId, 10);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid user ID" }); return; }
+    const [updated] = await db
+      .update(usersTable)
+      .set({ plan, planExpiresAt: plan === "suspended" || plan === "silver" || plan === "free" ? null : undefined })
+      .where(eq(usersTable.id, id))
+      .returning({ id: usersTable.id, name: usersTable.name, plan: usersTable.plan });
+    if (!updated) { res.status(404).json({ error: "User not found" }); return; }
+    res.json({ success: true, user: updated });
+  } catch (err) {
+    req.log.error(err, "admin change plan error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /api/admin/payments
+ * Query: ?status=all|pending|verified|rejected
+ * Returns all payments with filters
+ */
+router.get("/admin/payments", async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  try {
+    const { status } = req.query as { status?: string };
+    const base = db
+      .select({
+        id: paymentsTable.id,
+        userId: paymentsTable.userId,
+        userName: paymentsTable.userName,
+        userEmail: paymentsTable.userEmail,
+        plan: paymentsTable.plan,
+        amount: paymentsTable.amount,
+        txHash: paymentsTable.txHash,
+        screenshotPath: paymentsTable.screenshotPath,
+        status: paymentsTable.status,
+        verified: paymentsTable.verified,
+        verifiedAt: paymentsTable.verifiedAt,
+        createdAt: paymentsTable.createdAt,
+      })
+      .from(paymentsTable);
+
+    const payments =
+      status && status !== "all"
+        ? await base.where(eq(paymentsTable.status, status)).orderBy(desc(paymentsTable.createdAt))
+        : await base.orderBy(desc(paymentsTable.createdAt));
+
+    res.json({ payments });
+  } catch (err) {
+    req.log.error(err, "admin payments error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /api/admin/payments/:paymentId/reject
+ * Rejects a pending payment
+ */
+router.post("/admin/payments/:paymentId/reject", async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  try {
+    const id = parseInt(req.params.paymentId, 10);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid payment ID" }); return; }
+    const [payment] = await db.select().from(paymentsTable).where(eq(paymentsTable.id, id)).limit(1);
+    if (!payment) { res.status(404).json({ error: "Payment not found" }); return; }
+    await db
+      .update(paymentsTable)
+      .set({ status: "rejected", verificationError: "Rejected by admin" })
+      .where(eq(paymentsTable.id, id));
+    res.json({ success: true, message: `Payment #${id} rejected` });
+  } catch (err) {
+    req.log.error(err, "admin reject payment error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 /**
  * POST /api/admin/approve-payment/:paymentId
  * Body: { adminToken: string }
  * Activates a pending payment and grants subscription access to the user.
+ * Also accepts Bearer JWT for new admin panel.
  */
 router.post("/admin/approve-payment/:paymentId", async (req, res) => {
   try {
     const { paymentId } = req.params;
     const { adminToken } = req.body as { adminToken?: string };
 
-    if (!verifyAdminToken(adminToken)) {
+    const isJwtAdmin = verifyAdminJwt(req);
+    const isTokenAdmin = verifyAdminToken(adminToken);
+
+    if (!isJwtAdmin && !isTokenAdmin) {
       res.status(401).json({ error: "Unauthorized. Invalid or missing admin token." });
       return;
     }
 
     const paymentIdNum = parseInt(paymentId, 10);
-    if (isNaN(paymentIdNum)) {
-      res.status(400).json({ error: "Invalid payment ID" });
-      return;
-    }
+    if (isNaN(paymentIdNum)) { res.status(400).json({ error: "Invalid payment ID" }); return; }
 
-    // Get payment record
-    const [payment] = await db
-      .select()
-      .from(paymentsTable)
-      .where(eq(paymentsTable.id, paymentIdNum))
-      .limit(1);
+    const [payment] = await db.select().from(paymentsTable).where(eq(paymentsTable.id, paymentIdNum)).limit(1);
+    if (!payment) { res.status(404).json({ error: "Payment not found" }); return; }
+    if (payment.verified) { res.status(400).json({ error: "Payment already approved" }); return; }
 
-    if (!payment) {
-      res.status(404).json({ error: "Payment not found" });
-      return;
-    }
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, payment.userId)).limit(1);
+    if (!user) { res.status(404).json({ error: "User not found" }); return; }
 
-    if (payment.verified) {
-      res.status(400).json({ error: "Payment already approved" });
-      return;
-    }
-
-    // Get user
-    const [user] = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.id, payment.userId))
-      .limit(1);
-
-    if (!user) {
-      res.status(404).json({ error: "User not found" });
-      return;
-    }
-
-    // Determine subscription tier and expiry from payment plan
     const tierName = payment.plan.startsWith("platinum") ? "platinum" : "premium";
     const now = new Date();
     const expiresAt = payment.plan.endsWith("yearly")
       ? new Date(now.getFullYear() + 1, now.getMonth(), now.getDate())
       : new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
 
-    // Activate subscription
     const [updatedUser] = await db
       .update(usersTable)
       .set({ plan: tierName, planExpiresAt: expiresAt })
       .where(eq(usersTable.id, payment.userId))
       .returning();
 
-    // Mark payment as verified
     await db
       .update(paymentsTable)
       .set({ verified: true, verifiedAt: new Date(), status: "verified" })
       .where(eq(paymentsTable.id, paymentIdNum));
 
-    // Send confirmation email to admin
     const adminEmail = process.env.ADMIN_EMAIL ?? "admin@groeax.com";
-    void sendPaymentEmail({
-      userName: user.name,
-      userEmail: user.email,
-      plan: `${payment.plan.replace(/_/g, " ").toUpperCase()} — ${payment.amount} USDT`,
-      amount: payment.amount,
-      txHash: payment.txHash ?? undefined,
-      screenshotUrl: payment.screenshotPath ? `/api/payment/screenshot/${payment.screenshotPath}` : undefined,
-      status: "verified",
-      paymentId: payment.id,
-    }, adminEmail);
+    void sendPaymentEmail(
+      {
+        userName: user.name,
+        userEmail: user.email,
+        plan: `${payment.plan.replace(/_/g, " ").toUpperCase()} — ${payment.amount} USDT`,
+        amount: payment.amount,
+        txHash: payment.txHash ?? undefined,
+        screenshotUrl: payment.screenshotPath ? `/api/payment/screenshot/${payment.screenshotPath}` : undefined,
+        status: "verified",
+        paymentId: payment.id,
+      },
+      adminEmail,
+    );
 
     res.json({
       success: true,
@@ -121,234 +303,44 @@ router.post("/admin/approve-payment/:paymentId", async (req, res) => {
 
 /**
  * GET /api/admin/pending-payments
- * Query param: ?adminToken=xxx
- * Serves HTML dashboard with pending payments (or JSON if ?json=1)
+ * Legacy HTML dashboard (kept for backward compat)
  */
 router.get("/admin/pending-payments", async (req, res) => {
   try {
-    const { adminToken, json } = req.query as { adminToken?: string; json?: string };
-
+    const { adminToken } = req.query as { adminToken?: string };
     if (!verifyAdminToken(adminToken)) {
-      if (json) {
-        res.status(401).json({ error: "Unauthorized" });
-      } else {
-        res.status(401).send("<h1>Error: Invalid admin token</h1>");
-      }
+      res.status(401).send("<h1>Error: Invalid admin token</h1>");
       return;
     }
-
-    const pending = await db
-      .select()
-      .from(paymentsTable)
-      .where(eq(paymentsTable.status, "pending"));
-
-    if (json) {
-      res.json({
-        count: pending.length,
-        payments: pending.map((p) => ({
-          id: p.id,
-          userId: p.userId,
-          userName: p.userName,
-          userEmail: p.userEmail,
-          plan: p.plan,
-          amount: p.amount,
-          txHash: p.txHash,
-          screenshotPath: p.screenshotPath,
-          createdAt: p.createdAt,
-        })),
-      });
-      return;
-    }
-
-    // Generate HTML dashboard
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Groeax Admin - Pending Payments</title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #f5f5f5; padding: 20px; }
-          .container { max-width: 1200px; margin: 0 auto; }
-          .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-          h1 { color: #333; }
-          .badge { background: #2196F3; color: white; padding: 8px 12px; border-radius: 20px; font-weight: bold; }
-          .payment-card { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-          .payment-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
-          .user-name { font-size: 16px; font-weight: bold; color: #333; }
-          .user-email { color: #666; font-size: 14px; }
-          .timestamp { color: #999; font-size: 12px; }
-          .details { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin: 15px 0; }
-          .detail { }
-          .detail-label { color: #666; font-weight: 600; font-size: 12px; margin-bottom: 5px; }
-          .detail-value { color: #333; font-size: 14px; }
-          .screenshot { max-width: 100%; margin-top: 15px; border: 1px solid #ddd; border-radius: 4px; }
-          .actions { display: flex; gap: 10px; margin-top: 20px; }
-          .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
-          .btn-approve { background: #4CAF50; color: white; }
-          .btn-approve:hover { background: #45a049; }
-          .btn-approve:active { transform: scale(0.98); }
-          .empty { text-align: center; padding: 80px 20px; color: #999; }
-          .empty h2 { margin-bottom: 10px; }
-          code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Groeax Admin Dashboard</h1>
-            <div class="badge">${pending.length} Pending</div>
-          </div>
-
-          ${pending.length === 0 ? `
-            <div class="empty">
-              <h2>✓ No Pending Payments</h2>
-              <p>All payments have been processed.</p>
-            </div>
-          ` : `
-            ${pending.map(p => `
-              <div class="payment-card">
-                <div class="payment-header">
-                  <div>
-                    <div class="user-name">${p.userName}</div>
-                    <div class="user-email">${p.userEmail}</div>
-                    <div class="timestamp">Submitted: ${new Date(p.createdAt).toLocaleString()}</div>
-                  </div>
-                </div>
-
-                <div class="details">
-                  <div class="detail">
-                    <div class="detail-label">PLAN</div>
-                    <div class="detail-value"><strong>${p.plan.replace(/_/g, ' ').toUpperCase()}</strong></div>
-                  </div>
-                  <div class="detail">
-                    <div class="detail-label">AMOUNT</div>
-                    <div class="detail-value"><strong>${p.amount} USDT</strong></div>
-                  </div>
-                  ${p.txHash ? `
-                    <div class="detail" style="grid-column: span 2;">
-                      <div class="detail-label">TX HASH</div>
-                      <div class="detail-value"><code>${p.txHash}</code></div>
-                    </div>
-                  ` : ''}
-                </div>
-
-                ${p.screenshotPath ? `
-                  <div style="margin-top: 15px;">
-                    <div class="detail-label">PAYMENT SCREENSHOT</div>
-                    <img src="/api/payment/screenshot/${p.screenshotPath}" alt="Payment proof" class="screenshot">
-                  </div>
-                ` : ''}
-
-                <div class="actions">
-                  <button class="btn btn-approve" onclick="approve(${p.id}, '${p.userName}')">✓ Approve & Activate</button>
-                </div>
-              </div>
-            `).join('')}
-          `}
-        </div>
-
-        <script>
-          const token = '${adminToken}';
-
-          function approve(id, userName) {
-            if (!confirm(\`Approve payment for \${userName}?\`)) return;
-
-            fetch(\`/api/admin/approve-payment/\${id}\`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ adminToken: token })
-            })
-            .then(r => r.json())
-            .then(d => {
-              if (d.success) {
-                alert('✓ Payment approved!\\n' + d.message + '\\n\\nEmail confirmation sent to ' + d.user.email);
-                location.reload();
-              } else {
-                alert('Error: ' + (d.error || 'Failed'));
-              }
-            })
-            .catch(e => alert('Error: ' + e.message));
-          }
-        </script>
-      </body>
-      </html>
-    `;
-
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(html);
+    const pending = await db.select().from(paymentsTable).where(eq(paymentsTable.status, "pending"));
+    res.redirect(`/admin/subscriptions`);
   } catch (err) {
-    req.log.error(err, "pending payments fetch error");
-    res.status(500).send("<h1>Error</h1><p>Failed to load pending payments</p>");
+    req.log.error(err, "pending payments redirect error");
+    res.status(500).send("<h1>Error</h1>");
   }
 });
 
 /**
  * GET /api/admin/gmail-auth-url
- * Returns the OAuth2 authorization URL for Gmail setup.
- * Visit this URL, authorize, then you'll be redirected to the callback.
  */
 router.get("/admin/gmail-auth-url", (_req, res) => {
   const authUrl = getAuthorizationUrl();
-  res.json({
-    message: "Visit this URL to authorize Gmail access:",
-    authUrl,
-    instructions: [
-      "1. Click the link above",
-      "2. Sign in with arbinslom@gmail.com",
-      "3. Allow Groeax to send emails",
-      "4. You'll get redirected and see your GOOGLE_REFRESH_TOKEN",
-      "5. Copy that token and add it as GOOGLE_REFRESH_TOKEN env var",
-      "6. Restart the server",
-      "7. Emails will now work!",
-    ],
-  });
+  res.json({ message: "Visit this URL to authorize Gmail access:", authUrl });
 });
 
 /**
  * GET /api/admin/gmail-callback
- * OAuth2 callback from Google. Exchanges auth code for refresh token.
  */
 router.get("/admin/gmail-callback", async (req, res) => {
   try {
     const { code, error } = req.query as { code?: string; error?: string };
-
-    if (error) {
-      res.status(400).json({
-        error: `OAuth authorization failed: ${error}`,
-      });
-      return;
-    }
-
-    if (!code) {
-      res.status(400).json({ error: "Missing authorization code" });
-      return;
-    }
-
+    if (error) { res.status(400).json({ error: `OAuth failed: ${error}` }); return; }
+    if (!code) { res.status(400).json({ error: "Missing authorization code" }); return; }
     const tokens = await exchangeCodeForToken(code);
-
-    res.json({
-      success: true,
-      message: "✅ Gmail OAuth authorization successful!",
-      refreshToken: tokens.refresh_token,
-      instructions: [
-        "1. Copy the 'refreshToken' value above",
-        "2. Go to your Replit Secrets tab",
-        "3. Add new secret: GOOGLE_REFRESH_TOKEN = <paste token>",
-        "4. Restart the API server",
-        "5. Email notifications will now work!",
-      ],
-      nextSteps:
-        "Add GOOGLE_REFRESH_TOKEN='your-token' to environment variables",
-    });
+    res.json({ success: true, refreshToken: tokens.refresh_token, message: "Add GOOGLE_REFRESH_TOKEN to your env vars then restart the server." });
   } catch (err) {
     req.log.error(err, "Gmail OAuth callback error");
-    res.status(500).json({
-      error: "Failed to complete OAuth flow",
-      details: err instanceof Error ? err.message : "Unknown error",
-    });
+    res.status(500).json({ error: "OAuth flow failed" });
   }
 });
 
