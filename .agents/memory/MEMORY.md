@@ -1,1 +1,2 @@
-- [API Server Workflow Fix](api-server-workflow-fix.md) — artifact workflow port detection broken; use configureWorkflow with no waitForPort to keep it running.
+- [API Server workflow restart](api-server-workflow.md) — artifact workflow fails port detection; use custom "API Server" workflow instead
+- [Admin JWT auth fix](admin-jwt-auth.md) — admin approve endpoint requires Authorization Bearer header, not body token

@@ -1,0 +1,324 @@
+MASTER SYSTEM UPGRADE - ADMIN PANEL FIX + SUBSCRIPTION SYSTEM FIX + DASHBOARD UPGRADE
+
+IMPORTANT:
+
+This is an EXISTING website.
+
+DO NOT rebuild the project from scratch.
+
+DO NOT remove existing functionality.
+
+Upgrade and repair the existing system.
+
+PRIORITY ORDER IS MANDATORY:
+
+PHASE 1 = ADMIN PANEL FIX
+PHASE 2 = SUBSCRIPTION SYSTEM FIX
+PHASE 3 = PREMIUM ACTIVATION FIX
+PHASE 4 = DASHBOARD UPGRADE
+
+DO NOT START DASHBOARD WORK UNTIL PHASES 1-3 ARE FULLY WORKING.
+
+════════════════════════════════════
+PHASE 1 - ADMIN PANEL FIX (HIGHEST PRIORITY)
+════════════════════════════════════
+
+Current problem:
+
+Admin panel is incomplete
+Subscription requests are not visible
+Approval system is broken
+Admin receives:
+
+"Unauthorized. Invalid or missing admin token"
+
+Fix completely.
+
+Requirements:
+
+Working admin login
+Admin authentication
+Admin authorization
+Protected admin routes
+JWT/session validation
+Admin role verification
+Token persistence
+Token refresh handling
+
+Verify:
+
+GET admin APIs
+POST admin APIs
+PUT admin APIs
+DELETE admin APIs
+
+All must work correctly.
+
+Admin panel URL:
+
+/admin
+
+════════════════════════════════════
+PHASE 2 - SUBSCRIPTION REQUEST SYSTEM FIX
+════════════════════════════════════
+
+Current issue:
+
+Users submit screenshots but requests do not appear in admin panel.
+
+Fix complete flow:
+
+User uploads screenshot
+→ Request saved to database
+→ Request appears in admin panel
+→ Admin reviews request
+
+Store:
+
+user id
+username
+email
+selected plan
+screenshot URL
+upload date
+request status
+
+Statuses:
+
+Pending
+Approved
+Rejected
+Active
+
+No mock data.
+
+Everything must come from database.
+
+════════════════════════════════════
+PHASE 3 - PREMIUM ACTIVATION FIX
+════════════════════════════════════
+
+When admin clicks APPROVE:
+
+Automatically:
+
+request status = Approved
+user premium = true
+subscription activated
+premium features unlocked
+
+When admin clicks REJECT:
+
+request status = Rejected
+premium remains disabled
+
+Premium access must be backend-controlled.
+
+Frontend must never grant premium access itself.
+
+════════════════════════════════════
+PHASE 5 - OCR TRADE SCREENSHOT SYSTEM
+════════════════════════════════════
+
+Keep current Add Trade page.
+
+Add image upload.
+
+User uploads broker screenshot.
+
+AI automatically extracts:
+
+Pair
+Direction
+Entry Price
+Lot Size
+Stop Loss
+Take Profit
+Open Time
+Close Time
+Commission
+Profit/Loss
+
+Auto-fill trade form.
+
+User only selects:
+
+Strategy
+Pattern
+Session
+Notes
+
+Everything else auto-filled automatically.
+
+════════════════════════════════════
+PHASE 6 - ACCOUNT BALANCE TRACKER
+════════════════════════════════════
+
+Add real account tracking.
+
+User sets:
+
+Starting Balance
+
+Example:
+
+$100
+
+System automatically updates:
+
+Current Balance =
+Starting Balance +
+Profits -
+Losses
+
+Track:
+
+Current Balance
+Total Profit
+Total Loss
+Net PnL
+Growth %
+
+Update after every trade.
+
+════════════════════════════════════
+PHASE 7 - DASHBOARD UPGRADE
+════════════════════════════════════
+
+IMPORTANT:
+
+Use uploaded dashboard screenshot as design reference.
+
+Do not redesign into another style.
+
+Keep current dark theme.
+
+Upgrade existing dashboard only.
+
+Add:
+
+ACCOUNT OVERVIEW
+
+Starting Balance
+Current Balance
+Net PnL
+Growth %
+Drawdown %
+Monthly Goal
+
+STATISTICS
+
+Total Trades
+Win Rate
+Avg Win
+Avg Loss
+Best Trade
+Worst Trade
+Profit Factor
+Risk Reward
+
+════════════════════════════════════
+PHASE 8 - EQUITY CURVE & ANALYTICS
+════════════════════════════════════
+
+Add:
+
+Equity Curve
+Balance Growth Chart
+Drawdown Chart
+Monthly Performance Chart
+
+Automatically update from trade journal.
+
+════════════════════════════════════
+PHASE 9 - SESSION ANALYTICS
+════════════════════════════════════
+
+Track:
+
+Asia
+Tokyo
+London
+New York
+
+Show:
+
+Profit
+Loss
+Win Rate
+Trade Count
+
+════════════════════════════════════
+PHASE 10 - STRATEGY ANALYTICS
+════════════════════════════════════
+
+Track:
+
+FVG
+BOS
+CHOCH
+Order Block
+Liquidity Grab
+Support Resistance
+Trend Continuation
+Reversal Setup
+
+Show:
+
+Win Rate
+Total Profit
+Total Trades
+
+Rank strategies automatically.
+
+════════════════════════════════════
+PHASE 11 - DATABASE VERIFICATION
+════════════════════════════════════
+
+Verify:
+
+Requests table works
+Users table works
+Premium status updates
+Trade journal saves correctly
+Balance tracking saves correctly
+Analytics use real data
+
+No fake values.
+
+No mock data.
+
+════════════════════════════════════
+PHASE 12 - DEBUGGING & LOGGING
+════════════════════════════════════
+
+Add logs for:
+
+Admin login
+Token validation
+Request creation
+Request approval
+Premium activation
+Trade creation
+OCR extraction failures
+
+Never fail silently.
+
+Display useful errors.
+
+════════════════════════════════════
+FINAL OBJECTIVE
+════════════════════════════════════
+
+Deliver a fully working system where:
+
+Admin panel works.
+Unauthorized token error is fixed.
+Subscription requests appear in admin panel.
+Admin can approve/reject requests.
+Premium activation works.
+OCR trade extraction works.
+Balance tracking works.
+Dashboard matches uploaded design quality.
+Analytics use real database data.
+System is production-ready and fully functional.
