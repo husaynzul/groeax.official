@@ -12,7 +12,6 @@ import {
   BarChart2,
   Bot,
   Newspaper,
-  CandlestickChart,
   Link2,
   Layers,
   Brain,
@@ -39,7 +38,6 @@ const FREE_ITEMS = [
 const PREMIUM_ITEMS = [
   { href: "/ai-coach",     label: "AI Coach",     icon: Bot },
   { href: "/intelligence", label: "Intelligence", icon: Brain },
-  { href: "/chart",        label: "Live Chart",   icon: CandlestickChart },
   { href: "/positions",    label: "Positions",    icon: Layers },
   { href: "/brokers",      label: "Brokers",      icon: Link2 },
 ];

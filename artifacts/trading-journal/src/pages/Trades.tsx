@@ -2,10 +2,11 @@ import { useMemo, useState, useEffect } from "react";
 import { useTradeStore } from "@/store/tradeStore";
 import { computeAnalytics } from "@/engine/analyticsEngine";
 import { fmtTradeDate } from "@/lib/dateUtils";
-import { Plus, Search, Trash2, Edit2, ChevronUp, ChevronDown, Upload, Download, RefreshCw, CheckCircle, AlertCircle } from "lucide-react";
-import AddTradeModal from "@/components/trades/AddTradeModal";
+import { Plus, Search, Trash2, Edit2, ChevronUp, ChevronDown, Upload, Download, RefreshCw, CheckCircle, AlertCircle, Camera } from "lucide-react";
+import AddTradeModal, { TradeFormPrefill } from "@/components/trades/AddTradeModal";
 import TradeDetailDrawer from "@/components/trades/TradeDetailDrawer";
 import CSVImportModal from "@/components/trades/CSVImportModal";
+import OCRImportModal, { OCRResult } from "@/components/trades/OCRImportModal";
 import { Trade } from "@/types";
 import { exportTradesToCSV } from "@/utils/csvExporter";
 import { usePnLRecalculator } from "@/hooks/usePnLRecalculator";
@@ -31,6 +32,8 @@ export default function Trades() {
   const [toast, setToast] = useState<{ ok: boolean; msg: string } | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [ocrOpen, setOcrOpen] = useState(false);
+  const [ocrPrefill, setOcrPrefill] = useState<TradeFormPrefill | null>(null);
   const [editTrade, setEditTrade] = useState<Trade | null>(null);
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [search, setSearch] = useState("");
@@ -98,6 +101,21 @@ export default function Trades() {
     return list;
   }, [trades, search, filterPair, filterDirection, filterOutcome, sortKey, sortDir]);
 
+  function handleOcrResult(result: OCRResult) {
+    const prefill: TradeFormPrefill = {};
+    if (result.pair)        prefill.pair       = result.pair;
+    if (result.direction)   prefill.direction  = result.direction;
+    if (result.entryPrice)  prefill.entryPrice = result.entryPrice;
+    if (result.stopLoss)    prefill.stopLoss   = result.stopLoss;
+    if (result.takeProfit)  prefill.takeProfit = result.takeProfit;
+    if (result.lotSize)     prefill.lotSize    = result.lotSize;
+    if (result.date)        prefill.date       = result.date;
+    if (result.outcome)     prefill.outcome    = result.outcome;
+    if (result.notes)       prefill.notes      = result.notes;
+    setOcrPrefill(prefill);
+    setAddOpen(true);
+  }
+
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortKey(key); setSortDir("desc"); }
@@ -147,6 +165,14 @@ export default function Trades() {
               Recalc P&amp;L
             </button>
           )}
+          <button
+            onClick={() => setOcrOpen(true)}
+            className="flex items-center gap-2 border border-blue-500/30 hover:border-blue-500/60 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+            title="Import trade from a platform screenshot using AI"
+          >
+            <Camera className="w-4 h-4" />
+            Import Screenshot
+          </button>
           <button
             onClick={() => setImportOpen(true)}
             className="flex items-center gap-2 border border-border hover:border-primary/50 bg-card hover:bg-accent text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg text-sm font-medium transition-colors"
@@ -407,7 +433,12 @@ export default function Trades() {
         </div>
       )}
 
-      <AddTradeModal open={addOpen} onClose={() => setAddOpen(false)} />
+      <AddTradeModal
+        key={ocrPrefill ? JSON.stringify(ocrPrefill) : "add"}
+        open={addOpen}
+        onClose={() => { setAddOpen(false); setOcrPrefill(null); }}
+        prefill={ocrPrefill ?? undefined}
+      />
       {editTrade && (
         <AddTradeModal
           open={!!editTrade}
@@ -415,6 +446,11 @@ export default function Trades() {
           editTrade={editTrade}
         />
       )}
+      <OCRImportModal
+        open={ocrOpen}
+        onClose={() => setOcrOpen(false)}
+        onUseResult={handleOcrResult}
+      />
       <TradeDetailDrawer
         trade={selectedTrade}
         open={!!selectedTrade}

@@ -14,7 +14,6 @@ import Analytics from "@/pages/Analytics";
 import AICoach from "@/pages/AICoach";
 import News from "@/pages/News";
 import Intelligence from "@/pages/Intelligence";
-import Chart from "@/pages/Chart";
 import Brokers from "@/pages/Brokers";
 import Positions from "@/pages/Positions";
 import NotFound from "@/pages/not-found";
@@ -100,7 +99,6 @@ function AppRoutes() {
         <Route path="/news">{layout(<News />)}</Route>
         <Route path="/ai-coach">{premiumLayout(<AICoach />, "AI Trading Coach")}</Route>
         <Route path="/intelligence">{premiumLayout(<Intelligence />, "Market Intelligence OS")}</Route>
-        <Route path="/chart">{premiumLayout(<Chart />, "Live Chart")}</Route>
         <Route path="/brokers">{premiumLayout(<Brokers />, "Broker Sync")}</Route>
         <Route path="/positions">{premiumLayout(<Positions />, "Open Positions Tracker")}</Route>
         <Route path="/admin/login" component={AdminLogin} />

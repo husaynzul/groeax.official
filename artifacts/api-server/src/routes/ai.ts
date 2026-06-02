@@ -19,6 +19,32 @@ When given trading stats, analyze: win rate, profit factor, average R:R, drawdow
 
 Format responses with clear sections when appropriate. Use bullet points for multiple insights.`;
 
+const OCR_SYSTEM_PROMPT = `You are a trading screenshot parser. Your job is to extract trade details from a trading platform screenshot.
+
+Look for: pair/symbol, direction (buy/long or sell/short), entry price, stop loss, take profit, lot size/volume, date/time, and outcome.
+
+Respond ONLY with a valid JSON object — no markdown, no code blocks, no extra text. Just raw JSON.`;
+
+const OCR_USER_PROMPT = `Analyze this trading screenshot and extract all trade details you can find.
+
+Return ONLY a JSON object with these exact fields (use null for fields you cannot determine):
+{
+  "pair": "string — e.g. EUR/USD, GBP/USD, XAU/USD, US30, NAS100 — use standard notation",
+  "direction": "BUY" or "SELL" (null if unknown),
+  "entryPrice": number or null,
+  "stopLoss": number or null,
+  "takeProfit": number or null,
+  "lotSize": number or null,
+  "date": "YYYY-MM-DD" or null,
+  "outcome": "WIN" or "LOSS" or "BE" or null,
+  "notes": "brief description of what you see in the screenshot (max 100 chars)" or null
+}
+
+Important: Return ONLY the JSON object. No explanation, no markdown.`;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/ai/analyze — streaming AI trading coach
+// ─────────────────────────────────────────────────────────────────────────────
 router.post("/ai/analyze", authMiddleware, platinumMiddleware, async (req, res) => {
   try {
     const { messages, tradingContext } = req.body;
@@ -107,6 +133,126 @@ router.post("/ai/analyze", authMiddleware, platinumMiddleware, async (req, res) 
       res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
       res.end();
     }
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/ai/ocr-trade — extract trade details from screenshot
+// Available to all authenticated users (silver+)
+// ─────────────────────────────────────────────────────────────────────────────
+router.post("/ai/ocr-trade", authMiddleware, async (req, res) => {
+  try {
+    const { imageBase64 } = req.body as { imageBase64?: string };
+
+    if (!imageBase64) {
+      res.status(400).json({ error: "imageBase64 is required" });
+      return;
+    }
+
+    // Accept data URI or raw base64
+    const isDataUri = imageBase64.startsWith("data:");
+    if (!isDataUri && !imageBase64.match(/^[A-Za-z0-9+/=]+$/)) {
+      res.status(400).json({ error: "Invalid image data" });
+      return;
+    }
+
+    // Enforce reasonable size limit (5MB base64 ≈ 3.75MB image)
+    if (imageBase64.length > 6 * 1024 * 1024) {
+      res.status(400).json({ error: "Image too large (max 4MB)" });
+      return;
+    }
+
+    const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+
+    if (!baseUrl || !apiKey) {
+      res.status(503).json({ error: "AI service not configured" });
+      return;
+    }
+
+    const imageUrl = isDataUri
+      ? imageBase64
+      : `data:image/jpeg;base64,${imageBase64}`;
+
+    req.log.info({ userId: req.userId }, "OCR trade analysis requested");
+
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        max_completion_tokens: 512,
+        messages: [
+          { role: "system", content: OCR_SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: OCR_USER_PROMPT },
+              {
+                type: "image_url",
+                image_url: { url: imageUrl, detail: "high" },
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      req.log.error({ status: response.status, errText }, "OCR AI call failed");
+      res.status(502).json({ error: `AI service error: ${response.status}` });
+      return;
+    }
+
+    const data = await response.json() as {
+      choices: Array<{ message: { content: string } }>;
+    };
+
+    const rawContent = data.choices?.[0]?.message?.content ?? "";
+
+    // Strip any markdown code fences in case the model wrapped it
+    const cleaned = rawContent
+      .replace(/```json\s*/gi, "")
+      .replace(/```\s*/g, "")
+      .trim();
+
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch {
+      req.log.warn({ rawContent }, "OCR response was not valid JSON");
+      res.status(422).json({
+        error: "Could not parse trade details from screenshot. Try a clearer image.",
+        raw: rawContent,
+      });
+      return;
+    }
+
+    // Sanitise and return
+    const result = {
+      pair:        typeof parsed.pair === "string"       ? parsed.pair       : null,
+      direction:   parsed.direction === "BUY" || parsed.direction === "SELL" ? parsed.direction as "BUY" | "SELL" : null,
+      entryPrice:  typeof parsed.entryPrice === "number" ? parsed.entryPrice  : null,
+      stopLoss:    typeof parsed.stopLoss === "number"   ? parsed.stopLoss    : null,
+      takeProfit:  typeof parsed.takeProfit === "number" ? parsed.takeProfit  : null,
+      lotSize:     typeof parsed.lotSize === "number"    ? parsed.lotSize     : null,
+      date:        typeof parsed.date === "string"       ? parsed.date        : null,
+      outcome:     parsed.outcome === "WIN" || parsed.outcome === "LOSS" || parsed.outcome === "BE"
+                     ? parsed.outcome as "WIN" | "LOSS" | "BE"
+                     : null,
+      notes:       typeof parsed.notes === "string"      ? parsed.notes       : null,
+    };
+
+    req.log.info({ userId: req.userId, pair: result.pair, direction: result.direction }, "OCR trade analysis complete");
+    res.json({ trade: result });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    req.log.error({ err }, "OCR trade analysis error");
+    res.status(500).json({ error: msg });
   }
 });
 

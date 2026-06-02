@@ -51,16 +51,29 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+export interface TradeFormPrefill {
+  pair?: string;
+  direction?: "BUY" | "SELL";
+  entryPrice?: number;
+  stopLoss?: number;
+  takeProfit?: number;
+  lotSize?: number;
+  date?: string;
+  outcome?: "WIN" | "LOSS" | "BE";
+  notes?: string;
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
   editTrade?: Trade;
+  prefill?: TradeFormPrefill;
 }
 
 const fmtMoney = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 
-export default function AddTradeModal({ open, onClose, editTrade }: Props) {
+export default function AddTradeModal({ open, onClose, editTrade, prefill }: Props) {
   const addTrade = useTradeStore((s) => s.addTrade);
   const updateTrade = useTradeStore((s) => s.updateTrade);
 
@@ -70,6 +83,18 @@ export default function AddTradeModal({ open, onClose, editTrade }: Props) {
   const [selectedSession, setSelectedSession] = useState<TradingSession | undefined>(
     editTrade?.session ?? detectSession()
   );
+
+  const defaultEmpty = {
+    pair: "EUR/USD" as string,
+    direction: "BUY" as const,
+    entryPrice: 0,
+    stopLoss: 0,
+    takeProfit: 0,
+    lotSize: 0.1,
+    date: new Date().toISOString().split("T")[0],
+    notes: "",
+    strategy: "",
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -86,17 +111,20 @@ export default function AddTradeModal({ open, onClose, editTrade }: Props) {
           notes: editTrade.notes ?? "",
           strategy: editTrade.strategy ?? "",
         }
-      : {
-          pair: "EUR/USD",
-          direction: "BUY",
-          entryPrice: 0,
-          stopLoss: 0,
-          takeProfit: 0,
-          lotSize: 0.1,
-          date: new Date().toISOString().split("T")[0],
-          notes: "",
-          strategy: "",
-        },
+      : prefill
+      ? {
+          ...defaultEmpty,
+          ...(prefill.pair        && { pair: prefill.pair }),
+          ...(prefill.direction   && { direction: prefill.direction }),
+          ...(prefill.entryPrice  && { entryPrice: prefill.entryPrice }),
+          ...(prefill.stopLoss    && { stopLoss: prefill.stopLoss }),
+          ...(prefill.takeProfit  && { takeProfit: prefill.takeProfit }),
+          ...(prefill.lotSize     && { lotSize: prefill.lotSize }),
+          ...(prefill.date        && { date: prefill.date }),
+          ...(prefill.outcome     && { outcome: prefill.outcome }),
+          ...(prefill.notes       && { notes: prefill.notes }),
+        }
+      : defaultEmpty,
   });
 
   const watched = form.watch();
