@@ -5,10 +5,13 @@
  * a list of Trade field updates. Works for both long (buy→sell) and
  * short (sell→buy) positions.
  *
+ * Uses pair-aware pip values so XAUUSD / indices calculate correctly.
+ *
  * Pure function — no side effects, no store imports.
  */
 
 import { Trade } from "../types";
+import { getPipConfig } from "./riskEngine";
 
 export interface PnLUpdate {
   id: string;
@@ -36,63 +39,56 @@ interface QueueEntry {
 export function matchRoundTrips(trades: Trade[]): PnLUpdate[] {
   const updates: PnLUpdate[] = [];
 
-  // Group trades by pair
   const byPair = new Map<string, Trade[]>();
   for (const t of trades) {
     if (!byPair.has(t.pair)) byPair.set(t.pair, []);
     byPair.get(t.pair)!.push(t);
   }
 
-  for (const [, pairTrades] of byPair) {
+  for (const [pair, pairTrades] of byPair) {
+    const cfg = getPipConfig(pair);
     const sorted = [...pairTrades].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
-    // Two queues: open longs and open shorts
-    const longQueue: QueueEntry[] = [];  // unmatched BUY fills
-    const shortQueue: QueueEntry[] = []; // unmatched SELL fills (shorts)
+    const longQueue: QueueEntry[] = [];
+    const shortQueue: QueueEntry[] = [];
 
     for (const t of sorted) {
       const qty = t.lotSize;
       const price = t.entryPrice;
 
       if (t.direction === "BUY") {
-        // Try to close open short positions first
         let remaining = qty;
         while (remaining > 0 && shortQueue.length > 0) {
           const oldest = shortQueue[0];
           const matched = Math.min(remaining, oldest.qty);
-          const pnl = (oldest.price - price) * matched; // short: entry > exit = profit
-
+          // short closed by buy: profit if entry (short open) > exit (buy price)
+          const rawPriceDiff = oldest.price - price;
+          const pnl = (rawPriceDiff / cfg.pipSize) * cfg.pipValue * matched;
           const update = buildUpdate(t.id, oldest.price, price, matched, pnl, oldest, t);
           updates.push(update);
-
           oldest.qty -= matched;
           remaining -= matched;
           if (oldest.qty <= 1e-9) shortQueue.shift();
         }
-
-        // Remaining qty goes into long queue
         if (remaining > 1e-9) {
           longQueue.push({ id: t.id, price, qty: remaining, date: t.date, stopLoss: t.stopLoss, takeProfit: t.takeProfit, notes: t.notes ?? "" });
         }
       } else {
-        // SELL — try to close open long positions first
         let remaining = qty;
         while (remaining > 0 && longQueue.length > 0) {
           const oldest = longQueue[0];
           const matched = Math.min(remaining, oldest.qty);
-          const pnl = (price - oldest.price) * matched; // long: exit > entry = profit
-
+          // long closed by sell: profit if exit (sell price) > entry (buy price)
+          const rawPriceDiff = price - oldest.price;
+          const pnl = (rawPriceDiff / cfg.pipSize) * cfg.pipValue * matched;
           const update = buildUpdate(t.id, oldest.price, price, matched, pnl, oldest, t);
           updates.push(update);
-
           oldest.qty -= matched;
           remaining -= matched;
           if (oldest.qty <= 1e-9) longQueue.shift();
         }
-
-        // Remaining qty goes into short queue
         if (remaining > 1e-9) {
           shortQueue.push({ id: t.id, price, qty: remaining, date: t.date, stopLoss: t.stopLoss, takeProfit: t.takeProfit, notes: t.notes ?? "" });
         }
@@ -112,11 +108,10 @@ function buildUpdate(
   openLeg: QueueEntry,
   closeLeg: Trade,
 ): PnLUpdate {
-  const pnl = parseFloat(rawPnl.toFixed(8));
+  const pnl = parseFloat(rawPnl.toFixed(2));
   const outcome: "WIN" | "LOSS" | "BE" =
-    pnl > 0.000001 ? "WIN" : pnl < -0.000001 ? "LOSS" : "BE";
+    pnl > 0.01 ? "WIN" : pnl < -0.01 ? "LOSS" : "BE";
 
-  // R:R calculation — only if the opening leg had a valid stop loss
   let rr = 0;
   if (openLeg.stopLoss > 0 && entryPrice > 0) {
     const risk = Math.abs(entryPrice - openLeg.stopLoss);
@@ -125,13 +120,10 @@ function buildUpdate(
 
   const note =
     `Entry ${entryPrice.toPrecision(6)} → Exit ${exitPrice.toPrecision(6)}` +
-    ` | Qty ${matchedQty.toPrecision(4)} | PnL ${pnl >= 0 ? "+" : ""}${pnl.toFixed(4)}`;
+    ` | Qty ${matchedQty.toPrecision(4)} | PnL ${pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}`;
 
-  // Merge the original notes (keep broker info) with position detail
   const originalNotes = closeLeg.notes ?? "";
-  const mergedNotes = originalNotes
-    ? `${originalNotes}\n${note}`
-    : note;
+  const mergedNotes = originalNotes ? `${originalNotes}\n${note}` : note;
 
   return {
     id: closeId,
@@ -152,11 +144,10 @@ export interface OpenPosition {
   direction: "LONG" | "SHORT";
   totalQty: number;
   avgEntryPrice: number;
-  openDate: string;       // date of the oldest unmatched leg
+  openDate: string;
   tradeIds: string[];
 }
 
-/** Returns still-open (unmatched) positions after FIFO matching. */
 export function extractOpenPositions(trades: Trade[]): OpenPosition[] {
   const result: OpenPosition[] = [];
 
@@ -224,8 +215,6 @@ export function extractOpenPositions(trades: Trade[]): OpenPosition[] {
   return result;
 }
 
-/** Convenience: takes a list of trades, runs the engine, returns a new array
- *  with the matched trades updated in-place. Unmatched trades are untouched. */
 export function applyPnLToTrades(trades: Trade[]): Trade[] {
   const updates = matchRoundTrips(trades);
   const updateMap = new Map(updates.map(u => [u.id, u]));
@@ -245,7 +234,6 @@ export function applyPnLToTrades(trades: Trade[]): Trade[] {
   });
 }
 
-/** Summary returned after recalculation */
 export interface PnLSummary {
   matchedPositions: number;
   totalPnL: number;
@@ -264,7 +252,7 @@ export function buildSummary(updates: PnLUpdate[]): PnLSummary {
   }
   return {
     matchedPositions: updates.length,
-    totalPnL: parseFloat(totalPnL.toFixed(4)),
+    totalPnL: parseFloat(totalPnL.toFixed(2)),
     wins, losses, breakeven,
   };
 }

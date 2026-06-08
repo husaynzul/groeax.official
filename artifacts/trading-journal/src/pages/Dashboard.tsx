@@ -1,11 +1,9 @@
 import { useMemo, useState } from "react";
 import { fmtTradeDate, toDate } from "@/lib/dateUtils";
 import { useTradeStore } from "@/store/tradeStore";
-import OpenPositions from "@/components/dashboard/OpenPositions";
 import { computeAnalytics } from "@/engine/analyticsEngine";
 import TradingSessions from "@/components/dashboard/TradingSessions";
 import StreakCard from "@/components/dashboard/StreakCard";
-import LiveTradingSignals from "@/components/dashboard/LiveTradingSignals";
 import {
   AreaChart,
   Area,
@@ -216,9 +214,6 @@ export default function Dashboard() {
           <span className="px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.03]">Institutional UI</span>
         </div>
       </div>
-
-      <OpenPositions />
-      <LiveTradingSignals />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
         <MetricCard index={0} label="Net P&L" value={fmtMoney(analytics.netBalance)} sub={`${fmtMoney(analytics.totalProfit)} won`} icon={analytics.netBalance >= 0 ? TrendingUp : TrendingDown} color={analytics.netBalance >= 0 ? "text-emerald-400" : "text-red-400"} />

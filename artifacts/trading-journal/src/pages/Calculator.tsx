@@ -1,8 +1,15 @@
-import { useState } from "react";
-import { calcNetProfit, calcNetLoss, calcRR, calcProfitPips, calcLossPips, calcPipValue, PIP_SIZE, PIP_VALUE_PER_LOT } from "@/engine/riskEngine";
+import { useState, useMemo } from "react";
+import { calcNetProfit, calcNetLoss, calcRR, calcProfitPips, calcLossPips, calcPipValue, getPipConfig } from "@/engine/riskEngine";
 import { TrendingUp, TrendingDown, Target, AlertTriangle } from "lucide-react";
 
+const PAIRS = [
+  "EUR/USD", "GBP/USD", "USD/JPY", "USD/CHF",
+  "AUD/USD", "NZD/USD", "USD/CAD", "EUR/GBP",
+  "EUR/JPY", "GBP/JPY", "XAU/USD", "US30", "NAS100",
+];
+
 export default function Calculator() {
+  const [pair, setPair] = useState("EUR/USD");
   const [entry, setEntry] = useState("");
   const [sl, setSl] = useState("");
   const [tp, setTp] = useState("");
@@ -14,12 +21,14 @@ export default function Calculator() {
   const l = parseFloat(lot);
   const valid = !isNaN(e) && !isNaN(s) && !isNaN(t) && !isNaN(l) && e > 0 && s > 0 && t > 0 && l > 0;
 
-  const netProfit = valid ? calcNetProfit(e, t, l) : 0;
-  const netLoss = valid ? calcNetLoss(e, s, l) : 0;
+  const cfg = useMemo(() => getPipConfig(pair), [pair]);
+
+  const netProfit = valid ? calcNetProfit(e, t, l, pair) : 0;
+  const netLoss = valid ? calcNetLoss(e, s, l, pair) : 0;
   const rr = valid ? calcRR(netProfit, netLoss) : 0;
-  const profitPips = valid ? calcProfitPips(e, t) : 0;
-  const lossPips = valid ? calcLossPips(e, s) : 0;
-  const pipVal = valid ? calcPipValue(l) : 0;
+  const profitPips = valid ? calcProfitPips(e, t, pair) : 0;
+  const lossPips = valid ? calcLossPips(e, s, pair) : 0;
+  const pipVal = valid ? calcPipValue(l, pair) : 0;
 
   const rrPct = Math.min((rr / 5) * 100, 100);
 
@@ -42,10 +51,21 @@ export default function Calculator() {
 
           <div className="space-y-3">
             <div>
+              <label className="block text-xs text-muted-foreground mb-1.5">Pair</label>
+              <select
+                value={pair}
+                onChange={(e) => setPair(e.target.value)}
+                className={inputClass}
+                data-testid="select-calc-pair"
+              >
+                {PAIRS.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
               <label className="block text-xs text-muted-foreground mb-1.5">Entry Price</label>
               <input
                 type="number"
-                step="0.00001"
+                step="any"
                 placeholder="1.08500"
                 value={entry}
                 onChange={(e) => setEntry(e.target.value)}
@@ -57,7 +77,7 @@ export default function Calculator() {
               <label className="block text-xs text-muted-foreground mb-1.5">Stop Loss</label>
               <input
                 type="number"
-                step="0.00001"
+                step="any"
                 placeholder="1.08200"
                 value={sl}
                 onChange={(e) => setSl(e.target.value)}
@@ -69,7 +89,7 @@ export default function Calculator() {
               <label className="block text-xs text-muted-foreground mb-1.5">Take Profit</label>
               <input
                 type="number"
-                step="0.00001"
+                step="any"
                 placeholder="1.09100"
                 value={tp}
                 onChange={(e) => setTp(e.target.value)}
@@ -92,7 +112,7 @@ export default function Calculator() {
           </div>
 
           <div className="pt-2 text-xs text-muted-foreground space-y-1 border-t border-border">
-            <p>Pip size: {PIP_SIZE} &nbsp;|&nbsp; Pip value/lot: ${PIP_VALUE_PER_LOT}</p>
+            <p>Pip size: {cfg.pipSize} &nbsp;|&nbsp; Pip value/lot: ${cfg.pipValue}</p>
           </div>
         </div>
 
@@ -121,7 +141,7 @@ export default function Calculator() {
             <div className="glass-card p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Target className="w-4 h-4 text-primary" />
-                <span className="text-xs text-muted-foreground">Pip Distance (TP)</span>
+                <span className="text-xs text-muted-foreground">Pips to TP</span>
               </div>
               <p className="text-2xl font-bold text-foreground" data-testid="text-calc-profit-pips">
                 {valid ? profitPips.toFixed(1) : "—"}
@@ -131,7 +151,7 @@ export default function Calculator() {
             <div className="glass-card p-4">
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle className="w-4 h-4 text-yellow-400" />
-                <span className="text-xs text-muted-foreground">Pip Distance (SL)</span>
+                <span className="text-xs text-muted-foreground">Pips to SL</span>
               </div>
               <p className="text-2xl font-bold text-foreground" data-testid="text-calc-loss-pips">
                 {valid ? lossPips.toFixed(1) : "—"}
@@ -164,8 +184,8 @@ export default function Calculator() {
 
             <div className="mt-4 pt-3 border-t border-border grid grid-cols-2 gap-3 text-xs">
               <div>
-                <span className="text-muted-foreground">Pip Value</span>
-                <p className="font-semibold text-foreground mt-0.5">{valid ? `$${pipVal.toFixed(2)}/pip` : "—"}</p>
+                <span className="text-muted-foreground">Pip Value / lot</span>
+                <p className="font-semibold text-foreground mt-0.5">{valid ? `$${pipVal.toFixed(2)}` : "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground">Assessment</span>

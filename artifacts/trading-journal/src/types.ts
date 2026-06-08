@@ -51,6 +51,7 @@ export interface Trade {
   pair: string;
   direction: "BUY" | "SELL";
   entryPrice: number;
+  exitPrice?: number;
   stopLoss: number;
   takeProfit: number;
   lotSize: number;

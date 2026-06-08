@@ -1,9 +1,13 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
+import path from "path";
+import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { optionalAuthMiddleware } from "./middleware/auth.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app: Express = express();
 
@@ -32,5 +36,11 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(optionalAuthMiddleware);
 
 app.use("/api", router);
+
+const frontendDist = path.resolve(__dirname, "../../trading-journal/dist/public");
+app.use(express.static(frontendDist));
+app.get("/{*path}", (_req, res) => {
+  res.sendFile(path.join(frontendDist, "index.html"));
+});
 
 export default app;

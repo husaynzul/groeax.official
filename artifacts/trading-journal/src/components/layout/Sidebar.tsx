@@ -5,7 +5,6 @@ import {
   BookOpen,
   CalendarDays,
   Calculator,
-  TrendingUp,
   ChevronLeft,
   ChevronRight,
   Plus,
@@ -13,32 +12,25 @@ import {
   Bot,
   Newspaper,
   Link2,
-  Layers,
   Brain,
   LogOut,
-  Crown,
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddTradeModal from "@/components/trades/AddTradeModal";
 import { useMT5Store } from "@/store/mt5Store";
 import { useAuthStore } from "@/store/authStore";
-import { UpgradeBanner, PremiumBadge } from "@/components/auth/PremiumGate";
 import groeaxLogo from "@assets/WhatsApp_Image_2026-05-03_at_12.44.10_PM_1777794284426.jpeg";
 
-const FREE_ITEMS = [
+const NAV_ITEMS = [
   { href: "/dashboard",    label: "Dashboard",    icon: LayoutDashboard },
   { href: "/trades",       label: "Trades",       icon: BookOpen },
   { href: "/journal",      label: "Journal",      icon: CalendarDays },
   { href: "/analytics",    label: "Analytics",    icon: BarChart2 },
   { href: "/calculator",   label: "Risk Calc",    icon: Calculator },
   { href: "/news",         label: "Market News",  icon: Newspaper },
-];
-
-const PREMIUM_ITEMS = [
   { href: "/ai-coach",     label: "AI Coach",     icon: Bot },
   { href: "/intelligence", label: "Intelligence", icon: Brain },
-  { href: "/positions",    label: "Positions",    icon: Layers },
   { href: "/brokers",      label: "Brokers",      icon: Link2 },
 ];
 
@@ -61,7 +53,7 @@ export default function Sidebar({ onSignOut, userName }: { onSignOut?: () => voi
   const [collapsed, setCollapsed] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const mt5Status = useMT5Store((s) => s.status);
-  const { isPlatinum, user } = useAuthStore();
+  const { user } = useAuthStore();
 
   return (
     <>
@@ -86,11 +78,6 @@ export default function Sidebar({ onSignOut, userName }: { onSignOut?: () => voi
             <span className="truncate">
               <span className="text-foreground font-medium">{user.name}</span>
             </span>
-            {isPlatinum && (
-              <span className="shrink-0">
-                <PremiumBadge />
-              </span>
-            )}
           </div>
         )}
 
@@ -107,7 +94,7 @@ export default function Sidebar({ onSignOut, userName }: { onSignOut?: () => voi
             {!collapsed && <span>Add Trade</span>}
           </button>
 
-          {FREE_ITEMS.map(({ href, label, icon: Icon }) => {
+          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
             const isActive = location === href;
             return (
               <Link
@@ -127,44 +114,7 @@ export default function Sidebar({ onSignOut, userName }: { onSignOut?: () => voi
               </Link>
             );
           })}
-
-          {!collapsed && (
-            <div className="mt-3 mb-1 px-2">
-              <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground/50 font-semibold flex items-center gap-1.5">
-                <Crown className="w-2.5 h-2.5" /> Platinum & Premium
-              </p>
-            </div>
-          )}
-          {collapsed && <div className="my-1 border-t border-sidebar-border/40 mx-1" />}
-
-          {PREMIUM_ITEMS.map(({ href, label, icon: Icon }) => {
-            const isActive = location === href;
-            return (
-              <Link
-                key={href}
-                href={href}
-                data-testid={`nav-${label.toLowerCase().replace(/\s+/, "-")}`}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors relative",
-                  collapsed ? "justify-center px-2" : "",
-                  isActive
-                    ? "bg-sidebar-accent text-foreground font-medium"
-                    : isPlatinum
-                    ? "text-blue-400 hover:bg-blue-500/10 hover:text-blue-300"
-                    : "text-muted-foreground/50 hover:bg-sidebar-accent hover:text-muted-foreground"
-                )}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                {!collapsed && <span>{label}</span>}
-                {!collapsed && !isPlatinum && !isActive && (
-                  <Crown className="ml-auto w-3 h-3 text-blue-400/50" />
-                )}
-              </Link>
-            );
-          })}
         </div>
-
-        {!collapsed && <UpgradeBanner />}
 
         <div className={cn(
           "px-3 py-2.5 mx-2 mb-1 rounded-lg bg-sidebar-accent/50 border border-sidebar-border flex items-center gap-2.5 transition-all duration-300",

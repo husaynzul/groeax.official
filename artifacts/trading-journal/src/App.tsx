@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,24 +15,13 @@ import AICoach from "@/pages/AICoach";
 import News from "@/pages/News";
 import Intelligence from "@/pages/Intelligence";
 import Brokers from "@/pages/Brokers";
-import Positions from "@/pages/Positions";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
-import Pricing from "@/pages/Pricing";
 import Account from "@/pages/Account";
-import PaymentVerification from "@/pages/PaymentVerification";
 import { useTradeStore } from "@/store/tradeStore";
 import { useAuthStore } from "@/store/authStore";
 import { AuthProvider } from "@/components/auth/AuthProvider";
-import { PremiumGate } from "@/components/auth/PremiumGate";
-import AdminLogin from "@/pages/admin/AdminLogin";
-import AdminLayout from "@/pages/admin/AdminLayout";
-import AdminDashboard from "@/pages/admin/AdminDashboard";
-import AdminUsers from "@/pages/admin/AdminUsers";
-import AdminSubscriptions from "@/pages/admin/AdminSubscriptions";
-import AdminMedia from "@/pages/admin/AdminMedia";
-import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -74,22 +63,12 @@ function AppRoutes() {
     </ProtectedRoute>
   );
 
-  const premiumLayout = (children: ReactNode, feature: string) => (
-    <ProtectedRoute>
-      <AppLayout onSignOut={clearAuth} userName={user?.name}>
-        <PremiumGate feature={feature}>{children}</PremiumGate>
-      </AppLayout>
-    </ProtectedRoute>
-  );
-
   return (
     <>
       <Switch>
         <Route path="/" component={Landing} />
         <Route path="/login" component={Login} />
         <Route path="/signup" component={Signup} />
-        <Route path="/pricing" component={Pricing} />
-        <Route path="/payment-verification" component={PaymentVerification} />
         <Route path="/account" component={Account} />
         <Route path="/dashboard">{layout(<Dashboard />)}</Route>
         <Route path="/trades">{layout(<Trades />)}</Route>
@@ -97,43 +76,9 @@ function AppRoutes() {
         <Route path="/analytics">{layout(<Analytics />)}</Route>
         <Route path="/calculator">{layout(<Calculator />)}</Route>
         <Route path="/news">{layout(<News />)}</Route>
-        <Route path="/ai-coach">{premiumLayout(<AICoach />, "AI Trading Coach")}</Route>
-        <Route path="/intelligence">{premiumLayout(<Intelligence />, "Market Intelligence OS")}</Route>
-        <Route path="/brokers">{premiumLayout(<Brokers />, "Broker Sync")}</Route>
-        <Route path="/positions">{premiumLayout(<Positions />, "Open Positions Tracker")}</Route>
-        <Route path="/admin/login" component={AdminLogin} />
-        <Route path="/admin/users">
-          <AdminLayout><AdminUsers /></AdminLayout>
-        </Route>
-        <Route path="/admin/subscriptions">
-          <AdminLayout><AdminSubscriptions /></AdminLayout>
-        </Route>
-        <Route path="/admin/premium">
-          <AdminLayout><AdminSubscriptions /></AdminLayout>
-        </Route>
-        <Route path="/admin/media">
-          <AdminLayout><AdminMedia /></AdminLayout>
-        </Route>
-        <Route path="/admin/analytics">
-          <AdminLayout><AdminAnalytics /></AdminLayout>
-        </Route>
-        <Route path="/admin/settings">
-          <AdminLayout>
-            <div className="space-y-4">
-              <h1 className="text-xl font-bold text-white">Settings</h1>
-              <div className="bg-[#13131a] border border-white/5 rounded-xl p-6">
-                <h2 className="text-sm font-semibold text-white mb-4">Admin Credentials</h2>
-                <div className="space-y-2 text-sm text-gray-400">
-                  <div>Admin email is set via <code className="text-blue-400 bg-white/5 px-1 rounded">ADMIN_EMAIL</code> environment variable</div>
-                  <div>Admin password is set via <code className="text-blue-400 bg-white/5 px-1 rounded">ADMIN_API_TOKEN</code> environment variable</div>
-                </div>
-              </div>
-            </div>
-          </AdminLayout>
-        </Route>
-        <Route path="/admin">
-          <AdminLayout><AdminDashboard /></AdminLayout>
-        </Route>
+        <Route path="/ai-coach">{layout(<AICoach />)}</Route>
+        <Route path="/intelligence">{layout(<Intelligence />)}</Route>
+        <Route path="/brokers">{layout(<Brokers />)}</Route>
         <Route component={NotFound} />
       </Switch>
       <MT5BridgeGlobal />

@@ -89,38 +89,3 @@ export async function apiMe(token: string) {
   const data = await res.json();
   return data.user as AuthUser;
 }
-
-export interface PaymentConfig {
-  wallet: string;
-  binanceMerchantId: string;
-  plans: Record<string, { amount: string; currency: string; label: string }>;
-}
-
-export async function apiPaymentConfig(): Promise<PaymentConfig> {
-  const res = await fetch(`${BASE()}/api/payment/config`);
-  if (!res.ok) throw new Error("Failed to load payment config");
-  return res.json() as Promise<PaymentConfig>;
-}
-
-export type SubscribePlan = "platinum_monthly" | "platinum_yearly" | "premium_monthly" | "premium_yearly";
-
-export interface SubscribePayload {
-  email?: string;
-  txHash?: string;
-  screenshotBase64?: string;
-}
-
-export async function apiSubscribe(
-  token: string,
-  plan: SubscribePlan,
-  payment: SubscribePayload,
-) {
-  const res = await fetch(`${BASE()}/api/auth/subscribe`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ plan, ...payment }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Subscription failed");
-  return data as { user: AuthUser; status: "activated" | "pending"; message?: string };
-}

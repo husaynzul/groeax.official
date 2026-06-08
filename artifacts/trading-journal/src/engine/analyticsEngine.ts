@@ -34,6 +34,17 @@ export interface Analytics {
   monthlyPnL: { month: string; pnl: number }[];
 }
 
+/**
+ * Extract a timezone-safe YYYY-MM-DD key from any date string.
+ * Uses noon local time to avoid day boundaries.
+ */
+function safeDateKey(raw: string): string | null {
+  if (!raw) return null;
+  const datePart = raw.includes('T') ? raw.split('T')[0] : raw;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return null;
+  return datePart;
+}
+
 export function computeAnalytics(trades: Trade[]): Analytics {
   const empty: Analytics = {
     totalTrades: 0, totalProfit: 0, totalLoss: 0, netBalance: 0,
@@ -44,9 +55,11 @@ export function computeAnalytics(trades: Trade[]): Analytics {
   };
   if (!trades || trades.length === 0) return empty;
 
-  const sorted = [...trades].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
+  const sorted = [...trades]
+    .filter(t => safeDateKey(t.date) !== null)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  if (sorted.length === 0) return empty;
 
   let totalProfit = 0, totalLoss = 0, wins = 0, biggestProfit = 0, biggestLoss = 0;
   let bestTrade: Trade | null = null, worstTrade: Trade | null = null;
@@ -75,23 +88,20 @@ export function computeAnalytics(trades: Trade[]): Analytics {
       }
     }
 
-    const dateKey = trade.date.split('T')[0];
+    const dateKey = safeDateKey(trade.date)!;
     if (!tradesByDate[dateKey]) tradesByDate[dateKey] = [];
     tradesByDate[dateKey].push(trade);
     dailyPnLMap[dateKey] = (dailyPnLMap[dateKey] ?? 0) + pnl;
 
-    // weekly key: ISO year-week
     const d = new Date(dateKey + 'T12:00:00');
     const jan1 = new Date(d.getFullYear(), 0, 1);
     const weekNum = Math.ceil(((d.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7);
     const weekKey = `${d.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
     weeklyMap[weekKey] = (weeklyMap[weekKey] ?? 0) + pnl;
 
-    // monthly key
-    const monthKey = dateKey.slice(0, 7); // "YYYY-MM"
+    const monthKey = dateKey.slice(0, 7);
     monthlyMap[monthKey] = (monthlyMap[monthKey] ?? 0) + pnl;
 
-    // strategy stats
     if (trade.strategy) {
       if (!stratMap[trade.strategy]) {
         stratMap[trade.strategy] = { wins: 0, losses: 0, count: 0, profit: 0, loss: 0, rrSum: 0 };
@@ -110,7 +120,7 @@ export function computeAnalytics(trades: Trade[]): Analytics {
   const avgWin = wins > 0 ? totalProfit / wins : 0;
   const avgLoss = losses > 0 ? totalLoss / losses : 0;
 
-  const dailyPnL = Object.keys(dailyPnLMap).sort().map(date => ({ date, pnl: dailyPnLMap[date] }));
+  const dailyPnL = Object.keys(dailyPnLMap).sort().map(date => ({ date, pnl: parseFloat(dailyPnLMap[date].toFixed(2)) }));
   const weeklyPnL = Object.keys(weeklyMap).sort().map(week => ({ week, pnl: weeklyMap[week] }));
   const monthlyPnL = Object.keys(monthlyMap).sort().map(month => ({ month, pnl: monthlyMap[month] }));
 
