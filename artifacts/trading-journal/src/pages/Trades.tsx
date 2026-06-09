@@ -134,7 +134,7 @@ export default function Trades() {
     "bg-card border border-input rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors";
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       {/* P&L recalc toast */}
       {toast && (
         <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl border text-sm font-medium transition-all

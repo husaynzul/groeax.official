@@ -39,7 +39,7 @@ export default function Calculator() {
     "w-full bg-card border border-input rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors";
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 md:p-6 max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Risk Calculator</h1>
         <p className="text-sm text-muted-foreground mt-1">Live position sizing and risk analysis</p>

@@ -86,7 +86,7 @@ export default function Journal() {
   }, [days, analytics.tradesByDate]);
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="mb-5 flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-foreground">Journal</h1>

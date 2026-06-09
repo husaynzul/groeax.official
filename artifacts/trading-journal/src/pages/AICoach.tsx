@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useTradeStore } from "@/store/tradeStore";
 import { computeAnalytics } from "@/engine/analyticsEngine";
+import type { Trade } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Bot, User, Sparkles, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, Zap } from "lucide-react";
 import { format } from "date-fns";
@@ -23,7 +24,7 @@ const STARTER_QUESTIONS = [
   "What time of day do I perform best?",
 ];
 
-function buildTradingContext(analytics: ReturnType<typeof computeAnalytics>, trades: ReturnType<typeof useTradeStore>[0]["trades"]): string {
+function buildTradingContext(analytics: ReturnType<typeof computeAnalytics>, trades: Trade[]): string {
   const pf = analytics.totalLoss > 0
     ? (analytics.totalProfit / analytics.totalLoss).toFixed(2)
     : analytics.totalProfit > 0 ? "∞" : "0";
@@ -208,7 +209,7 @@ export default function AICoach() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+      <div className="px-4 md:px-6 py-4 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-violet-500/15 flex items-center justify-center">
             <Bot className="w-5 h-5 text-violet-400" />

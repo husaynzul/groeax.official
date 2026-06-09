@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, type ReactElement } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Trash2, RefreshCw, CheckCircle, XCircle, Clock,
@@ -176,7 +176,7 @@ const ALL_DEFS = [...CRYPTO_BROKERS, ...TRAD_BROKERS];
 /* ── Icons ─────────────────────────────────────────────────────────── */
 function BrokerIcon({ type, size = 5 }: { type: BrokerType; size?: number }) {
   const cls = `w-${size} h-${size}`;
-  const map: Partial<Record<BrokerType, JSX.Element>> = {
+  const map: Partial<Record<BrokerType, ReactElement>> = {
     mt5:       <BarChart2    className={cls} />,
     alpaca:    <Zap          className={cls} />,
     oanda:     <Globe        className={cls} />,
@@ -856,7 +856,7 @@ export default function Brokers() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+      <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-border shrink-0">
         <div>
           <h1 className="text-xl font-bold">Broker & Exchange Connections</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -871,7 +871,7 @@ export default function Brokers() {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-8">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-8">
 
         {/* Connected list */}
         {brokers.length > 0 && (

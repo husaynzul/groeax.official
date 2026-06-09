@@ -534,7 +534,7 @@ export default function Intelligence() {
   const avgConf = events.length ? Math.round(events.reduce((s, e) => s + e.confidenceScore, 0) / events.length) : 0;
 
   return (
-    <div className="p-5 max-w-6xl space-y-5">
+    <div className="p-4 md:p-5 max-w-6xl space-y-5">
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
