@@ -31,16 +31,16 @@ Return ONLY a JSON object with these exact fields (use null for fields you canno
 {
   "pair": "string — e.g. EUR/USD, GBP/USD, XAU/USD, US30, NAS100 — use standard notation",
   "direction": "BUY" or "SELL" (null if unknown),
-  "entryPrice": number or null,
-  "stopLoss": number or null,
-  "takeProfit": number or null,
+  "entryPrice": string or number or null — preserve EXACTLY as shown, e.g. "27,267.9" or "1.08456",
+  "stopLoss": string or number or null — preserve EXACTLY as shown on screen,
+  "takeProfit": string or number or null — preserve EXACTLY as shown on screen,
   "lotSize": number or null,
   "date": "YYYY-MM-DD" or null,
   "outcome": "WIN" or "LOSS" or "BE" or null,
   "notes": "brief description of what you see in the screenshot (max 100 chars)" or null
 }
 
-Important: Return ONLY the JSON object. No explanation, no markdown.`;
+Important: For price fields (entryPrice, stopLoss, takeProfit) copy the value EXACTLY as it appears in the screenshot, including any commas (e.g. "27,267.9", "2,7267.9", "3,378.52"). Return ONLY the JSON object. No explanation, no markdown.`;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/ai/analyze — streaming AI trading coach
@@ -232,13 +232,39 @@ router.post("/ai/ocr-trade", authMiddleware, async (req, res) => {
       return;
     }
 
+    // Parse a price value that may come back as a number or a comma-formatted string
+    // e.g. "27,267.9" or "2,7267.9" or 1.08456 — all are valid broker formats
+    function parseOcrPrice(val: unknown): number | null {
+      if (val === null || val === undefined) return null;
+      if (typeof val === "number") return isFinite(val) && val > 0 ? val : null;
+      if (typeof val === "string") {
+        // Remove currency symbols, spaces; keep digits, commas, dots
+        const s = val.replace(/[$€£¥\s]/g, "");
+        if (!/^[\d,.]+$/.test(s) || !s) return null;
+        const hasDot = s.includes(".");
+        const commaCount = (s.match(/,/g) ?? []).length;
+        let normalized = s;
+        if (hasDot) {
+          normalized = s.replace(/,/g, "");
+        } else if (commaCount === 1) {
+          const afterComma = s.split(",")[1] ?? "";
+          normalized = afterComma.length > 2 ? s.replace(",", ".") : s.replace(/,/g, "");
+        } else {
+          normalized = s.replace(/,/g, "");
+        }
+        const n = parseFloat(normalized);
+        return isFinite(n) && n > 0 ? n : null;
+      }
+      return null;
+    }
+
     // Sanitise and return
     const result = {
       pair:        typeof parsed.pair === "string"       ? parsed.pair       : null,
       direction:   parsed.direction === "BUY" || parsed.direction === "SELL" ? parsed.direction as "BUY" | "SELL" : null,
-      entryPrice:  typeof parsed.entryPrice === "number" ? parsed.entryPrice  : null,
-      stopLoss:    typeof parsed.stopLoss === "number"   ? parsed.stopLoss    : null,
-      takeProfit:  typeof parsed.takeProfit === "number" ? parsed.takeProfit  : null,
+      entryPrice:  parseOcrPrice(parsed.entryPrice),
+      stopLoss:    parseOcrPrice(parsed.stopLoss),
+      takeProfit:  parseOcrPrice(parsed.takeProfit),
       lotSize:     typeof parsed.lotSize === "number"    ? parsed.lotSize     : null,
       date:        typeof parsed.date === "string"       ? parsed.date        : null,
       outcome:     parsed.outcome === "WIN" || parsed.outcome === "LOSS" || parsed.outcome === "BE"

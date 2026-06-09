@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { useTradeStore } from "@/store/tradeStore";
 import { calcNetProfit, calcNetLoss, calcExitPnL, calcRR } from "@/engine/riskEngine";
+import { parseBrokerPrice } from "@/utils/priceParser";
 import { useMemo, useState } from "react";
 import { Trade, PRIMARY_STRATEGIES, PATTERN_TYPES, TRADING_SESSIONS, TradingSession, SESSION_LABELS, detectSession } from "@/types";
 
@@ -36,13 +37,25 @@ const FOREX_PAIRS = [
   "EUR/JPY", "GBP/JPY", "XAU/USD", "US30", "NAS100",
 ];
 
+function priceField(label: string) {
+  return z
+    .string()
+    .min(1, "Required")
+    .transform((v) => parseBrokerPrice(v))
+    .refine((n) => n > 0, `${label} must be a positive number`);
+}
+
 const schema = z.object({
   pair: z.string().min(1, "Required"),
   direction: z.enum(["BUY", "SELL"]),
-  entryPrice: z.coerce.number().positive("Must be positive"),
-  exitPrice: z.coerce.number().optional(),
-  stopLoss: z.coerce.number().positive("Must be positive"),
-  takeProfit: z.coerce.number().positive("Must be positive"),
+  entryPrice: priceField("Entry price"),
+  exitPrice: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim() !== "" ? parseBrokerPrice(v) : undefined))
+    .refine((n) => n === undefined || n > 0, "Exit price must be positive"),
+  stopLoss: priceField("Stop loss"),
+  takeProfit: priceField("Take profit"),
   lotSize: z.coerce.number().positive("Must be positive"),
   date: z.string().min(1, "Required"),
   outcome: z.enum(["WIN", "LOSS", "BE"]).optional(),
@@ -50,7 +63,8 @@ const schema = z.object({
   strategy: z.string().min(1, "Select a strategy"),
 });
 
-type FormValues = z.infer<typeof schema>;
+type FormInput = z.input<typeof schema>;
+type FormValues = z.output<typeof schema>;
 
 export interface TradeFormPrefill {
   pair?: string;
@@ -75,8 +89,20 @@ interface Props {
 const fmtMoney = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 
-function computePnL(values: Partial<FormValues>): { np: number; nl: number; rr: number } | null {
-  const { pair = "EUR/USD", entryPrice: e = 0, stopLoss: sl = 0, takeProfit: tp = 0, lotSize: lot = 0, exitPrice: ep, direction = "BUY", outcome } = values;
+function computePnL(values: Partial<FormInput>): { np: number; nl: number; rr: number } | null {
+  const {
+    pair = "EUR/USD",
+    direction = "BUY",
+    outcome,
+  } = values;
+
+  // Price fields are strings in the form state — parse them safely
+  const e  = parseBrokerPrice(values.entryPrice);
+  const sl = parseBrokerPrice(values.stopLoss);
+  const tp = parseBrokerPrice(values.takeProfit);
+  const ep = values.exitPrice ? parseBrokerPrice(values.exitPrice) : 0;
+  const lot = typeof values.lotSize === "number" ? values.lotSize : parseBrokerPrice(String(values.lotSize ?? "0"));
+
   if (!e || !lot) return null;
 
   if (ep && ep > 0) {
@@ -110,29 +136,29 @@ export default function AddTradeModal({ open, onClose, editTrade, prefill }: Pro
     editTrade?.session ?? detectSession()
   );
 
-  const defaultEmpty = {
-    pair: "EUR/USD" as string,
-    direction: "BUY" as const,
-    entryPrice: 0,
-    exitPrice: undefined,
-    stopLoss: 0,
-    takeProfit: 0,
+  const defaultEmpty: FormInput = {
+    pair: "EUR/USD",
+    direction: "BUY",
+    entryPrice: "",
+    exitPrice: "",
+    stopLoss: "",
+    takeProfit: "",
     lotSize: 0.1,
     date: new Date().toISOString().split("T")[0],
     notes: "",
     strategy: "",
   };
 
-  const form = useForm<FormValues>({
+  const form = useForm<FormInput>({
     resolver: zodResolver(schema),
     defaultValues: editTrade
       ? {
           pair: editTrade.pair,
           direction: editTrade.direction,
-          entryPrice: editTrade.entryPrice,
-          exitPrice: editTrade.exitPrice,
-          stopLoss: editTrade.stopLoss,
-          takeProfit: editTrade.takeProfit,
+          entryPrice: String(editTrade.entryPrice),
+          exitPrice: editTrade.exitPrice != null ? String(editTrade.exitPrice) : "",
+          stopLoss: String(editTrade.stopLoss),
+          takeProfit: String(editTrade.takeProfit),
           lotSize: editTrade.lotSize,
           date: editTrade.date.split("T")[0],
           outcome: editTrade.outcome,
@@ -144,10 +170,10 @@ export default function AddTradeModal({ open, onClose, editTrade, prefill }: Pro
           ...defaultEmpty,
           ...(prefill.pair        && { pair: prefill.pair }),
           ...(prefill.direction   && { direction: prefill.direction }),
-          ...(prefill.entryPrice  && { entryPrice: prefill.entryPrice }),
-          ...(prefill.exitPrice   && { exitPrice: prefill.exitPrice }),
-          ...(prefill.stopLoss    && { stopLoss: prefill.stopLoss }),
-          ...(prefill.takeProfit  && { takeProfit: prefill.takeProfit }),
+          ...(prefill.entryPrice  && { entryPrice: String(prefill.entryPrice) }),
+          ...(prefill.exitPrice   && { exitPrice: String(prefill.exitPrice) }),
+          ...(prefill.stopLoss    && { stopLoss: String(prefill.stopLoss) }),
+          ...(prefill.takeProfit  && { takeProfit: String(prefill.takeProfit) }),
           ...(prefill.lotSize     && { lotSize: prefill.lotSize }),
           ...(prefill.date        && { date: prefill.date }),
           ...(prefill.outcome     && { outcome: prefill.outcome }),
@@ -170,7 +196,15 @@ export default function AddTradeModal({ open, onClose, editTrade, prefill }: Pro
   }
 
   function onSubmit(values: FormValues) {
-    const pnl = computePnL(values);
+    // values.entryPrice / stopLoss / takeProfit / exitPrice are already
+    // parsed numbers at this point — zod ran the transform on submit
+    const pnl = computePnL({
+      ...watched,
+      entryPrice: String(values.entryPrice),
+      stopLoss: String(values.stopLoss),
+      takeProfit: String(values.takeProfit),
+      exitPrice: values.exitPrice != null ? String(values.exitPrice) : "",
+    });
     const np = pnl?.np ?? 0;
     const nl = pnl?.nl ?? 0;
     const rr = pnl?.rr ?? 0;
@@ -274,7 +308,7 @@ export default function AddTradeModal({ open, onClose, editTrade, prefill }: Pro
                   <FormItem>
                     <FormLabel>Entry Price</FormLabel>
                     <FormControl>
-                      <Input type="number" step="any" placeholder="1.08500" data-testid="input-entry-price" {...field} />
+                      <Input type="text" inputMode="decimal" placeholder="1.08500 or 27,267.9" data-testid="input-entry-price" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -290,7 +324,7 @@ export default function AddTradeModal({ open, onClose, editTrade, prefill }: Pro
                       Exit Price <span className="text-muted-foreground text-xs">(optional — actual close)</span>
                     </FormLabel>
                     <FormControl>
-                      <Input type="number" step="any" placeholder="Actual exit price" data-testid="input-exit-price" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : Number(e.target.value))} />
+                      <Input type="text" inputMode="decimal" placeholder="Actual exit price" data-testid="input-exit-price" {...field} value={field.value ?? ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -318,7 +352,7 @@ export default function AddTradeModal({ open, onClose, editTrade, prefill }: Pro
                   <FormItem>
                     <FormLabel>Stop Loss</FormLabel>
                     <FormControl>
-                      <Input type="number" step="any" placeholder="1.08200" data-testid="input-stop-loss" {...field} />
+                      <Input type="text" inputMode="decimal" placeholder="1.08200 or 27,100.0" data-testid="input-stop-loss" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -332,7 +366,7 @@ export default function AddTradeModal({ open, onClose, editTrade, prefill }: Pro
                   <FormItem>
                     <FormLabel>Take Profit</FormLabel>
                     <FormControl>
-                      <Input type="number" step="any" placeholder="1.09100" data-testid="input-take-profit" {...field} />
+                      <Input type="text" inputMode="decimal" placeholder="1.09100 or 27,500.0" data-testid="input-take-profit" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

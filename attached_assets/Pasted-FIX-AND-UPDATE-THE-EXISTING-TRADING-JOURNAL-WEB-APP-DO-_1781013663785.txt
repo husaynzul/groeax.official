@@ -1,0 +1,228 @@
+FIX AND UPDATE THE EXISTING TRADING JOURNAL WEB APP.
+
+DO NOT REDESIGN THE ENTIRE APPLICATION.
+
+KEEP THE CURRENT UI STYLE.
+
+ONLY FIX THE BROKEN FEATURES AND IMPROVE THE EXISTING CALENDAR AND BALANCE SYSTEM.
+
+────────────────────────────
+
+1. FIX OCR SYSTEM (HIGH PRIORITY)
+   ────────────────────────────
+
+Current Issue:
+
+- OCR is not working reliably.
+- OCR trades sometimes appear in Dashboard and Journal.
+- OCR trades do NOT appear correctly in Calendar.
+- OCR data mapping is inconsistent.
+
+Required Fix:
+
+When a user uploads a trade screenshot:
+
+1. Run OCR extraction.
+2. Extract:
+   - Symbol
+   - Entry Price
+   - Exit Price
+   - Stop Loss
+   - Take Profit
+   - Lot Size
+   - Trade Direction (Buy/Sell)
+   - Profit/Loss
+   - Trade Date
+3. Show extracted values for review.
+4. Save trade into MongoDB.
+5. Automatically sync trade with:
+   - Dashboard
+   - Journal
+   - Calendar
+   - Analytics
+
+No duplicate records.
+
+No missing records.
+
+OCR trades must behave exactly like manually entered trades.
+
+────────────────────────────
+2. FIX CALENDAR SYSTEM
+────────────────────────────
+
+Current Issue:
+
+OCR trades are not appearing correctly in Calendar.
+
+Required Fix:
+
+Every trade saved in MongoDB must appear in Calendar.
+
+Calendar must show:
+
+- Trade count per day
+- Daily profit
+- Daily loss
+- Net daily PnL
+- Win/Loss indicator
+
+Clicking a day must open:
+
+- Trade details
+- Screenshot preview
+- Entry
+- Exit
+- Profit/Loss
+- Notes
+
+Fix all date parsing and timezone issues.
+
+Calendar must use database trades as the single source of truth.
+
+────────────────────────────
+3. CALENDAR UI UPDATE
+────────────────────────────
+
+Update Calendar design to match the uploaded reference style.
+
+Requirements:
+
+- Professional dark trading theme
+- Modern card layout
+- Monthly grid view
+- Daily PnL indicators
+- Win/Loss color indicators
+- Trade count badges
+- Responsive mobile layout
+- Responsive desktop layout
+
+Do NOT build a generic calendar.
+
+Make it look like a professional trading journal calendar.
+
+────────────────────────────
+4. TOTAL BALANCE SYSTEM
+────────────────────────────
+
+Add a dedicated balance management system.
+
+User enters:
+
+Starting Balance
+
+Example:
+
+$10,000
+
+Store permanently.
+
+After every trade:
+
+If trade is profit:
+
+Balance = Balance + Profit
+
+If trade is loss:
+
+Balance = Balance - Loss
+
+Formula:
+
+Current Balance =
+Starting Balance +
+Total Profit -
+Total Loss
+
+Balance updates automatically after:
+
+- Add Trade
+- OCR Trade
+- Edit Trade
+- Delete Trade
+
+No manual calculations.
+
+────────────────────────────
+5. DASHBOARD BALANCE INTEGRATION
+────────────────────────────
+
+Display:
+
+- Starting Balance
+- Current Balance
+- Net PnL
+- Total Profit
+- Total Loss
+- Account Growth %
+- Drawdown %
+
+Everything must update automatically.
+
+────────────────────────────
+6. XAUUSD / GOLD FIX
+────────────────────────────
+
+Fix XAUUSD trade calculations.
+
+Requirements:
+
+- Correct lot size handling
+- Correct profit/loss calculations
+- Correct decimal handling
+- Correct balance updates
+
+Support:
+
+- XAUUSD
+- GOLD
+- XAUUSDm
+- Broker-specific Gold symbols
+
+────────────────────────────
+7. RESPONSIVE DESIGN
+────────────────────────────
+
+Must work perfectly on:
+
+Desktop:
+
+- Large screens
+- Multi-column layouts
+
+Mobile:
+
+- Cards stack correctly
+- No overflow
+- No hidden content
+- Touch friendly
+
+No broken layouts.
+
+────────────────────────────
+8. DATABASE RULES
+────────────────────────────
+
+MongoDB is the single source of truth.
+
+Dashboard, Journal, Calendar, Analytics and Balance must all read from the same trade records.
+
+No mock data.
+No duplicate data.
+No disconnected calculations.
+
+────────────────────────────
+FINAL RESULT
+────────────────────────────
+
+The application should behave like a professional trading journal:
+
+- OCR fully working
+- OCR trades appear in Calendar
+- Calendar matches professional trading journal style
+- Starting Balance system added
+- Current Balance auto-adjusts after every trade
+- Dashboard always synced
+- XAUUSD calculations fixed
+- Mobile and Desktop fully responsive
+- MongoDB is the only source of truth

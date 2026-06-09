@@ -1,4 +1,5 @@
 import { Trade, PRIMARY_STRATEGIES } from "../types";
+import { parseBrokerPrice } from "./priceParser";
 
 export interface ParsedCSVResult {
   trades: Trade[];
@@ -64,8 +65,7 @@ function parseDate(raw: string): string | null {
 
 function parseNumber(raw: string | undefined): number {
   if (!raw) return 0;
-  const n = parseFloat(raw.replace(/[$,\s%]/g, ""));
-  return isNaN(n) ? 0 : n;
+  return parseBrokerPrice(raw);
 }
 
 function parseDirection(raw: string | undefined): "BUY" | "SELL" {
