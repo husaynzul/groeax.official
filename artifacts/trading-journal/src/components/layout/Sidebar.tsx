@@ -24,6 +24,7 @@ import groeaxLogo from "@assets/WhatsApp_Image_2026-05-03_at_12.44.10_PM_1777794
 const NAV_ITEMS = [
   { href: "/dashboard",    label: "Dashboard",    icon: LayoutDashboard },
   { href: "/trades",       label: "Trades",       icon: BookOpen },
+  { href: "/calendar",     label: "Calendar",     icon: CalendarDays },
   { href: "/journal",      label: "Journal",      icon: CalendarDays },
   { href: "/analytics",    label: "Analytics",    icon: BarChart2 },
   { href: "/calculator",   label: "Risk Calc",    icon: Calculator },

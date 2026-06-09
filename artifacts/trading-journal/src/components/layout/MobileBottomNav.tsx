@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 const PRIMARY_NAV = [
   { href: "/dashboard",  label: "Home",     icon: LayoutDashboard },
   { href: "/trades",     label: "Trades",   icon: BookOpen },
-  { href: "/journal",    label: "Journal",  icon: CalendarDays },
+  { href: "/calendar",   label: "Calendar", icon: CalendarDays },
   { href: "/analytics",  label: "Stats",    icon: BarChart2 },
 ];
 

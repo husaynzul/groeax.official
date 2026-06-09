@@ -15,6 +15,7 @@ import AICoach from "@/pages/AICoach";
 import News from "@/pages/News";
 import Intelligence from "@/pages/Intelligence";
 import Brokers from "@/pages/Brokers";
+import CalendarPage from "@/pages/Calendar";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
@@ -79,6 +80,7 @@ function AppRoutes() {
         <Route path="/ai-coach">{layout(<AICoach />)}</Route>
         <Route path="/intelligence">{layout(<Intelligence />)}</Route>
         <Route path="/brokers">{layout(<Brokers />)}</Route>
+        <Route path="/calendar">{layout(<CalendarPage />)}</Route>
         <Route component={NotFound} />
       </Switch>
       <MT5BridgeGlobal />
