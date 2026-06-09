@@ -103,15 +103,16 @@ export default function Trades() {
 
   function handleOcrResult(result: OCRResult) {
     const prefill: TradeFormPrefill = {};
-    if (result.pair)        prefill.pair       = result.pair;
-    if (result.direction)   prefill.direction  = result.direction;
-    if (result.entryPrice)  prefill.entryPrice = result.entryPrice;
-    if (result.stopLoss)    prefill.stopLoss   = result.stopLoss;
-    if (result.takeProfit)  prefill.takeProfit = result.takeProfit;
-    if (result.lotSize)     prefill.lotSize    = result.lotSize;
-    if (result.date)        prefill.date       = result.date;
-    if (result.outcome)     prefill.outcome    = result.outcome;
-    if (result.notes)       prefill.notes      = result.notes;
+    if (result.pair)        prefill.pair         = result.pair;
+    if (result.direction)   prefill.direction    = result.direction;
+    if (result.entryPrice)  prefill.entryPrice   = result.entryPrice;
+    if (result.stopLoss)    prefill.stopLoss     = result.stopLoss;
+    if (result.takeProfit)  prefill.takeProfit   = result.takeProfit;
+    if (result.lotSize)     prefill.lotSize      = result.lotSize;
+    if (result.profit != null) prefill.brokerProfit = result.profit;
+    if (result.date)        prefill.date         = result.date;
+    if (result.outcome)     prefill.outcome      = result.outcome;
+    if (result.notes)       prefill.notes        = result.notes;
     setOcrPrefill(prefill);
     setAddOpen(true);
   }

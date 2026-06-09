@@ -74,6 +74,7 @@ export interface TradeFormPrefill {
   stopLoss?: number;
   takeProfit?: number;
   lotSize?: number;
+  brokerProfit?: number;
   date?: string;
   outcome?: "WIN" | "LOSS" | "BE";
   notes?: string;
@@ -84,6 +85,7 @@ interface Props {
   onClose: () => void;
   editTrade?: Trade;
   prefill?: TradeFormPrefill;
+  brokerProfit?: number;
 }
 
 const fmtMoney = (n: number) =>
@@ -125,7 +127,8 @@ function computePnL(values: Partial<FormInput>): { np: number; nl: number; rr: n
   return { np, nl, rr: calcRR(np, nl) };
 }
 
-export default function AddTradeModal({ open, onClose, editTrade, prefill }: Props) {
+export default function AddTradeModal({ open, onClose, editTrade, prefill, brokerProfit: brokerProfitProp }: Props) {
+  const brokerProfitRef = prefill?.brokerProfit ?? brokerProfitProp;
   const addTrade = useTradeStore((s) => s.addTrade);
   const updateTrade = useTradeStore((s) => s.updateTrade);
 
@@ -205,8 +208,18 @@ export default function AddTradeModal({ open, onClose, editTrade, prefill }: Pro
       takeProfit: String(values.takeProfit),
       exitPrice: values.exitPrice != null ? String(values.exitPrice) : "",
     });
-    const np = pnl?.np ?? 0;
-    const nl = pnl?.nl ?? 0;
+
+    // If the broker reported a P&L directly (e.g. from OCR), use it verbatim
+    // so exotic pairs like XAUUSD don't get miscalculated.
+    let np: number;
+    let nl: number;
+    if (brokerProfitRef != null) {
+      np = brokerProfitRef > 0 ? brokerProfitRef : 0;
+      nl = brokerProfitRef < 0 ? Math.abs(brokerProfitRef) : 0;
+    } else {
+      np = pnl?.np ?? 0;
+      nl = pnl?.nl ?? 0;
+    }
     const rr = pnl?.rr ?? 0;
 
     if (editTrade) {

@@ -35,6 +35,7 @@ Return ONLY a JSON object with these exact fields (use null for fields you canno
   "stopLoss": string or number or null — preserve EXACTLY as shown on screen,
   "takeProfit": string or number or null — preserve EXACTLY as shown on screen,
   "lotSize": number or null,
+  "profit": number or null — the actual broker P&L value shown (e.g. 12.50, -8.00). Use the exact dollar/monetary value shown, positive for profit, negative for loss. null if not visible,
   "date": "YYYY-MM-DD" or null,
   "outcome": "WIN" or "LOSS" or "BE" or null,
   "notes": "brief description of what you see in the screenshot (max 100 chars)" or null
@@ -49,10 +50,10 @@ router.post("/ai/analyze", authMiddleware, platinumMiddleware, async (req, res) 
   try {
     const { messages, tradingContext } = req.body;
 
-    const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+    const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL ?? "https://api.openai.com/v1";
+    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? process.env.OPENAI_API_KEY;
 
-    if (!baseUrl || !apiKey) {
+    if (!apiKey) {
       res.status(503).json({ error: "AI service not configured" });
       return;
     }
@@ -162,10 +163,10 @@ router.post("/ai/ocr-trade", authMiddleware, async (req, res) => {
       return;
     }
 
-    const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+    const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL ?? "https://api.openai.com/v1";
+    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? process.env.OPENAI_API_KEY;
 
-    if (!baseUrl || !apiKey) {
+    if (!apiKey) {
       res.status(503).json({ error: "AI service not configured" });
       return;
     }
@@ -266,6 +267,7 @@ router.post("/ai/ocr-trade", authMiddleware, async (req, res) => {
       stopLoss:    parseOcrPrice(parsed.stopLoss),
       takeProfit:  parseOcrPrice(parsed.takeProfit),
       lotSize:     typeof parsed.lotSize === "number"    ? parsed.lotSize     : null,
+      profit:      typeof parsed.profit === "number" && isFinite(parsed.profit) ? parsed.profit : null,
       date:        typeof parsed.date === "string"       ? parsed.date        : null,
       outcome:     parsed.outcome === "WIN" || parsed.outcome === "LOSS" || parsed.outcome === "BE"
                      ? parsed.outcome as "WIN" | "LOSS" | "BE"

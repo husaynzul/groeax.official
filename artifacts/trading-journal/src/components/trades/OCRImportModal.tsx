@@ -19,6 +19,7 @@ export interface OCRResult {
   stopLoss: number | null;
   takeProfit: number | null;
   lotSize: number | null;
+  profit: number | null;
   date: string | null;
   outcome: "WIN" | "LOSS" | "BE" | null;
   notes: string | null;
