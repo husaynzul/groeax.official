@@ -2,12 +2,14 @@ import { create } from 'zustand';
 import { Trade } from '../types';
 import { saveToStorage, loadFromStorage, clearStorage } from '../storage/tradeStorage';
 
-const GOAL_KEY = 'groeax_monthly_goal';
+const GOAL_KEY    = 'groeax_monthly_goal';
+const BALANCE_KEY = 'groeax_starting_balance';
 
 interface TradeStore {
   trades: Trade[];
   isHydrated: boolean;
   monthlyGoal: number;
+  startingBalance: number;
   addTrade: (trade: Trade) => void;
   updateTrade: (id: string, trade: Partial<Trade>) => void;
   bulkUpdateTrades: (updates: { id: string; changes: Partial<Trade> }[]) => void;
@@ -15,6 +17,7 @@ interface TradeStore {
   clearAll: () => void;
   hydrate: () => Promise<void>;
   setMonthlyGoal: (goal: number) => void;
+  setStartingBalance: (balance: number) => void;
 }
 
 function loadGoal(): number {
@@ -25,10 +28,19 @@ function loadGoal(): number {
   return 0;
 }
 
+function loadStartingBalance(): number {
+  try {
+    const raw = localStorage.getItem(BALANCE_KEY);
+    if (raw) return parseFloat(raw);
+  } catch {}
+  return 0;
+}
+
 export const useTradeStore = create<TradeStore>((set, get) => ({
   trades: [],
   isHydrated: false,
   monthlyGoal: loadGoal(),
+  startingBalance: loadStartingBalance(),
 
   addTrade: (trade) => {
     const next = [...get().trades, trade];
@@ -66,11 +78,16 @@ export const useTradeStore = create<TradeStore>((set, get) => ({
   hydrate: async () => {
     if (get().isHydrated) return;
     const trades = await loadFromStorage();
-    set({ trades, isHydrated: true, monthlyGoal: loadGoal() });
+    set({ trades, isHydrated: true, monthlyGoal: loadGoal(), startingBalance: loadStartingBalance() });
   },
 
   setMonthlyGoal: (goal) => {
     set({ monthlyGoal: goal });
     try { localStorage.setItem(GOAL_KEY, String(goal)); } catch {}
+  },
+
+  setStartingBalance: (balance) => {
+    set({ startingBalance: balance });
+    try { localStorage.setItem(BALANCE_KEY, String(balance)); } catch {}
   },
 }));

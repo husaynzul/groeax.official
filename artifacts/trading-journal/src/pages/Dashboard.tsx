@@ -37,6 +37,11 @@ import {
   Pencil,
   Check,
   X,
+  Wallet,
+  DollarSign,
+  Percent,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Trade } from "@/types";
 import {
@@ -64,12 +69,129 @@ const fmtMoney = (n: number) =>
 
 const fmtPct = (n: number) => `${n.toFixed(1)}%`;
 
+/** Format PnL as compact: $9.4K / -$20.6K / $340 */
+function fmtPnLCompact(n: number): string {
+  const abs = Math.abs(n);
+  const sign = n < 0 ? "-" : "";
+  if (abs >= 1000) return `${sign}$${(abs / 1000).toFixed(1)}K`;
+  return `${sign}$${abs.toFixed(0)}`;
+}
+
 function MetricCard({ label, value, sub, icon: Icon, color = "text-foreground", index }: { label: string; value: string; sub?: string; icon: React.ElementType; color?: string; index: number; }) {
   return (
     <motion.div custom={index} initial="hidden" animate="show" variants={FADE_UP} className="glass-card p-4 flex flex-col gap-1.5 hover:border-white/15 transition-colors">
       <div className="flex items-center gap-2 text-muted-foreground"><Icon className="w-3.5 h-3.5" /><span className="text-xs uppercase tracking-wider">{label}</span></div>
       <p className={`text-2xl font-bold ${color}`}>{value}</p>
       {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+    </motion.div>
+  );
+}
+
+function BalanceCard({
+  startingBalance,
+  currentBalance,
+  totalProfit,
+  totalLoss,
+  onSetBalance,
+}: {
+  startingBalance: number;
+  currentBalance: number;
+  totalProfit: number;
+  totalLoss: number;
+  onSetBalance: (b: number) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(startingBalance || ""));
+
+  const growth = startingBalance > 0 ? ((currentBalance - startingBalance) / startingBalance) * 100 : 0;
+  const maxDrawdown = startingBalance > 0 ? Math.min((totalLoss / startingBalance) * 100, 100) : 0;
+
+  function commit() {
+    const v = parseFloat(draft);
+    if (!isNaN(v) && v > 0) onSetBalance(v);
+    setEditing(false);
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.15 }}
+      className="glass-card p-4 flex flex-col gap-3 hover:border-white/15 transition-colors"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Wallet className="w-3.5 h-3.5 text-primary" />
+          <span className="text-xs uppercase tracking-wider">Balance</span>
+        </div>
+        <button
+          onClick={() => { setDraft(String(startingBalance || "")); setEditing(true); }}
+          className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded hover:bg-white/5"
+        >
+          <Pencil className="w-3 h-3" />
+        </button>
+      </div>
+
+      {editing && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">$</span>
+          <input
+            type="number"
+            min="1"
+            step="any"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
+            autoFocus
+            placeholder="e.g. 10000"
+            className="flex-1 bg-secondary border border-input rounded-lg px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+          <button onClick={commit} className="p-1.5 rounded bg-primary/20 text-primary hover:bg-primary/30 transition-colors"><Check className="w-3.5 h-3.5" /></button>
+          <button onClick={() => setEditing(false)} className="p-1.5 rounded hover:bg-white/5 text-muted-foreground transition-colors"><X className="w-3.5 h-3.5" /></button>
+        </div>
+      )}
+
+      {startingBalance > 0 ? (
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Starting</p>
+              <p className="text-sm font-semibold text-foreground">{fmtMoney(startingBalance)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Current</p>
+              <p className={`text-sm font-bold ${currentBalance >= startingBalance ? "text-emerald-400" : "text-red-400"}`}>{fmtMoney(currentBalance)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Growth</p>
+              <p className={`text-sm font-semibold ${growth >= 0 ? "text-emerald-400" : "text-red-400"}`}>{growth >= 0 ? "+" : ""}{growth.toFixed(2)}%</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Drawdown</p>
+              <p className="text-sm font-semibold text-orange-400">{maxDrawdown.toFixed(2)}%</p>
+            </div>
+          </div>
+          <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ${growth >= 0 ? "bg-emerald-500" : "bg-red-500"}`}
+              style={{ width: `${Math.min(Math.abs(growth), 100)}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-[9px] text-muted-foreground">
+            <span>Net P&L: {totalProfit - totalLoss >= 0 ? "+" : ""}{fmtMoney(totalProfit - totalLoss)}</span>
+            <span>{growth >= 0 ? "+" : ""}{growth.toFixed(1)}% return</span>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-4 gap-2">
+          <p className="text-sm text-muted-foreground text-center">Set your starting balance to track account growth</p>
+          {!editing && (
+            <button onClick={() => setEditing(true)} className="text-xs text-primary hover:text-primary/80 transition-colors font-medium">
+              + Set balance
+            </button>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -134,46 +256,168 @@ function MonthlyGoalCard({ monthlyPnL, goal, onSetGoal }: { monthlyPnL: number; 
   );
 }
 
-function CalendarHeatmap({ tradesByDate }: { tradesByDate: Record<string, Trade[]>; }) {
+function CalendarHeatmap({ tradesByDate }: { tradesByDate: Record<string, Trade[]> }) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
   const days = eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) });
   const firstDayOfWeek = getDay(startOfMonth(currentMonth));
   const blanks = Array.from({ length: firstDayOfWeek });
   const weekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  const selectedTrades = selectedDate ? (tradesByDate[selectedDate] ?? []) : [];
+
   return (
-    <div className="glass-card p-4 hover:border-white/15 transition-colors">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.22 }}
+      className="glass-card p-4 hover:border-white/15 transition-colors"
+    >
+      {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <button onClick={() => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1))} className="text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded">‹</button>
-        <span className="text-sm font-medium">{format(currentMonth, "MMMM yyyy")}</span>
-        <button onClick={() => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1))} className="text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded">›</button>
+        <button
+          onClick={() => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1))}
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <span className="text-sm font-semibold text-foreground">{format(currentMonth, "MMMM yyyy")}</span>
+        <button
+          onClick={() => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1))}
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
-      <div className="grid grid-cols-7 gap-1 mb-1">{weekLabels.map((d) => <div key={d} className="text-center text-[10px] text-muted-foreground py-1">{d}</div>)}</div>
-      <div className="grid grid-cols-7 gap-1">
-        {blanks.map((_, i) => <div key={`blank-${i}`} />)}
+
+      {/* Week-day headers */}
+      <div className="grid grid-cols-7 mb-2">
+        {weekLabels.map((d) => (
+          <div key={d} className="text-center text-[11px] font-medium text-muted-foreground py-1.5 tracking-wide">
+            {d}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 gap-1.5">
+        {blanks.map((_, i) => (
+          <div key={`blank-${i}`} className="rounded-xl min-h-[72px] sm:min-h-[90px]" />
+        ))}
+
         {days.map((day) => {
           const key = format(day, "yyyy-MM-dd");
           const dayTrades = tradesByDate[key] ?? [];
-          const pnl = dayTrades.reduce((acc, t) => acc + (t.outcome === "WIN" ? t.netProfit : t.outcome === "LOSS" ? -t.netLoss : 0), 0);
+          const pnl = dayTrades.reduce(
+            (acc, t) => acc + (t.outcome === "WIN" ? t.netProfit : t.outcome === "LOSS" ? -t.netLoss : 0),
+            0,
+          );
+          const wins = dayTrades.filter((t) => t.outcome === "WIN").length;
+          const winRate = dayTrades.length > 0 ? (wins / dayTrades.length) * 100 : 0;
           const hasTrades = dayTrades.length > 0;
           const isSelected = selectedDate === key;
+          const today = isToday(day);
+
           return (
-            <button key={key} onClick={() => setSelectedDate(isSelected ? null : key)} className={`relative rounded-md p-1 min-h-[50px] text-left transition-all border ${isSelected ? "border-primary/60 ring-1 ring-primary/40" : "border-transparent hover:border-white/10"} ${hasTrades ? pnl > 0 ? "bg-emerald-500/15" : pnl < 0 ? "bg-red-500/15" : "bg-white/[0.03]" : isToday(day) ? "bg-primary/10 border-primary/20" : "bg-transparent"}`}>
-              <span className={`text-[10px] font-medium ${isToday(day) ? "text-primary" : "text-muted-foreground"}`}>{format(day, "d")}</span>
-              {hasTrades && <div className="mt-0.5"><p className={`text-[9px] font-semibold truncate ${pnl > 0 ? "text-emerald-400" : pnl < 0 ? "text-red-400" : "text-muted-foreground"}`}>{pnl > 0 ? "+" : ""}{fmtMoney(pnl)}</p><p className="text-[9px] text-muted-foreground">{dayTrades.length}T</p></div>}
+            <button
+              key={key}
+              onClick={() => setSelectedDate(isSelected ? null : key)}
+              className={[
+                "relative rounded-xl p-2 min-h-[72px] sm:min-h-[90px] text-left transition-all duration-150 focus:outline-none",
+                hasTrades
+                  ? pnl > 0
+                    ? "bg-emerald-700 hover:bg-emerald-600 border border-emerald-600/50"
+                    : pnl < 0
+                      ? "bg-red-800 hover:bg-red-700 border border-red-600/50"
+                      : "bg-white/10 hover:bg-white/15 border border-white/10"
+                  : today
+                    ? "bg-primary/10 border border-primary/30 hover:bg-primary/15"
+                    : "bg-white/[0.03] border border-transparent hover:bg-white/[0.06]",
+                isSelected ? "ring-2 ring-white/50 ring-offset-1 ring-offset-transparent" : "",
+              ].join(" ")}
+            >
+              {/* Day number – top right */}
+              <span
+                className={[
+                  "absolute top-1.5 right-2 text-[11px] font-semibold",
+                  hasTrades ? "text-white/80" : today ? "text-primary" : "text-muted-foreground/60",
+                ].join(" ")}
+              >
+                {format(day, "d")}
+              </span>
+
+              {/* Today dot */}
+              {today && !hasTrades && (
+                <span className="absolute top-1.5 left-2 w-1.5 h-1.5 rounded-full bg-primary" />
+              )}
+
+              {/* Trade data */}
+              {hasTrades && (
+                <div className="mt-5 space-y-0.5">
+                  <p className="text-white font-bold text-sm leading-tight truncate">
+                    {fmtPnLCompact(pnl)}
+                  </p>
+                  <p className="text-white/70 text-[11px]">
+                    {dayTrades.length} {dayTrades.length === 1 ? "trade" : "trades"}
+                  </p>
+                  <p className="text-white/70 text-[11px]">{winRate.toFixed(1)}%</p>
+                </div>
+              )}
             </button>
           );
         })}
       </div>
-      {selectedDate && tradesByDate[selectedDate] && (
-        <div className="mt-3 pt-3 border-t border-border">
-          <p className="text-xs font-medium text-muted-foreground mb-2">{fmtTradeDate(selectedDate, "MMM d, yyyy")}</p>
-          <div className="space-y-1.5 max-h-36 overflow-y-auto">
-            {tradesByDate[selectedDate].map((t) => <div key={t.id} className="flex items-center justify-between text-xs p-1.5 rounded bg-secondary/40"><span className="font-medium">{t.pair}</span><span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${t.direction === "BUY" ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}`}>{t.direction}</span><span className={t.outcome === "WIN" ? "text-emerald-400" : t.outcome === "LOSS" ? "text-red-400" : "text-muted-foreground"}>{t.outcome === "WIN" ? `+${fmtMoney(t.netProfit)}` : t.outcome === "LOSS" ? `-${fmtMoney(t.netLoss)}` : "BE"}</span></div>)}
+
+      {/* Day detail panel */}
+      {selectedDate && selectedTrades.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          className="mt-4 pt-4 border-t border-border overflow-hidden"
+        >
+          <p className="text-xs font-semibold text-muted-foreground mb-3">
+            {fmtTradeDate(selectedDate, "EEEE, MMMM d yyyy")}
+          </p>
+          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+            {selectedTrades.map((t) => (
+              <div
+                key={t.id}
+                className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-secondary/40 gap-2"
+              >
+                <span className="font-semibold text-foreground min-w-[60px]">{t.pair}</span>
+                <span
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    t.direction === "BUY"
+                      ? "bg-emerald-500/20 text-emerald-400"
+                      : "bg-red-500/20 text-red-400"
+                  }`}
+                >
+                  {t.direction}
+                </span>
+                <span className="text-muted-foreground text-[10px]">{t.rr.toFixed(2)}R</span>
+                <span
+                  className={`font-semibold ml-auto ${
+                    t.outcome === "WIN"
+                      ? "text-emerald-400"
+                      : t.outcome === "LOSS"
+                        ? "text-red-400"
+                        : "text-muted-foreground"
+                  }`}
+                >
+                  {t.outcome === "WIN"
+                    ? `+${fmtMoney(t.netProfit)}`
+                    : t.outcome === "LOSS"
+                      ? `-${fmtMoney(t.netLoss)}`
+                      : "BE"}
+                </span>
+              </div>
+            ))}
           </div>
-        </div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -181,7 +425,13 @@ export default function Dashboard() {
   const trades = useTradeStore((s) => s.trades);
   const monthlyGoal = useTradeStore((s) => s.monthlyGoal);
   const setMonthlyGoal = useTradeStore((s) => s.setMonthlyGoal);
+  const startingBalance = useTradeStore((s) => s.startingBalance);
+  const setStartingBalance = useTradeStore((s) => s.setStartingBalance);
+
   const analytics = useMemo(() => computeAnalytics(trades), [trades]);
+
+  const currentBalance = startingBalance + analytics.totalProfit - analytics.totalLoss;
+
   const monthlyPnL = useMemo(() => {
     const now = new Date();
     return trades.reduce((acc, t) => {
@@ -215,6 +465,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Core metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
         <MetricCard index={0} label="Net P&L" value={fmtMoney(analytics.netBalance)} sub={`${fmtMoney(analytics.totalProfit)} won`} icon={analytics.netBalance >= 0 ? TrendingUp : TrendingDown} color={analytics.netBalance >= 0 ? "text-emerald-400" : "text-red-400"} />
         <MetricCard index={1} label="Win Rate" value={fmtPct(analytics.winRate)} sub={`${analytics.totalTrades} trades`} icon={Target} color={analytics.winRate >= 50 ? "text-emerald-400" : "text-red-400"} />
@@ -222,6 +473,16 @@ export default function Dashboard() {
         <MetricCard index={3} label="Best Trade" value={analytics.bestTrade ? fmtMoney(analytics.bestTrade.netProfit) : "—"} sub={analytics.bestTrade?.pair} icon={Trophy} color="text-emerald-400" />
         <MetricCard index={4} label="Worst Trade" value={analytics.worstTrade ? `-${fmtMoney(analytics.worstTrade.netLoss)}` : "—"} sub={analytics.worstTrade?.pair} icon={AlertCircle} color="text-red-400" />
       </div>
+
+      {/* Balance metrics row (only when balance is set) */}
+      {startingBalance > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <MetricCard index={0} label="Starting Balance" value={fmtMoney(startingBalance)} icon={DollarSign} />
+          <MetricCard index={1} label="Current Balance" value={fmtMoney(currentBalance)} sub="auto-updated" icon={Wallet} color={currentBalance >= startingBalance ? "text-emerald-400" : "text-red-400"} />
+          <MetricCard index={2} label="Account Growth" value={`${startingBalance > 0 ? ((currentBalance - startingBalance) / startingBalance * 100).toFixed(2) : "0.00"}%`} sub="since start" icon={Percent} color={currentBalance >= startingBalance ? "text-emerald-400" : "text-red-400"} />
+          <MetricCard index={3} label="Total Drawdown" value={`${startingBalance > 0 ? (analytics.totalLoss / startingBalance * 100).toFixed(2) : "0.00"}%`} sub={`${fmtMoney(analytics.totalLoss)} lost`} icon={TrendingDown} color="text-orange-400" />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass-card p-4 lg:col-span-2 hover:border-white/15 transition-colors">
@@ -232,11 +493,24 @@ export default function Dashboard() {
             </ResponsiveContainer>
           ) : <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">Add trades to see your performance</div>}
         </motion.div>
-        <MonthlyGoalCard monthlyPnL={monthlyPnL} goal={monthlyGoal} onSetGoal={setMonthlyGoal} />
+
+        <div className="flex flex-col gap-4">
+          <BalanceCard
+            startingBalance={startingBalance}
+            currentBalance={currentBalance}
+            totalProfit={analytics.totalProfit}
+            totalLoss={analytics.totalLoss}
+            onSetBalance={setStartingBalance}
+          />
+          <MonthlyGoalCard monthlyPnL={monthlyPnL} goal={monthlyGoal} onSetGoal={setMonthlyGoal} />
+        </div>
       </div>
 
       <TradingSessions />
+
+      {/* Professional trading calendar */}
       <CalendarHeatmap tradesByDate={analytics.tradesByDate} />
+
       <StreakCard trades={trades} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
