@@ -449,7 +449,7 @@ export default function Dashboard() {
   const startingBalance = useTradeStore((s) => s.startingBalance);
   const setStartingBalance = useTradeStore((s) => s.setStartingBalance);
 
-  const analytics = useMemo(() => computeAnalytics(trades), [trades]);
+  const analytics = useMemo(() => computeAnalytics(trades, startingBalance), [trades, startingBalance]);
 
   const currentBalance = startingBalance + analytics.totalProfit - analytics.totalLoss;
 

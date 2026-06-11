@@ -44,7 +44,8 @@ function getWeeklyStats(
 
 export default function Journal() {
   const trades = useTradeStore((s) => s.trades);
-  const analytics = useMemo(() => computeAnalytics(trades), [trades]);
+  const startingBalance = useTradeStore((s) => s.startingBalance);
+  const analytics = useMemo(() => computeAnalytics(trades, startingBalance), [trades, startingBalance]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 

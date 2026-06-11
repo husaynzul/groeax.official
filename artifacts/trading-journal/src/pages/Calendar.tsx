@@ -118,7 +118,8 @@ function MonthSummary({
 
 export default function CalendarPage() {
   const trades = useTradeStore((s) => s.trades);
-  const analytics = useMemo(() => computeAnalytics(trades), [trades]);
+  const startingBalance = useTradeStore((s) => s.startingBalance);
+  const analytics = useMemo(() => computeAnalytics(trades, startingBalance), [trades, startingBalance]);
   const { tradesByDate } = analytics;
 
   const [currentMonth, setCurrentMonth] = useState(new Date());

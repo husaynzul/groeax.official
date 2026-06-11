@@ -125,7 +125,8 @@ function TypingIndicator() {
 
 export default function AICoach() {
   const trades = useTradeStore((s) => s.trades);
-  const analytics = useMemo(() => computeAnalytics(trades), [trades]);
+  const startingBalance = useTradeStore((s) => s.startingBalance);
+  const analytics = useMemo(() => computeAnalytics(trades, startingBalance), [trades, startingBalance]);
   const tradingContext = useMemo(() => buildTradingContext(analytics, trades), [analytics, trades]);
 
   const [messages, setMessages] = useState<Message[]>([]);

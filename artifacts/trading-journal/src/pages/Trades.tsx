@@ -25,7 +25,8 @@ export default function Trades() {
   const trades = useTradeStore((s) => s.trades);
   const deleteTrade = useTradeStore((s) => s.deleteTrade);
   const clearAll = useTradeStore((s) => s.clearAll);
-  const analytics = useMemo(() => computeAnalytics(trades), [trades]);
+  const startingBalance = useTradeStore((s) => s.startingBalance);
+  const analytics = useMemo(() => computeAnalytics(trades, startingBalance), [trades, startingBalance]);
 
   const addTrade = useTradeStore((s) => s.addTrade);
   const { recalculate, running: recalcRunning, lastResult } = usePnLRecalculator();

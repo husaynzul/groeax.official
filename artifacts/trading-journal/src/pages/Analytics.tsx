@@ -104,7 +104,8 @@ const StrategyTooltip = ({ active, payload }: { active?: boolean; payload?: { pa
 
 export default function Analytics() {
   const trades = useTradeStore((s) => s.trades);
-  const analytics = useMemo(() => computeAnalytics(trades), [trades]);
+  const startingBalance = useTradeStore((s) => s.startingBalance);
+  const analytics = useMemo(() => computeAnalytics(trades, startingBalance), [trades, startingBalance]);
 
   const maxDrawdown = useMemo(
     () => analytics.drawdownCurve.length > 0 ? Math.max(...analytics.drawdownCurve.map((d) => d.drawdown)) : 0,

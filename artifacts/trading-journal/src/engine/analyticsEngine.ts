@@ -53,7 +53,7 @@ function safeDateKey(raw: string): string | null {
   return datePart;
 }
 
-export function computeAnalytics(trades: Trade[]): Analytics {
+export function computeAnalytics(trades: Trade[], startingBalance = 0): Analytics {
   const emptyDrawdown: DrawdownStats = { peak: 0, currentEquity: 0, drawdownAmount: 0, drawdownPercent: 0 };
   const empty: Analytics = {
     totalTrades: 0, totalProfit: 0, totalLoss: 0, netBalance: 0,
@@ -134,11 +134,12 @@ export function computeAnalytics(trades: Trade[]): Analytics {
   const weeklyPnL = Object.keys(weeklyMap).sort().map(week => ({ week, pnl: weeklyMap[week] }));
   const monthlyPnL = Object.keys(monthlyMap).sort().map(month => ({ month, pnl: monthlyMap[month] }));
 
-  // Equity curve & drawdown — using peak equity method
-  // drawdownAmount = peak - currentEquity (never negative)
-  // drawdownPercent = (drawdownAmount / peak) * 100
-  let currentEquity = 0;
-  let peak = 0;
+  // Equity curve & drawdown — peak equity method (correct professional approach)
+  // equity  = startingBalance + cumulative P&L  (never just profit)
+  // peak    = highest equity ever reached        (starts at startingBalance)
+  // drawdown = (peak - equity) / peak * 100
+  let currentEquity = startingBalance;
+  let peak = startingBalance;
   const equityCurve: { date: string; equity: number }[] = [];
   const drawdownCurve: { date: string; drawdown: number }[] = [];
 
