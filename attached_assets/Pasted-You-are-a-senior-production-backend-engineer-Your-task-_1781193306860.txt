@@ -1,0 +1,146 @@
+You are a senior production backend engineer.
+
+Your task is to build a CLEAN, SCALABLE, and SECURE full-stack backend system using Node.js, Express, MongoDB (Mongoose).
+
+This system is for a multi-user trading app where each user has private data.
+
+========================
+CORE REQUIREMENTS
+========================
+
+1. AUTH SYSTEM (VERY IMPORTANT)
+- Users must be able to register using:
+  - email (Gmail supported)
+  - username
+  - password
+
+- Password must be hashed using bcrypt
+- Prevent duplicate email/username registration
+
+- Login system must:
+  - verify email/username + password
+  - return JWT token on success
+
+- Use JWT authentication for all protected routes
+
+========================
+2. USER SYSTEM
+========================
+
+Create a User model with:
+- username
+- email
+- password (hashed)
+- createdAt
+
+Each user must have a unique MongoDB _id
+
+========================
+3. TRADE SYSTEM
+========================
+
+Create a Trade model with:
+- userId (IMPORTANT - linked to User _id)
+- symbol (e.g. XAUUSD, BTCUSD)
+- entryPrice
+- exitPrice
+- profit
+- loss
+- strategy (optional)
+- createdAt
+
+========================
+4. USER DATA ISOLATION (CRITICAL)
+========================
+
+Each user must ONLY see their own trades.
+
+Rules:
+- Every trade must store userId
+- GET /trades must return ONLY logged-in user's trades
+- DELETE/UPDATE must only affect user's own trades
+
+NO GLOBAL SHARED DATA ALLOWED.
+
+========================
+5. API ROUTES
+========================
+
+AUTH:
+- POST /api/auth/register
+- POST /api/auth/login
+
+TRADES:
+- POST /api/trades/add
+- GET /api/trades
+- DELETE /api/trades/:id
+- (optional) PUT /api/trades/:id
+
+========================
+6. DATABASE (MONGODB)
+========================
+
+- Use mongoose
+- Use single DB connection file (db.js or config/db.js)
+- Connection string must come from:
+  process.env.MONGO_URI
+
+DO NOT hardcode credentials.
+
+========================
+7. SECURITY
+========================
+
+- Use JWT middleware to protect all trade routes
+- Validate token on every request
+- Block unauthorized access
+- Hash passwords with bcrypt
+- Use environment variables (.env or Replit Secrets)
+
+========================
+8. STRUCTURE (CLEAN ARCHITECTURE)
+========================
+
+Organize code like this:
+
+/models
+  User.js
+  Trade.js
+
+/routes
+  authRoutes.js
+  tradeRoutes.js
+
+/middleware
+  authMiddleware.js
+
+/config
+  db.js
+
+/server.js or index.js
+
+========================
+9. FINAL OUTPUT REQUIREMENTS
+========================
+
+After implementation:
+
+- Server must start without errors
+- Console must show:
+  "MongoDB Connected"
+  "Server running"
+
+- Registration must work
+- Login must return JWT
+- Trade creation must store userId correctly
+- Each user must only see their own trades
+
+========================
+IMPORTANT RULE
+========================
+
+Do not create a demo or partial system.
+
+Build a FULL WORKING production-ready backend only.
+
+If anything is missing, fix it instead of assuming.
