@@ -3,6 +3,68 @@ import { authMiddleware, platinumMiddleware } from "../middleware/auth.js";
 
 const router = Router();
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Provider resolution
+// Priority: Gemini → Groq → OpenAI
+// Each provider exposes an OpenAI-compatible /chat/completions endpoint.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface Provider {
+  name: string;
+  baseUrl: string;
+  apiKey: string;
+  chatModel: string;
+  visionModel: string | null; // null = no vision support
+  maxTokensParam: "max_tokens" | "max_completion_tokens";
+}
+
+function resolveProvider(): Provider | null {
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (geminiKey) {
+    return {
+      name: "gemini",
+      baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+      apiKey: geminiKey,
+      chatModel: "gemini-2.0-flash",
+      visionModel: "gemini-2.0-flash",
+      maxTokensParam: "max_tokens",
+    };
+  }
+
+  const groqKey = process.env.GROQ_API_KEY;
+  if (groqKey) {
+    return {
+      name: "groq",
+      baseUrl: "https://api.groq.com/openai/v1",
+      apiKey: groqKey,
+      chatModel: "llama-3.3-70b-versatile",
+      visionModel: null, // Groq does not support vision
+      maxTokensParam: "max_tokens",
+    };
+  }
+
+  const openaiKey =
+    process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? process.env.OPENAI_API_KEY;
+  const openaiBase =
+    process.env.AI_INTEGRATIONS_OPENAI_BASE_URL ?? "https://api.openai.com/v1";
+  if (openaiKey) {
+    return {
+      name: "openai",
+      baseUrl: openaiBase,
+      apiKey: openaiKey,
+      chatModel: "gpt-4o-mini",
+      visionModel: "gpt-4o",
+      maxTokensParam: "max_completion_tokens",
+    };
+  }
+
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Prompts
+// ─────────────────────────────────────────────────────────────────────────────
+
 const SYSTEM_PROMPT = `You are an expert trading coach and performance analyst. Your role is to analyze a trader's data objectively and give honest, actionable advice.
 
 CRITICAL RULES:
@@ -50,11 +112,9 @@ router.post("/ai/analyze", authMiddleware, platinumMiddleware, async (req, res) 
   try {
     const { messages, tradingContext } = req.body;
 
-    const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL ?? "https://api.openai.com/v1";
-    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? process.env.OPENAI_API_KEY;
-
-    if (!apiKey) {
-      res.status(503).json({ error: "AI service not configured" });
+    const provider = resolveProvider();
+    if (!provider) {
+      res.status(503).json({ error: "AI service not configured. Add GEMINI_API_KEY, GROQ_API_KEY, or OPENAI_API_KEY." });
       return;
     }
 
@@ -73,15 +133,15 @@ router.post("/ai/analyze", authMiddleware, platinumMiddleware, async (req, res) 
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.flushHeaders();
 
-    const upstream = await fetch(`${baseUrl}/chat/completions`, {
+    const upstream = await fetch(`${provider.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${provider.apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-5-mini",
-        max_completion_tokens: 8192,
+        model: provider.chatModel,
+        [provider.maxTokensParam]: 4096,
         messages: chatMessages,
         stream: true,
       }),
@@ -89,7 +149,7 @@ router.post("/ai/analyze", authMiddleware, platinumMiddleware, async (req, res) 
 
     if (!upstream.ok) {
       const err = await upstream.text();
-      res.write(`data: ${JSON.stringify({ error: `AI error: ${upstream.status}` })}\n\n`);
+      res.write(`data: ${JSON.stringify({ error: `AI error (${provider.name}): ${upstream.status} — ${err.slice(0, 200)}` })}\n\n`);
       res.end();
       return;
     }
@@ -150,24 +210,28 @@ router.post("/ai/ocr-trade", authMiddleware, async (req, res) => {
       return;
     }
 
-    // Accept data URI or raw base64
     const isDataUri = imageBase64.startsWith("data:");
     if (!isDataUri && !imageBase64.match(/^[A-Za-z0-9+/=]+$/)) {
       res.status(400).json({ error: "Invalid image data" });
       return;
     }
 
-    // Enforce reasonable size limit (5MB base64 ≈ 3.75MB image)
     if (imageBase64.length > 6 * 1024 * 1024) {
       res.status(400).json({ error: "Image too large (max 4MB)" });
       return;
     }
 
-    const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL ?? "https://api.openai.com/v1";
-    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? process.env.OPENAI_API_KEY;
+    const provider = resolveProvider();
+    if (!provider) {
+      res.status(503).json({ error: "AI service not configured. Add GEMINI_API_KEY, GROQ_API_KEY, or OPENAI_API_KEY." });
+      return;
+    }
 
-    if (!apiKey) {
-      res.status(503).json({ error: "AI service not configured" });
+    // OCR requires vision support — skip Groq if it's the only option
+    if (!provider.visionModel) {
+      res.status(503).json({
+        error: "Screenshot import requires a vision-capable AI model. Add GEMINI_API_KEY or OPENAI_API_KEY to enable this feature.",
+      });
       return;
     }
 
@@ -175,17 +239,17 @@ router.post("/ai/ocr-trade", authMiddleware, async (req, res) => {
       ? imageBase64
       : `data:image/jpeg;base64,${imageBase64}`;
 
-    req.log.info({ userId: req.userId }, "OCR trade analysis requested");
+    req.log.info({ userId: req.userId, provider: provider.name }, "OCR trade analysis requested");
 
-    const response = await fetch(`${baseUrl}/chat/completions`, {
+    const response = await fetch(`${provider.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${provider.apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o",
-        max_completion_tokens: 512,
+        model: provider.visionModel,
+        [provider.maxTokensParam]: 512,
         messages: [
           { role: "system", content: OCR_SYSTEM_PROMPT },
           {
@@ -205,7 +269,7 @@ router.post("/ai/ocr-trade", authMiddleware, async (req, res) => {
     if (!response.ok) {
       const errText = await response.text();
       req.log.error({ status: response.status, errText }, "OCR AI call failed");
-      res.status(502).json({ error: `AI service error: ${response.status}` });
+      res.status(502).json({ error: `AI service error (${provider.name}): ${response.status}` });
       return;
     }
 
@@ -215,7 +279,6 @@ router.post("/ai/ocr-trade", authMiddleware, async (req, res) => {
 
     const rawContent = data.choices?.[0]?.message?.content ?? "";
 
-    // Strip any markdown code fences in case the model wrapped it
     const cleaned = rawContent
       .replace(/```json\s*/gi, "")
       .replace(/```\s*/g, "")
@@ -233,13 +296,10 @@ router.post("/ai/ocr-trade", authMiddleware, async (req, res) => {
       return;
     }
 
-    // Parse a price value that may come back as a number or a comma-formatted string
-    // e.g. "27,267.9" or "2,7267.9" or 1.08456 — all are valid broker formats
     function parseOcrPrice(val: unknown): number | null {
       if (val === null || val === undefined) return null;
       if (typeof val === "number") return isFinite(val) && val > 0 ? val : null;
       if (typeof val === "string") {
-        // Remove currency symbols, spaces; keep digits, commas, dots
         const s = val.replace(/[$€£¥\s]/g, "");
         if (!/^[\d,.]+$/.test(s) || !s) return null;
         const hasDot = s.includes(".");
@@ -259,7 +319,6 @@ router.post("/ai/ocr-trade", authMiddleware, async (req, res) => {
       return null;
     }
 
-    // Sanitise and return
     const result = {
       pair:        typeof parsed.pair === "string"       ? parsed.pair       : null,
       direction:   parsed.direction === "BUY" || parsed.direction === "SELL" ? parsed.direction as "BUY" | "SELL" : null,
@@ -275,7 +334,7 @@ router.post("/ai/ocr-trade", authMiddleware, async (req, res) => {
       notes:       typeof parsed.notes === "string"      ? parsed.notes       : null,
     };
 
-    req.log.info({ userId: req.userId, pair: result.pair, direction: result.direction }, "OCR trade analysis complete");
+    req.log.info({ userId: req.userId, pair: result.pair, provider: provider.name }, "OCR trade analysis complete");
     res.json({ trade: result });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
