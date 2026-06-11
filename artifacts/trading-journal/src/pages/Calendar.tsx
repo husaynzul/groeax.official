@@ -141,10 +141,10 @@ export default function CalendarPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="text-[10px] uppercase tracking-[0.3em] text-primary/70 mb-1.5">Groeax</p>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-gray-900">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-foreground">
             Trading Calendar
           </h1>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             {trades.length} trades tracked · click any day to inspect
           </p>
         </div>
@@ -202,10 +202,10 @@ export default function CalendarPage() {
         </div>
 
         {/* Calendar grid — square cells via aspect-square */}
-        <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
+        <div className="grid grid-cols-7 gap-1">
           {/* Empty leading cells */}
           {blanks.map((_, i) => (
-            <div key={`blank-${i}`} className="aspect-square rounded-xl" />
+            <div key={`blank-${i}`} className="aspect-square rounded-lg" />
           ))}
 
           {/* Day cells */}
@@ -222,7 +222,7 @@ export default function CalendarPage() {
                 key={key}
                 onClick={() => setSelectedDate(isSelected ? null : key)}
                 className={[
-                  "relative aspect-square rounded-xl p-1 sm:p-2",
+                  "relative aspect-square rounded-lg p-1",
                   "text-left transition-all duration-150 focus:outline-none w-full",
                   "flex flex-col overflow-hidden",
                   hasTrades
@@ -240,7 +240,7 @@ export default function CalendarPage() {
                 {/* Day number — top right */}
                 <span
                   className={[
-                    "absolute top-1 right-1.5 text-[10px] sm:text-xs font-bold",
+                    "absolute top-0.5 right-1 text-[9px] sm:text-[11px] font-bold leading-tight",
                     hasTrades ? "text-white/90" : today ? "text-primary" : "text-muted-foreground/60",
                   ].join(" ")}
                 >
@@ -249,26 +249,20 @@ export default function CalendarPage() {
 
                 {/* Today dot */}
                 {today && !hasTrades && (
-                  <span className="absolute top-1 left-1.5 w-1 h-1 rounded-full bg-primary" />
+                  <span className="absolute top-1 left-1 w-1 h-1 rounded-full bg-primary" />
                 )}
 
-                {/* Trade data — hidden on xs, shown sm+ */}
+                {/* Trade data — always visible */}
                 {hasTrades && summary && (
-                  <div className="mt-auto pt-1 hidden [@media(min-width:360px)]:block">
-                    <p className="text-white font-bold text-[10px] sm:text-xs leading-tight truncate">
+                  <div className="mt-auto flex flex-col gap-0">
+                    <p className="text-white font-bold text-[8px] sm:text-[10px] leading-tight truncate">
                       {fmtPnLCompact(summary.pnl)}
                     </p>
-                    <p className="text-white/70 text-[9px] sm:text-[11px] leading-tight hidden sm:block">
-                      {dayTrades.length}t · {summary.winRate.toFixed(0)}%
+                    <p className="text-white/70 text-[7px] sm:text-[9px] leading-tight">
+                      {dayTrades.length} trade{dayTrades.length !== 1 ? "s" : ""}
                     </p>
-                  </div>
-                )}
-
-                {/* On very small screens just show PnL */}
-                {hasTrades && summary && (
-                  <div className="mt-auto pt-1 [@media(min-width:360px)]:hidden">
-                    <p className="text-white font-bold text-[9px] leading-tight truncate">
-                      {fmtPnLCompact(summary.pnl)}
+                    <p className="text-white/70 text-[7px] sm:text-[9px] leading-tight">
+                      {summary.winRate.toFixed(1)}%
                     </p>
                   </div>
                 )}

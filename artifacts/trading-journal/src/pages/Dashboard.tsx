@@ -304,9 +304,9 @@ function CalendarHeatmap({ tradesByDate }: { tradesByDate: Record<string, Trade[
       </div>
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1.5">
+      <div className="grid grid-cols-7 gap-1">
         {blanks.map((_, i) => (
-          <div key={`blank-${i}`} className="rounded-xl min-h-[72px] sm:min-h-[90px]" />
+          <div key={`blank-${i}`} className="aspect-square rounded-lg" />
         ))}
 
         {days.map((day) => {
@@ -327,7 +327,7 @@ function CalendarHeatmap({ tradesByDate }: { tradesByDate: Record<string, Trade[
               key={key}
               onClick={() => setSelectedDate(isSelected ? null : key)}
               className={[
-                "relative rounded-xl p-2 min-h-[72px] sm:min-h-[90px] text-left transition-all duration-150 focus:outline-none",
+                "relative aspect-square rounded-lg p-1 text-left transition-all duration-150 focus:outline-none flex flex-col overflow-hidden w-full",
                 hasTrades
                   ? pnl > 0
                     ? "bg-emerald-700 hover:bg-emerald-600 border border-emerald-600/50"
@@ -337,13 +337,13 @@ function CalendarHeatmap({ tradesByDate }: { tradesByDate: Record<string, Trade[
                   : today
                     ? "bg-primary/10 border border-primary/30 hover:bg-primary/15"
                     : "bg-white/[0.03] border border-transparent hover:bg-white/[0.06]",
-                isSelected ? "ring-2 ring-white/50 ring-offset-1 ring-offset-transparent" : "",
+                isSelected ? "ring-2 ring-white/50 ring-offset-1 ring-offset-transparent scale-[1.03]" : "",
               ].join(" ")}
             >
               {/* Day number – top right */}
               <span
                 className={[
-                  "absolute top-1.5 right-2 text-[11px] font-semibold",
+                  "absolute top-0.5 right-1 text-[9px] sm:text-[11px] font-semibold leading-tight",
                   hasTrades ? "text-white/80" : today ? "text-primary" : "text-muted-foreground/60",
                 ].join(" ")}
               >
@@ -352,19 +352,21 @@ function CalendarHeatmap({ tradesByDate }: { tradesByDate: Record<string, Trade[
 
               {/* Today dot */}
               {today && !hasTrades && (
-                <span className="absolute top-1.5 left-2 w-1.5 h-1.5 rounded-full bg-primary" />
+                <span className="absolute top-1 left-1 w-1 h-1 rounded-full bg-primary" />
               )}
 
-              {/* Trade data */}
+              {/* Trade data — always visible, sizes adapt to cell */}
               {hasTrades && (
-                <div className="mt-5 space-y-0.5">
-                  <p className="text-white font-bold text-sm leading-tight truncate">
+                <div className="mt-auto pt-1 flex flex-col gap-0">
+                  <p className="text-white font-bold text-[8px] sm:text-[10px] leading-tight truncate">
                     {fmtPnLCompact(pnl)}
                   </p>
-                  <p className="text-white/70 text-[11px]">
-                    {dayTrades.length} {dayTrades.length === 1 ? "trade" : "trades"}
+                  <p className="text-white/70 text-[7px] sm:text-[9px] leading-tight">
+                    {dayTrades.length}t
                   </p>
-                  <p className="text-white/70 text-[11px]">{winRate.toFixed(1)}%</p>
+                  <p className="text-white/70 text-[7px] sm:text-[9px] leading-tight">
+                    {winRate.toFixed(0)}%
+                  </p>
                 </div>
               )}
             </button>
