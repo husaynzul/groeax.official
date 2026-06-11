@@ -497,11 +497,12 @@ export default function Dashboard() {
 
       {/* Balance metrics row (only when balance is set) */}
       {startingBalance > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <MetricCard index={0} label="Starting Balance" value={fmtMoney(startingBalance)} icon={DollarSign} />
           <MetricCard index={1} label="Current Balance" value={fmtMoney(currentBalance)} sub="auto-updated" icon={Wallet} color={currentBalance >= startingBalance ? "text-emerald-400" : "text-red-400"} />
-          <MetricCard index={2} label="Account Growth" value={`${startingBalance > 0 ? ((currentBalance - startingBalance) / startingBalance * 100).toFixed(2) : "0.00"}%`} sub="since start" icon={Percent} color={currentBalance >= startingBalance ? "text-emerald-400" : "text-red-400"} />
-          <MetricCard index={3} label="Max Drawdown" value={`${analytics.drawdownStats.drawdownPercent.toFixed(2)}%`} sub={`${fmtMoney(analytics.drawdownStats.drawdownAmount)} from peak`} icon={TrendingDown} color="text-orange-400" />
+          <MetricCard index={2} label="Peak Equity" value={fmtMoney(analytics.drawdownStats.peak)} sub="all-time high" icon={Trophy} color="text-violet-400" />
+          <MetricCard index={3} label="Account Growth" value={`${startingBalance > 0 ? ((currentBalance - startingBalance) / startingBalance * 100).toFixed(2) : "0.00"}%`} sub="since start" icon={Percent} color={currentBalance >= startingBalance ? "text-emerald-400" : "text-red-400"} />
+          <MetricCard index={4} label="Max Drawdown" value={`${analytics.drawdownStats.drawdownPercent.toFixed(2)}%`} sub={`${fmtMoney(analytics.drawdownStats.drawdownAmount)} from peak`} icon={TrendingDown} color="text-orange-400" />
         </div>
       )}
 

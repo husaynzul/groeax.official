@@ -6,11 +6,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useAuthStore } from "@/store/authStore";
 import {
   Upload, Camera, CheckCircle2, AlertCircle, Loader2, X,
-  ArrowRight, TrendingUp, TrendingDown, RotateCcw,
+  ArrowRight, TrendingUp, TrendingDown, RotateCcw, ScanText,
 } from "lucide-react";
+import { parseOcrText } from "@/utils/ocrParser";
 
 export interface OCRResult {
   pair: string | null;
@@ -37,17 +37,8 @@ interface Props {
 
 type Step = "upload" | "analyzing" | "result" | "error";
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function FieldBadge({ label, value, missing }: { label: string; value: string | number | null; missing?: boolean }) {
-  if (missing || value === null || value === undefined) {
+function FieldBadge({ label, value }: { label: string; value: string | number | null }) {
+  if (value === null || value === undefined) {
     return (
       <div className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
         <span className="text-xs text-muted-foreground font-medium">{label}</span>
@@ -64,22 +55,21 @@ function FieldBadge({ label, value, missing }: { label: string; value: string | 
 }
 
 export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
-  const { token } = useAuthStore();
   const [step, setStep] = useState<Step>("upload");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [result, setResult] = useState<OCRResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [progress, setProgress] = useState<string>("Initializing…");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function reset() {
     setStep("upload");
     setImagePreview(null);
-    setImageBase64(null);
     setResult(null);
     setError(null);
     setDragOver(false);
+    setProgress("Initializing…");
   }
 
   function handleClose() {
@@ -87,53 +77,60 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
     onClose();
   }
 
+  const analyze = useCallback(async (file: File) => {
+    setStep("analyzing");
+    setError(null);
+    setProgress("Loading OCR engine…");
+
+    try {
+      // Dynamically import Tesseract.js so it doesn't bloat initial bundle
+      const Tesseract = await import("tesseract.js");
+      setProgress("Scanning image…");
+
+      const { data } = await Tesseract.recognize(file, "eng", {
+        logger: (m: { status: string; progress?: number }) => {
+          if (m.status === "recognizing text") {
+            const pct = Math.round((m.progress ?? 0) * 100);
+            setProgress(`Reading text… ${pct}%`);
+          } else if (m.status === "loading tesseract core") {
+            setProgress("Loading OCR engine…");
+          } else if (m.status === "initialized api") {
+            setProgress("Engine ready, scanning…");
+          }
+        },
+      });
+
+      setProgress("Parsing fields…");
+      const raw = data.text ?? "";
+      const parsed = parseOcrText(raw);
+
+      setResult(parsed);
+      setStep("result");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "OCR failed — try a higher-resolution screenshot"
+      );
+      setStep("error");
+    }
+  }, []);
+
   async function handleFile(file: File) {
     if (!file.type.startsWith("image/")) {
       setError("Please upload an image file (PNG, JPG, WEBP, etc.)");
       setStep("error");
       return;
     }
-    if (file.size > 8 * 1024 * 1024) {
-      setError("Image must be smaller than 8MB");
+    if (file.size > 12 * 1024 * 1024) {
+      setError("Image must be smaller than 12 MB");
       setStep("error");
       return;
     }
-    try {
-      const b64 = await fileToBase64(file);
-      setImagePreview(b64);
-      setImageBase64(b64);
-      await analyze(b64);
-    } catch {
-      setError("Failed to read image file");
-      setStep("error");
-    }
+    const url = URL.createObjectURL(file);
+    setImagePreview(url);
+    await analyze(file);
   }
-
-  const analyze = useCallback(async (b64: string) => {
-    setStep("analyzing");
-    setError(null);
-    try {
-      const res = await fetch("/api/ai/ocr-trade", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ imageBase64: b64 }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Analysis failed");
-        setStep("error");
-        return;
-      }
-      setResult(data.trade);
-      setStep("result");
-    } catch {
-      setError("Network error — could not reach AI service");
-      setStep("error");
-    }
-  }, [token]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -145,6 +142,7 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) handleFile(file);
+    e.target.value = "";
   };
 
   function useResult() {
@@ -154,7 +152,9 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
   }
 
   const detectedCount = result
-    ? Object.values(result).filter((v) => v !== null).length
+    ? Object.values(result).filter((v) =>
+        v !== null && !(Array.isArray(v) && v.length === 0)
+      ).length
     : 0;
 
   return (
@@ -168,7 +168,7 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
         </DialogHeader>
 
         <AnimatePresence mode="wait">
-          {/* ── Upload step ── */}
+          {/* ── Upload ── */}
           {step === "upload" && (
             <motion.div
               key="upload"
@@ -177,9 +177,13 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
               exit={{ opacity: 0, y: -8 }}
               className="space-y-4"
             >
-              <p className="text-sm text-muted-foreground">
-                Upload a screenshot from your trading platform. AI will automatically extract the trade details and pre-fill the form.
-              </p>
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                <ScanText className="w-4 h-4 text-blue-400 shrink-0" />
+                <p className="text-xs text-blue-300">
+                  Runs entirely on your device — no AI API, no internet required for OCR.
+                  Works best with MT4 / MT5 screenshots.
+                </p>
+              </div>
 
               {/* Drop zone */}
               <div
@@ -199,7 +203,7 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
                 <div className="text-center">
                   <p className="text-foreground font-semibold">Drop screenshot here</p>
                   <p className="text-muted-foreground text-sm mt-1">or click to browse</p>
-                  <p className="text-muted-foreground/60 text-xs mt-2">PNG, JPG, WEBP — max 8MB</p>
+                  <p className="text-muted-foreground/60 text-xs mt-2">PNG, JPG, WEBP — max 12 MB</p>
                 </div>
                 <input
                   ref={fileInputRef}
@@ -225,7 +229,7 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
             </motion.div>
           )}
 
-          {/* ── Analyzing step ── */}
+          {/* ── Analyzing ── */}
           {step === "analyzing" && (
             <motion.div
               key="analyzing"
@@ -239,19 +243,19 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
                   <img
                     src={imagePreview}
                     alt="Screenshot"
-                    className="max-h-48 rounded-xl border border-white/10 opacity-60"
+                    className="max-h-48 rounded-xl border border-white/10 opacity-50"
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl">
                     <div className="flex flex-col items-center gap-2">
                       <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
-                      <span className="text-sm text-white font-medium">Analyzing…</span>
+                      <span className="text-sm text-white font-medium">{progress}</span>
                     </div>
                   </div>
                 </div>
               )}
               <div className="text-center">
-                <p className="text-foreground font-semibold">AI is reading your screenshot</p>
-                <p className="text-muted-foreground text-sm mt-1">Extracting trade details…</p>
+                <p className="text-foreground font-semibold">Reading your screenshot</p>
+                <p className="text-muted-foreground text-sm mt-1">Using local Tesseract OCR — no API needed</p>
               </div>
               <div className="flex gap-1.5">
                 {["Pair", "Direction", "Prices", "Date"].map((label, i) => (
@@ -269,7 +273,7 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
             </motion.div>
           )}
 
-          {/* ── Result step ── */}
+          {/* ── Result ── */}
           {step === "result" && result && (
             <motion.div
               key="result"
@@ -278,7 +282,6 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
               exit={{ opacity: 0 }}
               className="space-y-4"
             >
-              {/* Header */}
               <div className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
                 <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
                 <div>
@@ -286,13 +289,12 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
                     Extracted {detectedCount} field{detectedCount !== 1 ? "s" : ""}
                   </p>
                   <p className="text-xs text-green-400/60 mt-0.5">
-                    Review the details below, then click "Use These Details" to pre-fill the trade form
+                    Review below — empty fields can be filled in manually
                   </p>
                 </div>
               </div>
 
               <div className="space-y-3">
-                {/* Image preview row */}
                 {imagePreview && (
                   <div className="relative">
                     <img
@@ -310,7 +312,6 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
                   </div>
                 )}
 
-                {/* Direction + pair header */}
                 {result.direction && (
                   <div className={`flex items-center gap-2 p-2.5 rounded-lg border ${
                     result.direction === "BUY"
@@ -324,7 +325,9 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
                     <span className={`font-bold text-sm ${result.direction === "BUY" ? "text-emerald-400" : "text-red-400"}`}>
                       {result.direction}
                     </span>
-                    {result.pair && <span className="text-foreground font-semibold text-sm">{result.pair}</span>}
+                    {result.pair && (
+                      <span className="text-foreground font-semibold text-sm">{result.pair}</span>
+                    )}
                     {result.outcome && (
                       <span className={`ml-auto text-xs font-bold px-2 py-0.5 rounded-full ${
                         result.outcome === "WIN" ? "bg-emerald-500/20 text-emerald-400"
@@ -335,7 +338,6 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
                   </div>
                 )}
 
-                {/* Trade numbers */}
                 <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 space-y-0">
                   <FieldBadge label="Entry Price" value={result.entryPrice} />
                   <FieldBadge label="Exit Price"  value={result.exitPrice} />
@@ -346,46 +348,21 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
                   <FieldBadge label="Date"        value={result.date} />
                 </div>
 
-                {/* Strategy / Patterns / Session row */}
                 <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 space-y-2.5">
-                  {/* Strategy */}
                   <div className="flex items-start justify-between gap-2">
-                    <span className="text-xs text-muted-foreground font-medium shrink-0">Strategy</span>
-                    {result.strategy
-                      ? <span className="text-xs bg-primary/15 text-primary border border-primary/30 px-2 py-0.5 rounded-full font-semibold text-right">{result.strategy}</span>
-                      : <span className="text-xs text-muted-foreground/50 italic">Not detected</span>
-                    }
-                  </div>
-
-                  {/* Patterns */}
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-xs text-muted-foreground font-medium shrink-0">Patterns</span>
-                    {result.patterns.length > 0
-                      ? <div className="flex flex-wrap gap-1 justify-end">
-                          {result.patterns.map((p) => (
-                            <span key={p} className="text-xs bg-violet-500/15 text-violet-400 border border-violet-500/25 px-2 py-0.5 rounded-full font-medium">{p}</span>
-                          ))}
-                        </div>
-                      : <span className="text-xs text-muted-foreground/50 italic">Not detected</span>
-                    }
-                  </div>
-
-                  {/* Session */}
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-muted-foreground font-medium">Session</span>
+                    <span className="text-xs text-muted-foreground font-medium shrink-0">Session</span>
                     {result.session
                       ? <span className="text-xs bg-blue-500/15 text-blue-400 border border-blue-500/25 px-2 py-0.5 rounded-full font-semibold">{result.session}</span>
                       : <span className="text-xs text-muted-foreground/50 italic">Not detected</span>
                     }
                   </div>
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-xs text-muted-foreground font-medium shrink-0">Strategy</span>
+                    <span className="text-xs text-muted-foreground/50 italic">Not detected — add manually</span>
+                  </div>
                 </div>
-
-                {result.notes && (
-                  <p className="text-xs text-muted-foreground italic px-1">"{result.notes}"</p>
-                )}
               </div>
 
-              {/* Actions */}
               <div className="flex gap-3 pt-1">
                 <button
                   onClick={reset}
@@ -405,7 +382,7 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
             </motion.div>
           )}
 
-          {/* ── Error step ── */}
+          {/* ── Error ── */}
           {step === "error" && (
             <motion.div
               key="error"
@@ -417,8 +394,11 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
               <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
                 <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm text-red-400 font-medium">Analysis failed</p>
+                  <p className="text-sm text-red-400 font-medium">Could not read screenshot</p>
                   <p className="text-xs text-red-400/70 mt-1">{error}</p>
+                  <p className="text-xs text-muted-foreground/60 mt-2">
+                    Tips: use a clear, high-resolution screenshot; avoid blurry or very small images.
+                  </p>
                 </div>
               </div>
               <div className="flex gap-3">
