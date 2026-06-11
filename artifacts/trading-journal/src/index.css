@@ -76,10 +76,10 @@
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
 
-  /* Page background → #F0F0F0 light grey */
-  --background: 0 0% 94%;
-  /* Page-level text → dark so it reads on the light background */
-  --foreground: 220 15% 14%;
+  /* Page background → dark navy matching the card context */
+  --background: 220 16% 9%;
+  /* Page-level text → light so it reads on the dark background */
+  --foreground: 210 40% 96%;
 
   --card: 220 14% 11%;
   --card-foreground: 210 40% 96%;
@@ -146,8 +146,8 @@
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
 
-  --background: 0 0% 94%;
-  --foreground: 220 15% 14%;
+  --background: 220 16% 9%;
+  --foreground: 210 40% 96%;
   --card: 220 14% 11%;
   --card-foreground: 210 40% 96%;
   --card-border: 220 13% 18%;
