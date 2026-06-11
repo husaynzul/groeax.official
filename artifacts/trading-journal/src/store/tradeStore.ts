@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { Trade } from '../types';
 import { saveToStorage, loadFromStorage, clearStorage } from '../storage/tradeStorage';
+import { fetchServerTrades, syncTrade, deleteServerTrade, bulkSyncTrades } from '../api/tradeApi';
+import { getSavedToken } from './authStore';
 
 const GOAL_KEY    = 'groeax_monthly_goal';
 const BALANCE_KEY = 'groeax_starting_balance';
@@ -46,12 +48,21 @@ export const useTradeStore = create<TradeStore>((set, get) => ({
     const next = [...get().trades, trade];
     set({ trades: next });
     saveToStorage(next);
+    // Sync to server in background (fire and forget)
+    const token = getSavedToken();
+    if (token) syncTrade(token, trade).catch(console.error);
   },
 
   updateTrade: (id, updates) => {
     const next = get().trades.map((t) => (t.id === id ? { ...t, ...updates } : t));
     set({ trades: next });
     saveToStorage(next);
+    // Sync updated trade to server
+    const token = getSavedToken();
+    if (token) {
+      const updated = next.find((t) => t.id === id);
+      if (updated) syncTrade(token, updated).catch(console.error);
+    }
   },
 
   bulkUpdateTrades: (updates) => {
@@ -62,12 +73,22 @@ export const useTradeStore = create<TradeStore>((set, get) => ({
     });
     set({ trades: next });
     saveToStorage(next);
+    // Sync all updated trades to server
+    const token = getSavedToken();
+    if (token) {
+      const updatedIds = new Set(updates.map(u => u.id));
+      const toSync = next.filter(t => updatedIds.has(t.id));
+      bulkSyncTrades(token, toSync).catch(console.error);
+    }
   },
 
   deleteTrade: (id) => {
     const next = get().trades.filter((t) => t.id !== id);
     set({ trades: next });
     saveToStorage(next);
+    // Delete from server
+    const token = getSavedToken();
+    if (token) deleteServerTrade(token, id).catch(console.error);
   },
 
   clearAll: () => {
@@ -77,6 +98,36 @@ export const useTradeStore = create<TradeStore>((set, get) => ({
 
   hydrate: async () => {
     if (get().isHydrated) return;
+
+    const token = getSavedToken();
+
+    if (token) {
+      try {
+        // Load any locally saved trades first for instant display
+        const localTrades = await loadFromStorage();
+
+        // Fetch server trades (the source of truth when logged in)
+        const serverTrades = await fetchServerTrades(token);
+
+        if (serverTrades.length > 0) {
+          // Server has data — use it as the source of truth
+          set({ trades: serverTrades, isHydrated: true, monthlyGoal: loadGoal(), startingBalance: loadStartingBalance() });
+          // Also save to local for offline use
+          saveToStorage(serverTrades);
+        } else if (localTrades.length > 0) {
+          // Server is empty but we have local trades — push them up (first login on new account)
+          set({ trades: localTrades, isHydrated: true, monthlyGoal: loadGoal(), startingBalance: loadStartingBalance() });
+          bulkSyncTrades(token, localTrades).catch(console.error);
+        } else {
+          set({ trades: [], isHydrated: true, monthlyGoal: loadGoal(), startingBalance: loadStartingBalance() });
+        }
+        return;
+      } catch (err) {
+        console.warn('[TradeStore] Server sync failed, falling back to local storage:', err);
+      }
+    }
+
+    // Not logged in or server unreachable — use local storage
     const trades = await loadFromStorage();
     set({ trades, isHydrated: true, monthlyGoal: loadGoal(), startingBalance: loadStartingBalance() });
   },

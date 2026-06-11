@@ -11,11 +11,13 @@ import tradingSignalRouter from "./tradingSignal.js";
 import marketIntelligenceRouter from "./marketIntelligence.js";
 import authRouter from "./auth.js";
 import tradesRouter from "./trades.js";
+import tradeSyncRouter from "./tradeSync.js";
 
 const router: IRouter = Router();
 
 router.use(authRouter);
 router.use(tradesRouter);
+router.use(tradeSyncRouter);
 router.use(healthRouter);
 router.use(aiRouter);
 router.use(newsRouter);
