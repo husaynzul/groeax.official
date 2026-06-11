@@ -461,12 +461,12 @@ export default function Dashboard() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="text-[10px] uppercase tracking-[0.3em] text-primary/70 mb-1.5">Groeax</p>
-          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-gray-900">Dashboard</h1>
-          <p className="text-xs text-gray-500 mt-1">{analytics.totalTrades} trades tracked · premium trading workspace</p>
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
+          <p className="text-xs text-muted-foreground mt-1">{analytics.totalTrades} trades tracked · premium trading workspace</p>
         </div>
-        <div className="flex items-center gap-2 text-[10px] text-gray-500">
-          <span className="px-2.5 py-1 rounded-full border border-gray-300 bg-white/60">Live</span>
-          <span className="px-2.5 py-1 rounded-full border border-gray-300 bg-white/60">Institutional UI</span>
+        <div className="flex items-center gap-2 text-[10px] font-semibold text-muted-foreground">
+          <span className="px-2.5 py-1 rounded-full border border-border bg-card text-foreground">Live</span>
+          <span className="px-2.5 py-1 rounded-full border border-border bg-card text-foreground">Institutional UI</span>
         </div>
       </div>
 

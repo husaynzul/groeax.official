@@ -46,15 +46,15 @@ function FieldBadge({ label, value, missing }: { label: string; value: string | 
   if (missing || value === null || value === undefined) {
     return (
       <div className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-        <span className="text-xs text-gray-500">{label}</span>
-        <span className="text-xs text-gray-600 italic">Not detected</span>
+        <span className="text-xs text-muted-foreground font-medium">{label}</span>
+        <span className="text-xs text-muted-foreground/50 italic">Not detected</span>
       </div>
     );
   }
   return (
     <div className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-      <span className="text-xs text-gray-400">{label}</span>
-      <span className="text-xs text-white font-medium">{String(value)}</span>
+      <span className="text-xs text-muted-foreground font-medium">{label}</span>
+      <span className="text-xs text-foreground font-semibold">{String(value)}</span>
     </div>
   );
 }
@@ -173,7 +173,7 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
               exit={{ opacity: 0, y: -8 }}
               className="space-y-4"
             >
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 Upload a screenshot from your trading platform. AI will automatically extract the trade details and pre-fill the form.
               </p>
 
@@ -193,9 +193,9 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
                   <Upload className="w-7 h-7 text-blue-400" />
                 </div>
                 <div className="text-center">
-                  <p className="text-white font-medium">Drop screenshot here</p>
-                  <p className="text-gray-500 text-sm mt-1">or click to browse</p>
-                  <p className="text-gray-600 text-xs mt-2">PNG, JPG, WEBP — max 8MB</p>
+                  <p className="text-foreground font-semibold">Drop screenshot here</p>
+                  <p className="text-muted-foreground text-sm mt-1">or click to browse</p>
+                  <p className="text-muted-foreground/60 text-xs mt-2">PNG, JPG, WEBP — max 8MB</p>
                 </div>
                 <input
                   ref={fileInputRef}
@@ -214,7 +214,7 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
                 ].map(({ emoji, label }) => (
                   <div key={label} className="bg-white/[0.03] border border-white/5 rounded-lg py-2.5 px-2">
                     <div className="text-lg mb-0.5">{emoji}</div>
-                    <div className="text-xs text-gray-500">{label}</div>
+                    <div className="text-xs text-muted-foreground font-medium">{label}</div>
                   </div>
                 ))}
               </div>
@@ -246,8 +246,8 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
                 </div>
               )}
               <div className="text-center">
-                <p className="text-white font-medium">AI is reading your screenshot</p>
-                <p className="text-gray-500 text-sm mt-1">Extracting trade details…</p>
+                <p className="text-foreground font-semibold">AI is reading your screenshot</p>
+                <p className="text-muted-foreground text-sm mt-1">Extracting trade details…</p>
               </div>
               <div className="flex gap-1.5">
                 {["Pair", "Direction", "Prices", "Date"].map((label, i) => (
@@ -256,7 +256,7 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: [0, 1, 0.4] }}
                     transition={{ delay: i * 0.3, repeat: Infinity, duration: 1.2 }}
-                    className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded"
+                    className="text-xs text-muted-foreground bg-white/5 px-2 py-0.5 rounded"
                   >
                     {label}
                   </motion.div>
@@ -336,8 +336,8 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
 
                   {result.notes && (
                     <div className="pt-2 mt-1 border-t border-white/5">
-                      <p className="text-xs text-gray-500 mb-1">AI Notes</p>
-                      <p className="text-xs text-gray-400 italic">"{result.notes}"</p>
+                      <p className="text-xs text-muted-foreground font-semibold mb-1">AI Notes</p>
+                      <p className="text-xs text-muted-foreground italic">"{result.notes}"</p>
                     </div>
                   )}
                 </div>
@@ -347,7 +347,7 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
               <div className="flex gap-3 pt-1">
                 <button
                   onClick={reset}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:border-white/20 text-sm transition-colors"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:border-border/80 text-sm font-medium transition-colors"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   Try Again
