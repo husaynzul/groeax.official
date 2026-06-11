@@ -14,13 +14,12 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
   ReferenceLine,
 } from "recharts";
+import PerformanceScoreCard from "@/components/dashboard/PerformanceScoreCard";
 import { motion } from "framer-motion";
 import {
   TrendingUp,
@@ -499,58 +498,8 @@ export default function Dashboard() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass-card p-4 lg:col-span-2 hover:border-white/15 transition-colors">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Zap className="w-3.5 h-3.5 text-primary" />
-              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Equity Curve</h2>
-            </div>
-            {analytics.equityCurve.length > 0 && (
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${analytics.netBalance >= 0 ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400"}`}>
-                {analytics.netBalance >= 0 ? "+" : ""}{fmtMoney(analytics.netBalance)} net
-              </span>
-            )}
-          </div>
-          {analytics.equityCurve.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={analytics.equityCurve} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 9, fill: "hsl(215 20% 45%)" }}
-                  tickFormatter={(d: string) => d.slice(5)}
-                  interval="preserveStartEnd"
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 9, fill: "hsl(215 20% 45%)" }}
-                  tickFormatter={(v: number) => `$${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(0)}`}
-                  tickLine={false}
-                  axisLine={false}
-                  width={48}
-                />
-                <Tooltip
-                  contentStyle={{ background: "#0d0d14", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 11 }}
-                  labelStyle={{ color: "hsl(215 20% 60%)" }}
-                  formatter={(v: number) => [fmtMoney(v), "Equity"]}
-                  labelFormatter={(d: string) => `Date: ${d}`}
-                />
-                <ReferenceLine y={startingBalance > 0 ? startingBalance : analytics.equityCurve[0]?.equity} stroke="rgba(255,255,255,0.12)" strokeDasharray="4 4" />
-                <Line
-                  type="monotone"
-                  dataKey="equity"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 4, fill: "#10b981", strokeWidth: 0 }}
-                  isAnimationActive
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">Add trades to see your equity curve</div>
-          )}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="lg:col-span-2">
+          <PerformanceScoreCard analytics={analytics} />
         </motion.div>
 
         <div className="flex flex-col gap-4">
