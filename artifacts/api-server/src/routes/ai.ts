@@ -19,15 +19,35 @@ interface Provider {
 
 function resolveProviders(): Provider[] {
   const providers: Provider[] = [];
+  const geminiBase = "https://generativelanguage.googleapis.com/v1beta/openai";
 
   const geminiKey = process.env.GEMINI_API_KEY;
   if (geminiKey) {
+    // Try lite model first (30 RPM free) — less likely to hit rate limits
+    providers.push({
+      name: "gemini-lite",
+      baseUrl: geminiBase,
+      apiKey: geminiKey,
+      chatModel: "gemini-2.0-flash-lite",
+      visionModel: "gemini-2.0-flash-lite",
+      maxTokensParam: "max_tokens",
+    });
+    // Full flash as second attempt
     providers.push({
       name: "gemini",
-      baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+      baseUrl: geminiBase,
       apiKey: geminiKey,
       chatModel: "gemini-2.0-flash",
       visionModel: "gemini-2.0-flash",
+      maxTokensParam: "max_tokens",
+    });
+    // 1.5 flash-8b as third attempt (15 RPM but smaller quota bucket)
+    providers.push({
+      name: "gemini-1.5",
+      baseUrl: geminiBase,
+      apiKey: geminiKey,
+      chatModel: "gemini-1.5-flash-8b",
+      visionModel: "gemini-1.5-flash-8b",
       maxTokensParam: "max_tokens",
     });
   }
@@ -39,7 +59,7 @@ function resolveProviders(): Provider[] {
       baseUrl: "https://api.groq.com/openai/v1",
       apiKey: groqKey,
       chatModel: "llama-3.3-70b-versatile",
-      visionModel: null,
+      visionModel: null, // Groq has no vision support
       maxTokensParam: "max_tokens",
     });
   }
