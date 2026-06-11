@@ -76,8 +76,11 @@
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
 
-  --background: 220 16% 8%;
-  --foreground: 210 40% 96%;
+  /* Page background → #F0F0F0 light grey */
+  --background: 0 0% 94%;
+  /* Page-level text → dark so it reads on the light background */
+  --foreground: 220 15% 14%;
+
   --card: 220 14% 11%;
   --card-foreground: 210 40% 96%;
   --card-border: 220 13% 18%;
@@ -122,6 +125,18 @@
   --destructive-border: hsl(var(--destructive));
 }
 
+/* ─── Dark surface context ───────────────────────────────────────────────────
+   Any element with a dark background re-scopes --foreground / --muted-foreground
+   back to light so that text-foreground utilities inside dark cards read white.
+   ──────────────────────────────────────────────────────────────────────────── */
+.glass-card,
+.dark-surface {
+  --foreground: 210 40% 96%;
+  --muted-foreground: 215 20% 55%;
+  --secondary-foreground: 210 40% 96%;
+  --accent-foreground: 210 40% 96%;
+}
+
 .dark {
   --button-outline: rgba(255,255,255, .10);
   --badge-outline: rgba(255,255,255, .05);
@@ -131,8 +146,8 @@
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
 
-  --background: 220 16% 8%;
-  --foreground: 210 40% 96%;
+  --background: 0 0% 94%;
+  --foreground: 220 15% 14%;
   --card: 220 14% 11%;
   --card-foreground: 210 40% 96%;
   --card-border: 220 13% 18%;
@@ -179,9 +194,9 @@
 
 @layer utilities {
   .glass-card {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
-    backdrop-filter: blur(10px);
+    background: hsl(220 14% 11%);
+    border: 1px solid hsl(220 13% 20%);
     border-radius: 12px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.12);
   }
 }

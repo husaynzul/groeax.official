@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { fmtTradeDate, toDate } from "@/lib/dateUtils";
 import { useTradeStore } from "@/store/tradeStore";
-import { computeAnalytics } from "@/engine/analyticsEngine";
+import { computeAnalytics, DrawdownStats } from "@/engine/analyticsEngine";
 import TradingSessions from "@/components/dashboard/TradingSessions";
 import StreakCard from "@/components/dashboard/StreakCard";
 import {
@@ -92,19 +92,22 @@ function BalanceCard({
   currentBalance,
   totalProfit,
   totalLoss,
+  drawdownStats,
   onSetBalance,
 }: {
   startingBalance: number;
   currentBalance: number;
   totalProfit: number;
   totalLoss: number;
+  drawdownStats: DrawdownStats;
   onSetBalance: (b: number) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(startingBalance || ""));
 
   const growth = startingBalance > 0 ? ((currentBalance - startingBalance) / startingBalance) * 100 : 0;
-  const maxDrawdown = startingBalance > 0 ? Math.min((totalLoss / startingBalance) * 100, 100) : 0;
+  // Peak-equity based drawdown: how far below the peak are we right now (as % of peak)
+  const maxDrawdown = drawdownStats.drawdownPercent;
 
   function commit() {
     const v = parseFloat(draft);
@@ -456,12 +459,12 @@ export default function Dashboard() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="text-[10px] uppercase tracking-[0.3em] text-primary/70 mb-1.5">Groeax</p>
-          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-foreground">Dashboard</h1>
-          <p className="text-xs text-muted-foreground mt-1">{analytics.totalTrades} trades tracked · premium trading workspace</p>
+          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-gray-900">Dashboard</h1>
+          <p className="text-xs text-gray-500 mt-1">{analytics.totalTrades} trades tracked · premium trading workspace</p>
         </div>
-        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-          <span className="px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.03]">Live</span>
-          <span className="px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.03]">Institutional UI</span>
+        <div className="flex items-center gap-2 text-[10px] text-gray-500">
+          <span className="px-2.5 py-1 rounded-full border border-gray-300 bg-white/60">Live</span>
+          <span className="px-2.5 py-1 rounded-full border border-gray-300 bg-white/60">Institutional UI</span>
         </div>
       </div>
 
@@ -480,7 +483,7 @@ export default function Dashboard() {
           <MetricCard index={0} label="Starting Balance" value={fmtMoney(startingBalance)} icon={DollarSign} />
           <MetricCard index={1} label="Current Balance" value={fmtMoney(currentBalance)} sub="auto-updated" icon={Wallet} color={currentBalance >= startingBalance ? "text-emerald-400" : "text-red-400"} />
           <MetricCard index={2} label="Account Growth" value={`${startingBalance > 0 ? ((currentBalance - startingBalance) / startingBalance * 100).toFixed(2) : "0.00"}%`} sub="since start" icon={Percent} color={currentBalance >= startingBalance ? "text-emerald-400" : "text-red-400"} />
-          <MetricCard index={3} label="Total Drawdown" value={`${startingBalance > 0 ? (analytics.totalLoss / startingBalance * 100).toFixed(2) : "0.00"}%`} sub={`${fmtMoney(analytics.totalLoss)} lost`} icon={TrendingDown} color="text-orange-400" />
+          <MetricCard index={3} label="Max Drawdown" value={`${analytics.drawdownStats.drawdownPercent.toFixed(2)}%`} sub={`${fmtMoney(analytics.drawdownStats.drawdownAmount)} from peak`} icon={TrendingDown} color="text-orange-400" />
         </div>
       )}
 
@@ -500,6 +503,7 @@ export default function Dashboard() {
             currentBalance={currentBalance}
             totalProfit={analytics.totalProfit}
             totalLoss={analytics.totalLoss}
+            drawdownStats={analytics.drawdownStats}
             onSetBalance={setStartingBalance}
           />
           <MonthlyGoalCard monthlyPnL={monthlyPnL} goal={monthlyGoal} onSetGoal={setMonthlyGoal} />

@@ -12,6 +12,13 @@ export interface StrategyStats {
   avgRR: number;
 }
 
+export interface DrawdownStats {
+  peak: number;
+  currentEquity: number;
+  drawdownAmount: number;
+  drawdownPercent: number;
+}
+
 export interface Analytics {
   totalTrades: number;
   totalProfit: number;
@@ -25,6 +32,7 @@ export interface Analytics {
   equityCurve: { date: string; equity: number }[];
   dailyPnL: { date: string; pnl: number }[];
   drawdownCurve: { date: string; drawdown: number }[];
+  drawdownStats: DrawdownStats;
   rrScatter: { rr: number; profit: number; pair: string }[];
   tradesByDate: Record<string, Trade[]>;
   avgWin: number;
@@ -46,10 +54,12 @@ function safeDateKey(raw: string): string | null {
 }
 
 export function computeAnalytics(trades: Trade[]): Analytics {
+  const emptyDrawdown: DrawdownStats = { peak: 0, currentEquity: 0, drawdownAmount: 0, drawdownPercent: 0 };
   const empty: Analytics = {
     totalTrades: 0, totalProfit: 0, totalLoss: 0, netBalance: 0,
     winRate: 0, bestTrade: null, worstTrade: null, biggestProfit: 0,
     biggestLoss: 0, equityCurve: [], dailyPnL: [], drawdownCurve: [],
+    drawdownStats: emptyDrawdown,
     rrScatter: [], tradesByDate: {}, avgWin: 0, avgLoss: 0,
     strategyStats: [], weeklyPnL: [], monthlyPnL: [],
   };
@@ -124,15 +134,34 @@ export function computeAnalytics(trades: Trade[]): Analytics {
   const weeklyPnL = Object.keys(weeklyMap).sort().map(week => ({ week, pnl: weeklyMap[week] }));
   const monthlyPnL = Object.keys(monthlyMap).sort().map(month => ({ month, pnl: monthlyMap[month] }));
 
-  let currentEquity = 0, maxEquity = 0;
+  // Equity curve & drawdown — using peak equity method
+  // drawdownAmount = peak - currentEquity (never negative)
+  // drawdownPercent = (drawdownAmount / peak) * 100
+  let currentEquity = 0;
+  let peak = 0;
   const equityCurve: { date: string; equity: number }[] = [];
   const drawdownCurve: { date: string; drawdown: number }[] = [];
+
   dailyPnL.forEach(day => {
     currentEquity += day.pnl;
-    if (currentEquity > maxEquity) maxEquity = currentEquity;
+
+    // Update peak only when equity reaches a new high
+    if (currentEquity > peak) peak = currentEquity;
+
+    const drawdownAmount = Math.max(peak - currentEquity, 0);
+
     equityCurve.push({ date: day.date, equity: parseFloat(currentEquity.toFixed(2)) });
-    drawdownCurve.push({ date: day.date, drawdown: parseFloat((maxEquity - currentEquity).toFixed(2)) });
+    drawdownCurve.push({ date: day.date, drawdown: parseFloat(drawdownAmount.toFixed(2)) });
   });
+
+  const finalDrawdownAmount = Math.max(peak - currentEquity, 0);
+  const finalDrawdownPercent = peak > 0 ? (finalDrawdownAmount / peak) * 100 : 0;
+  const drawdownStats: DrawdownStats = {
+    peak: parseFloat(peak.toFixed(2)),
+    currentEquity: parseFloat(currentEquity.toFixed(2)),
+    drawdownAmount: parseFloat(finalDrawdownAmount.toFixed(2)),
+    drawdownPercent: parseFloat(finalDrawdownPercent.toFixed(2)),
+  };
 
   const rrScatter = sorted.map(t => ({
     rr: t.rr,
@@ -155,7 +184,8 @@ export function computeAnalytics(trades: Trade[]): Analytics {
   return {
     totalTrades: sorted.length, totalProfit, totalLoss, netBalance, winRate,
     bestTrade, worstTrade, biggestProfit, biggestLoss,
-    equityCurve, dailyPnL, drawdownCurve, rrScatter, tradesByDate,
+    equityCurve, dailyPnL, drawdownCurve, drawdownStats,
+    rrScatter, tradesByDate,
     avgWin, avgLoss, strategyStats, weeklyPnL, monthlyPnL,
   };
 }

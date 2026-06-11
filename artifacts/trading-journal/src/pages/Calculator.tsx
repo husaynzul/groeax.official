@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { calcNetProfit, calcNetLoss, calcRR, calcProfitPips, calcLossPips, calcPipValue, getPipConfig } from "@/engine/riskEngine";
+import { parseBrokerPrice } from "@/utils/priceParser";
 import { TrendingUp, TrendingDown, Target, AlertTriangle } from "lucide-react";
 
 const PAIRS = [
@@ -8,6 +9,10 @@ const PAIRS = [
   "EUR/JPY", "GBP/JPY", "XAU/USD", "US30", "NAS100",
 ];
 
+function sanitizePriceInput(value: string): string {
+  return value.replace(/[^0-9.,\-]/g, "");
+}
+
 export default function Calculator() {
   const [pair, setPair] = useState("EUR/USD");
   const [entry, setEntry] = useState("");
@@ -15,20 +20,20 @@ export default function Calculator() {
   const [tp, setTp] = useState("");
   const [lot, setLot] = useState("0.1");
 
-  const e = parseFloat(entry);
-  const s = parseFloat(sl);
-  const t = parseFloat(tp);
-  const l = parseFloat(lot);
-  const valid = !isNaN(e) && !isNaN(s) && !isNaN(t) && !isNaN(l) && e > 0 && s > 0 && t > 0 && l > 0;
+  const e = parseBrokerPrice(entry);
+  const s = parseBrokerPrice(sl);
+  const t = parseBrokerPrice(tp);
+  const l = parseBrokerPrice(lot);
+  const valid = e > 0 && s > 0 && t > 0 && l > 0;
 
   const cfg = useMemo(() => getPipConfig(pair), [pair]);
 
   const netProfit = valid ? calcNetProfit(e, t, l, pair) : 0;
-  const netLoss = valid ? calcNetLoss(e, s, l, pair) : 0;
-  const rr = valid ? calcRR(netProfit, netLoss) : 0;
-  const profitPips = valid ? calcProfitPips(e, t, pair) : 0;
-  const lossPips = valid ? calcLossPips(e, s, pair) : 0;
-  const pipVal = valid ? calcPipValue(l, pair) : 0;
+  const netLoss   = valid ? calcNetLoss(e, s, l, pair)   : 0;
+  const rr        = valid ? calcRR(netProfit, netLoss)    : 0;
+  const profitPips = valid ? calcProfitPips(e, t, pair)  : 0;
+  const lossPips   = valid ? calcLossPips(e, s, pair)    : 0;
+  const pipVal     = valid ? calcPipValue(l, pair)       : 0;
 
   const rrPct = Math.min((rr / 5) * 100, 100);
 
@@ -36,18 +41,19 @@ export default function Calculator() {
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n);
 
   const inputClass =
-    "w-full bg-card border border-input rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors";
+    "w-full bg-card border border-input rounded-lg px-3 py-2.5 text-sm text-card-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors";
 
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Risk Calculator</h1>
-        <p className="text-sm text-muted-foreground mt-1">Live position sizing and risk analysis</p>
+        <h1 className="text-2xl font-bold text-gray-900">Risk Calculator</h1>
+        <p className="text-sm text-gray-500 mt-1">Live position sizing and risk analysis</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="glass-card p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Inputs</h2>
+        {/* ── Inputs ── */}
+        <div className="glass-card p-5 space-y-4">
+          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inputs</h2>
 
           <div className="space-y-3">
             <div>
@@ -61,54 +67,25 @@ export default function Calculator() {
                 {PAIRS.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1.5">Entry Price</label>
-              <input
-                type="number"
-                step="any"
-                placeholder="1.08500"
-                value={entry}
-                onChange={(e) => setEntry(e.target.value)}
-                className={inputClass}
-                data-testid="input-calc-entry"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1.5">Stop Loss</label>
-              <input
-                type="number"
-                step="any"
-                placeholder="1.08200"
-                value={sl}
-                onChange={(e) => setSl(e.target.value)}
-                className={inputClass}
-                data-testid="input-calc-sl"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1.5">Take Profit</label>
-              <input
-                type="number"
-                step="any"
-                placeholder="1.09100"
-                value={tp}
-                onChange={(e) => setTp(e.target.value)}
-                className={inputClass}
-                data-testid="input-calc-tp"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1.5">Lot Size</label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="0.10"
-                value={lot}
-                onChange={(e) => setLot(e.target.value)}
-                className={inputClass}
-                data-testid="input-calc-lot"
-              />
-            </div>
+
+            {[
+              { label: "Entry Price",  value: entry, set: setEntry, ph: pair.includes("JPY") ? "149.500" : pair === "XAU/USD" ? "2,345.50" : "1.08500" },
+              { label: "Stop Loss",    value: sl,    set: setSl,    ph: pair.includes("JPY") ? "148.200" : pair === "XAU/USD" ? "2,320.00" : "1.08200" },
+              { label: "Take Profit",  value: tp,    set: setTp,    ph: pair.includes("JPY") ? "152.000" : pair === "XAU/USD" ? "2,400.00" : "1.09100" },
+              { label: "Lot Size",     value: lot,   set: setLot,   ph: "0.10" },
+            ].map(({ label, value, set, ph }) => (
+              <div key={label}>
+                <label className="block text-xs text-muted-foreground mb-1.5">{label}</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder={ph}
+                  value={value}
+                  onChange={(e) => set(sanitizePriceInput(e.target.value))}
+                  className={inputClass}
+                />
+              </div>
+            ))}
           </div>
 
           <div className="pt-2 text-xs text-muted-foreground space-y-1 border-t border-border">
@@ -116,6 +93,7 @@ export default function Calculator() {
           </div>
         </div>
 
+        {/* ── Results ── */}
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="glass-card p-4">

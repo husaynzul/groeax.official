@@ -130,21 +130,21 @@ export default function CalendarPage() {
   });
   const firstDayOfWeek = getDay(startOfMonth(currentMonth));
   const blanks = Array.from({ length: firstDayOfWeek });
-  const weekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const weekLabels = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
   const selectedTrades = selectedDate ? (tradesByDate[selectedDate] ?? []) : [];
   const selectedSummary = selectedTrades.length > 0 ? buildDaySummary(selectedTrades) : null;
 
   return (
-    <div className="min-h-screen p-4 md:p-5 lg:p-6 space-y-4 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.06),transparent_24%)]">
+    <div className="min-h-screen p-3 sm:p-4 md:p-5 lg:p-6 space-y-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="text-[10px] uppercase tracking-[0.3em] text-primary/70 mb-1.5">Groeax</p>
-          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-foreground">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-gray-900">
             Trading Calendar
           </h1>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-gray-500 mt-1">
             {trades.length} trades tracked · click any day to inspect
           </p>
         </div>
@@ -158,54 +158,54 @@ export default function CalendarPage() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="glass-card p-4 lg:p-6"
+        className="glass-card p-3 sm:p-4 lg:p-6"
       >
         {/* Month navigation */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => {
               setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1));
               setSelectedDate(null);
             }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors text-sm"
+            className="flex items-center gap-1 px-2.5 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors text-sm"
           >
             <ChevronLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Prev</span>
+            <span className="hidden sm:inline text-xs">Prev</span>
           </button>
 
-          <div className="text-center">
-            <h2 className="text-lg font-bold text-foreground">{format(currentMonth, "MMMM yyyy")}</h2>
-          </div>
+          <h2 className="text-base sm:text-lg font-bold text-foreground">
+            {format(currentMonth, "MMMM yyyy")}
+          </h2>
 
           <button
             onClick={() => {
               setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1));
               setSelectedDate(null);
             }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors text-sm"
+            className="flex items-center gap-1 px-2.5 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors text-sm"
           >
-            <span className="hidden sm:inline">Next</span>
+            <span className="hidden sm:inline text-xs">Next</span>
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
 
         {/* Weekday headers */}
-        <div className="grid grid-cols-7 mb-2">
+        <div className="grid grid-cols-7 mb-1">
           {weekLabels.map((d) => (
             <div
               key={d}
-              className="text-center text-xs font-semibold text-muted-foreground py-2 tracking-widest uppercase"
+              className="text-center text-[10px] sm:text-xs font-semibold text-muted-foreground py-1.5 tracking-widest uppercase"
             >
               {d}
             </div>
           ))}
         </div>
 
-        {/* Calendar grid */}
-        <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+        {/* Calendar grid — square cells via aspect-square */}
+        <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
           {/* Empty leading cells */}
           {blanks.map((_, i) => (
-            <div key={`blank-${i}`} className="rounded-xl min-h-[80px] sm:min-h-[110px] lg:min-h-[120px]" />
+            <div key={`blank-${i}`} className="aspect-square rounded-xl" />
           ))}
 
           {/* Day cells */}
@@ -222,8 +222,9 @@ export default function CalendarPage() {
                 key={key}
                 onClick={() => setSelectedDate(isSelected ? null : key)}
                 className={[
-                  "relative rounded-xl p-2 sm:p-3 min-h-[80px] sm:min-h-[110px] lg:min-h-[120px]",
-                  "text-left transition-all duration-150 focus:outline-none",
+                  "relative aspect-square rounded-xl p-1 sm:p-2",
+                  "text-left transition-all duration-150 focus:outline-none w-full",
+                  "flex flex-col overflow-hidden",
                   hasTrades
                     ? summary!.pnl > 0
                       ? "bg-emerald-700 hover:bg-emerald-600 border border-emerald-600/50"
@@ -232,36 +233,42 @@ export default function CalendarPage() {
                         : "bg-white/10 hover:bg-white/15 border border-white/10"
                     : today
                       ? "bg-primary/10 border border-primary/30 hover:bg-primary/15"
-                      : "bg-white/[0.03] border border-transparent hover:bg-white/[0.06]",
-                  isSelected ? "ring-2 ring-white/60 ring-offset-1 ring-offset-transparent scale-[1.02]" : "",
+                      : "bg-white/[0.06] border border-white/10 hover:bg-white/[0.1]",
+                  isSelected ? "ring-2 ring-white/70 ring-offset-1 ring-offset-transparent scale-[1.03]" : "",
                 ].join(" ")}
               >
-                {/* Day number – top right */}
+                {/* Day number — top right */}
                 <span
                   className={[
-                    "absolute top-2 right-2.5 text-xs font-semibold",
-                    hasTrades ? "text-white/80" : today ? "text-primary" : "text-muted-foreground/50",
+                    "absolute top-1 right-1.5 text-[10px] sm:text-xs font-bold",
+                    hasTrades ? "text-white/90" : today ? "text-primary" : "text-muted-foreground/60",
                   ].join(" ")}
                 >
                   {format(day, "d")}
                 </span>
 
-                {/* Today indicator */}
+                {/* Today dot */}
                 {today && !hasTrades && (
-                  <span className="absolute top-2 left-2 w-1.5 h-1.5 rounded-full bg-primary" />
+                  <span className="absolute top-1 left-1.5 w-1 h-1 rounded-full bg-primary" />
                 )}
 
-                {/* Trade data */}
+                {/* Trade data — hidden on xs, shown sm+ */}
                 {hasTrades && summary && (
-                  <div className="mt-5 space-y-0.5">
-                    <p className="text-white font-bold text-sm sm:text-base leading-tight">
+                  <div className="mt-auto pt-1 hidden [@media(min-width:360px)]:block">
+                    <p className="text-white font-bold text-[10px] sm:text-xs leading-tight truncate">
                       {fmtPnLCompact(summary.pnl)}
                     </p>
-                    <p className="text-white/70 text-[11px] sm:text-xs">
-                      {dayTrades.length} {dayTrades.length === 1 ? "trade" : "trades"}
+                    <p className="text-white/70 text-[9px] sm:text-[11px] leading-tight hidden sm:block">
+                      {dayTrades.length}t · {summary.winRate.toFixed(0)}%
                     </p>
-                    <p className="text-white/70 text-[11px] sm:text-xs">
-                      {summary.winRate.toFixed(1)}%
+                  </div>
+                )}
+
+                {/* On very small screens just show PnL */}
+                {hasTrades && summary && (
+                  <div className="mt-auto pt-1 [@media(min-width:360px)]:hidden">
+                    <p className="text-white font-bold text-[9px] leading-tight truncate">
+                      {fmtPnLCompact(summary.pnl)}
                     </p>
                   </div>
                 )}
@@ -271,17 +278,17 @@ export default function CalendarPage() {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-4 mt-5 pt-4 border-t border-border">
+        <div className="flex items-center gap-3 mt-4 pt-3 border-t border-border flex-wrap">
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded bg-emerald-700" />
-            <span className="text-[11px] text-muted-foreground">Profit day</span>
+            <span className="text-[11px] text-muted-foreground">Profit</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded bg-red-800" />
-            <span className="text-[11px] text-muted-foreground">Loss day</span>
+            <span className="text-[11px] text-muted-foreground">Loss</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-white/5 border border-white/10" />
+            <div className="w-3 h-3 rounded bg-white/[0.06] border border-white/10" />
             <span className="text-[11px] text-muted-foreground">No trades</span>
           </div>
         </div>
@@ -292,7 +299,7 @@ export default function CalendarPage() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass-card p-4 lg:p-6"
+          className="glass-card p-4"
         >
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -320,7 +327,7 @@ export default function CalendarPage() {
               <div
                 key={t.id}
                 className={[
-                  "flex items-center justify-between p-3 rounded-xl gap-3",
+                  "flex items-center justify-between p-3 rounded-xl gap-2",
                   t.outcome === "WIN"
                     ? "bg-emerald-500/10 border border-emerald-500/20"
                     : t.outcome === "LOSS"
@@ -328,10 +335,10 @@ export default function CalendarPage() {
                       : "bg-white/5 border border-white/10",
                 ].join(" ")}
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="font-bold text-sm text-foreground">{t.pair}</span>
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <span className="font-bold text-sm text-foreground shrink-0">{t.pair}</span>
                   <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ${
                       t.direction === "BUY"
                         ? "bg-emerald-500/20 text-emerald-400"
                         : "bg-red-500/20 text-red-400"
@@ -346,17 +353,11 @@ export default function CalendarPage() {
                   )}
                 </div>
 
-                <div className="flex items-center gap-4 shrink-0">
+                <div className="flex items-center gap-3 shrink-0">
                   <div className="text-right hidden sm:block">
                     <p className="text-[10px] text-muted-foreground">Entry</p>
                     <p className="text-xs text-foreground font-medium">{t.entryPrice}</p>
                   </div>
-                  {t.exitPrice != null && (
-                    <div className="text-right hidden sm:block">
-                      <p className="text-[10px] text-muted-foreground">Exit</p>
-                      <p className="text-xs text-foreground font-medium">{t.exitPrice}</p>
-                    </div>
-                  )}
                   <div className="text-right hidden sm:block">
                     <p className="text-[10px] text-muted-foreground">R:R</p>
                     <p className="text-xs text-muted-foreground">{t.rr.toFixed(2)}R</p>

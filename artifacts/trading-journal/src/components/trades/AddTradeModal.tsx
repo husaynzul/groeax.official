@@ -153,7 +153,8 @@ export default function AddTradeModal({ open, onClose, editTrade, prefill, broke
   };
 
   const form = useForm<FormInput>({
-    resolver: zodResolver(schema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(schema) as any,
     defaultValues: editTrade
       ? {
           pair: editTrade.pair,
@@ -259,7 +260,7 @@ export default function AddTradeModal({ open, onClose, editTrade, prefill, broke
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit as never)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
