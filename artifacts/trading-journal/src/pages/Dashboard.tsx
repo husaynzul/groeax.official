@@ -14,10 +14,8 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  Radar,
+  LineChart,
+  Line,
   PieChart,
   Pie,
   Cell,
@@ -465,12 +463,6 @@ export default function Dashboard() {
     }, 0);
   }, [trades]);
 
-  const radarData = [
-    { subject: "Win Rate", value: analytics.winRate },
-    { subject: "Profit Factor", value: Math.min(analytics.totalLoss > 0 ? (analytics.totalProfit / analytics.totalLoss) * 20 : analytics.totalProfit > 0 ? 100 : 0, 100) },
-    { subject: "Consistency", value: analytics.totalTrades > 0 ? Math.min((analytics.winRate / 100) * (analytics.equityCurve.length > 0 ? 80 : 50) + 20, 100) : 0 },
-    { subject: "Max Drawdown", value: analytics.drawdownCurve.length > 0 ? Math.max(100 - Math.min((Math.max(...analytics.drawdownCurve.map((d) => Math.abs(d.drawdown))), 100) as number), 0) : 100 },
-  ];
 
   return (
     <div className="min-h-screen p-4 md:p-5 lg:p-6 space-y-5 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.08),transparent_24%),radial-gradient(circle_at_80%_0%,rgba(139,92,246,0.08),transparent_18%)]">
@@ -508,12 +500,57 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass-card p-4 lg:col-span-2 hover:border-white/15 transition-colors">
-          <div className="flex items-center gap-2 mb-4"><Zap className="w-3.5 h-3.5 text-primary" /><h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Performance Score</h2></div>
-          {analytics.totalTrades > 0 ? (
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Zap className="w-3.5 h-3.5 text-primary" />
+              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Equity Curve</h2>
+            </div>
+            {analytics.equityCurve.length > 0 && (
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${analytics.netBalance >= 0 ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400"}`}>
+                {analytics.netBalance >= 0 ? "+" : ""}{fmtMoney(analytics.netBalance)} net
+              </span>
+            )}
+          </div>
+          {analytics.equityCurve.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
-              <RadarChart data={radarData}><PolarGrid stroke="rgba(255,255,255,0.07)" /><PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: "hsl(215 20% 50%)" }} /><Radar dataKey="value" stroke="#10b981" fill="#10b981" fillOpacity={0.15} isAnimationActive /></RadarChart>
+              <LineChart data={analytics.equityCurve} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 9, fill: "hsl(215 20% 45%)" }}
+                  tickFormatter={(d: string) => d.slice(5)}
+                  interval="preserveStartEnd"
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 9, fill: "hsl(215 20% 45%)" }}
+                  tickFormatter={(v: number) => `$${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(0)}`}
+                  tickLine={false}
+                  axisLine={false}
+                  width={48}
+                />
+                <Tooltip
+                  contentStyle={{ background: "#0d0d14", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 11 }}
+                  labelStyle={{ color: "hsl(215 20% 60%)" }}
+                  formatter={(v: number) => [fmtMoney(v), "Equity"]}
+                  labelFormatter={(d: string) => `Date: ${d}`}
+                />
+                <ReferenceLine y={startingBalance > 0 ? startingBalance : analytics.equityCurve[0]?.equity} stroke="rgba(255,255,255,0.12)" strokeDasharray="4 4" />
+                <Line
+                  type="monotone"
+                  dataKey="equity"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 4, fill: "#10b981", strokeWidth: 0 }}
+                  isAnimationActive
+                />
+              </LineChart>
             </ResponsiveContainer>
-          ) : <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">Add trades to see your performance</div>}
+          ) : (
+            <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">Add trades to see your equity curve</div>
+          )}
         </motion.div>
 
         <div className="flex flex-col gap-4">
