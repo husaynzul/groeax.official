@@ -16,12 +16,16 @@ export interface OCRResult {
   pair: string | null;
   direction: "BUY" | "SELL" | null;
   entryPrice: number | null;
+  exitPrice: number | null;
   stopLoss: number | null;
   takeProfit: number | null;
   lotSize: number | null;
   profit: number | null;
   date: string | null;
   outcome: "WIN" | "LOSS" | "BE" | null;
+  session: "ASIA" | "TOKYO" | "LONDON" | "NEW_YORK" | null;
+  strategy: string | null;
+  patterns: string[];
   notes: string | null;
 }
 
@@ -287,14 +291,14 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                {/* Image preview */}
+              <div className="space-y-3">
+                {/* Image preview row */}
                 {imagePreview && (
                   <div className="relative">
                     <img
                       src={imagePreview}
                       alt="Screenshot"
-                      className="w-full rounded-xl border border-white/10 max-h-64 object-contain bg-black/40"
+                      className="w-full rounded-xl border border-white/10 max-h-48 object-contain bg-black/40"
                     />
                     <button
                       onClick={reset}
@@ -306,41 +310,79 @@ export default function OCRImportModal({ open, onClose, onUseResult }: Props) {
                   </div>
                 )}
 
-                {/* Extracted fields */}
-                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 space-y-0">
-                  {/* Direction badge at top */}
-                  {result.direction && (
-                    <div className="flex items-center gap-2 mb-3 pb-3 border-b border-white/5">
-                      {result.direction === "BUY" ? (
-                        <TrendingUp className="w-4 h-4 text-emerald-400" />
-                      ) : (
-                        <TrendingDown className="w-4 h-4 text-red-400" />
-                      )}
-                      <span className={`text-sm font-bold ${
-                        result.direction === "BUY" ? "text-emerald-400" : "text-red-400"
-                      }`}>
-                        {result.direction}
-                      </span>
-                      {result.pair && (
-                        <span className="text-sm text-white font-medium">{result.pair}</span>
-                      )}
-                    </div>
-                  )}
+                {/* Direction + pair header */}
+                {result.direction && (
+                  <div className={`flex items-center gap-2 p-2.5 rounded-lg border ${
+                    result.direction === "BUY"
+                      ? "bg-emerald-500/10 border-emerald-500/25"
+                      : "bg-red-500/10 border-red-500/25"
+                  }`}>
+                    {result.direction === "BUY"
+                      ? <TrendingUp className="w-4 h-4 text-emerald-400" />
+                      : <TrendingDown className="w-4 h-4 text-red-400" />
+                    }
+                    <span className={`font-bold text-sm ${result.direction === "BUY" ? "text-emerald-400" : "text-red-400"}`}>
+                      {result.direction}
+                    </span>
+                    {result.pair && <span className="text-foreground font-semibold text-sm">{result.pair}</span>}
+                    {result.outcome && (
+                      <span className={`ml-auto text-xs font-bold px-2 py-0.5 rounded-full ${
+                        result.outcome === "WIN" ? "bg-emerald-500/20 text-emerald-400"
+                        : result.outcome === "LOSS" ? "bg-red-500/20 text-red-400"
+                        : "bg-white/10 text-muted-foreground"
+                      }`}>{result.outcome}</span>
+                    )}
+                  </div>
+                )}
 
+                {/* Trade numbers */}
+                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 space-y-0">
                   <FieldBadge label="Entry Price" value={result.entryPrice} />
-                  <FieldBadge label="Stop Loss" value={result.stopLoss} />
+                  <FieldBadge label="Exit Price"  value={result.exitPrice} />
+                  <FieldBadge label="Stop Loss"   value={result.stopLoss} />
                   <FieldBadge label="Take Profit" value={result.takeProfit} />
-                  <FieldBadge label="Lot Size" value={result.lotSize} />
-                  <FieldBadge label="Date" value={result.date} />
-                  <FieldBadge label="Outcome" value={result.outcome} />
-
-                  {result.notes && (
-                    <div className="pt-2 mt-1 border-t border-white/5">
-                      <p className="text-xs text-muted-foreground font-semibold mb-1">AI Notes</p>
-                      <p className="text-xs text-muted-foreground italic">"{result.notes}"</p>
-                    </div>
-                  )}
+                  <FieldBadge label="Lot Size"    value={result.lotSize} />
+                  <FieldBadge label="P&L"         value={result.profit != null ? `$${result.profit.toFixed(2)}` : null} />
+                  <FieldBadge label="Date"        value={result.date} />
                 </div>
+
+                {/* Strategy / Patterns / Session row */}
+                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 space-y-2.5">
+                  {/* Strategy */}
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-xs text-muted-foreground font-medium shrink-0">Strategy</span>
+                    {result.strategy
+                      ? <span className="text-xs bg-primary/15 text-primary border border-primary/30 px-2 py-0.5 rounded-full font-semibold text-right">{result.strategy}</span>
+                      : <span className="text-xs text-muted-foreground/50 italic">Not detected</span>
+                    }
+                  </div>
+
+                  {/* Patterns */}
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-xs text-muted-foreground font-medium shrink-0">Patterns</span>
+                    {result.patterns.length > 0
+                      ? <div className="flex flex-wrap gap-1 justify-end">
+                          {result.patterns.map((p) => (
+                            <span key={p} className="text-xs bg-violet-500/15 text-violet-400 border border-violet-500/25 px-2 py-0.5 rounded-full font-medium">{p}</span>
+                          ))}
+                        </div>
+                      : <span className="text-xs text-muted-foreground/50 italic">Not detected</span>
+                    }
+                  </div>
+
+                  {/* Session */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted-foreground font-medium">Session</span>
+                    {result.session
+                      ? <span className="text-xs bg-blue-500/15 text-blue-400 border border-blue-500/25 px-2 py-0.5 rounded-full font-semibold">{result.session}</span>
+                      : <span className="text-xs text-muted-foreground/50 italic">Not detected</span>
+                    }
+                  </div>
+                </div>
+
+                {result.notes && (
+                  <p className="text-xs text-muted-foreground italic px-1">"{result.notes}"</p>
+                )}
               </div>
 
               {/* Actions */}

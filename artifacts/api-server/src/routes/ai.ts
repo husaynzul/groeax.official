@@ -112,7 +112,7 @@ Look for: pair/symbol, direction (buy/long or sell/short), entry price, stop los
 
 Respond ONLY with a valid JSON object — no markdown, no code blocks, no extra text. Just raw JSON.`;
 
-const OCR_USER_PROMPT = `Analyze this trading screenshot and extract all trade details you can find.
+const OCR_USER_PROMPT = `Analyze this trading screenshot and extract ALL trade details you can find.
 
 Return ONLY a JSON object with these exact fields (use null for fields you cannot determine):
 {
@@ -121,14 +121,22 @@ Return ONLY a JSON object with these exact fields (use null for fields you canno
   "entryPrice": string or number or null — preserve EXACTLY as shown, e.g. "27,267.9" or "1.08456",
   "stopLoss": string or number or null — preserve EXACTLY as shown on screen,
   "takeProfit": string or number or null — preserve EXACTLY as shown on screen,
+  "exitPrice": string or number or null — actual close/exit price if shown,
   "lotSize": number or null,
-  "profit": number or null — the actual broker P&L value shown (e.g. 12.50, -8.00). Use the exact dollar/monetary value shown, positive for profit, negative for loss. null if not visible,
+  "profit": number or null — the actual broker P&L value shown (e.g. 12.50, -8.00), positive for profit, negative for loss,
   "date": "YYYY-MM-DD" or null,
-  "outcome": "WIN" or "LOSS" or "BE" or null,
+  "outcome": "WIN" or "LOSS" or "BE" or null — WIN if profit>0 or TP hit, LOSS if profit<0 or SL hit, BE if breakeven,
+  "session": "ASIA" or "TOKYO" or "LONDON" or "NEW_YORK" or null — detect from the time shown using UTC zones: ASIA=23:00-08:00, TOKYO=00:00-09:00, LONDON=08:00-17:00, NEW_YORK=13:00-22:00. Return null if time not visible,
+  "strategy": one of exactly these values or null — "Fair Value Gap (FVG)" | "Order Block" | "Break of Structure (BOS)" | "Change of Character (CHoCH)" | "Liquidity Grab / Stop Hunt" | "Support / Resistance" | "Trend Continuation" | "Reversal Setup" — infer from visible chart structure, entry placement relative to key levels, or any labels/text in the screenshot,
+  "patterns": array of 0-3 items using ONLY these exact values — "Continuation Pattern" | "Reversal Pattern" | "Breakout Pattern" | "Pullback Entry" | "Range Trading" — infer from chart shape and entry context. Return [] if not determinable,
   "notes": "brief description of what you see in the screenshot (max 100 chars)" or null
 }
 
-Important: For price fields (entryPrice, stopLoss, takeProfit) copy the value EXACTLY as it appears in the screenshot, including any commas. Return ONLY the JSON object. No explanation, no markdown.`;
+Important rules:
+- For price fields copy the value EXACTLY as shown including commas (e.g. "27,267.9")
+- If outcome is not explicitly shown but profit is visible: profit>0 = WIN, profit<0 = LOSS
+- For strategy and patterns: make your best inference from the chart structure — do NOT return null unless you truly cannot see anything
+- Return ONLY the raw JSON object. No explanation, no markdown, no code blocks.`;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/ai/analyze — streaming AI trading coach (with provider fallback)
@@ -367,12 +375,26 @@ router.post("/ai/ocr-trade", authMiddleware, async (req, res) => {
         return null;
       }
 
+      const VALID_STRATEGIES = [
+        "Fair Value Gap (FVG)", "Order Block", "Break of Structure (BOS)",
+        "Change of Character (CHoCH)", "Liquidity Grab / Stop Hunt",
+        "Support / Resistance", "Trend Continuation", "Reversal Setup",
+      ];
+      const VALID_PATTERNS = [
+        "Continuation Pattern", "Reversal Pattern", "Breakout Pattern",
+        "Pullback Entry", "Range Trading",
+      ];
+      const VALID_SESSIONS = ["ASIA", "TOKYO", "LONDON", "NEW_YORK"];
+
+      const rawPatterns = Array.isArray(parsed.patterns) ? parsed.patterns : [];
+
       const result = {
         pair:       typeof parsed.pair === "string"      ? parsed.pair       : null,
         direction:  parsed.direction === "BUY" || parsed.direction === "SELL"
                       ? parsed.direction as "BUY" | "SELL"
                       : null,
         entryPrice: parseOcrPrice(parsed.entryPrice),
+        exitPrice:  parseOcrPrice(parsed.exitPrice),
         stopLoss:   parseOcrPrice(parsed.stopLoss),
         takeProfit: parseOcrPrice(parsed.takeProfit),
         lotSize:    typeof parsed.lotSize === "number"   ? parsed.lotSize    : null,
@@ -383,6 +405,13 @@ router.post("/ai/ocr-trade", authMiddleware, async (req, res) => {
         outcome:    parsed.outcome === "WIN" || parsed.outcome === "LOSS" || parsed.outcome === "BE"
                       ? parsed.outcome as "WIN" | "LOSS" | "BE"
                       : null,
+        session:    VALID_SESSIONS.includes(parsed.session as string)
+                      ? parsed.session as "ASIA" | "TOKYO" | "LONDON" | "NEW_YORK"
+                      : null,
+        strategy:   VALID_STRATEGIES.includes(parsed.strategy as string)
+                      ? parsed.strategy as string
+                      : null,
+        patterns:   rawPatterns.filter((p) => VALID_PATTERNS.includes(p as string)) as string[],
         notes:      typeof parsed.notes === "string"     ? parsed.notes      : null,
       };
 

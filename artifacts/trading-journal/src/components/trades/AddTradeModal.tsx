@@ -78,6 +78,9 @@ export interface TradeFormPrefill {
   date?: string;
   outcome?: "WIN" | "LOSS" | "BE";
   notes?: string;
+  strategy?: string;
+  patterns?: string[];
+  session?: TradingSession;
 }
 
 interface Props {
@@ -133,10 +136,10 @@ export default function AddTradeModal({ open, onClose, editTrade, prefill, broke
   const updateTrade = useTradeStore((s) => s.updateTrade);
 
   const [selectedPatterns, setSelectedPatterns] = useState<string[]>(
-    editTrade?.patterns ?? []
+    editTrade?.patterns ?? prefill?.patterns ?? []
   );
   const [selectedSession, setSelectedSession] = useState<TradingSession | undefined>(
-    editTrade?.session ?? detectSession()
+    editTrade?.session ?? prefill?.session ?? detectSession()
   );
 
   const defaultEmpty: FormInput = {
@@ -182,6 +185,7 @@ export default function AddTradeModal({ open, onClose, editTrade, prefill, broke
           ...(prefill.date        && { date: prefill.date }),
           ...(prefill.outcome     && { outcome: prefill.outcome }),
           ...(prefill.notes       && { notes: prefill.notes }),
+          ...(prefill.strategy    && { strategy: prefill.strategy }),
         }
       : defaultEmpty,
   });
