@@ -62,6 +62,14 @@ export default defineConfig({
     fs: {
       strict: true,
     },
+    // Forward /api/* to the main Express server so port-conflict 502s are eliminated
+    proxy: {
+      "/api": {
+        target: "http://localhost:5000",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   preview: {
     port,
