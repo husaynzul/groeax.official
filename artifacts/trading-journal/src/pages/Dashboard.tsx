@@ -18,6 +18,8 @@ import {
   Pie,
   Cell,
   ReferenceLine,
+  ComposedChart,
+  Line,
 } from "recharts";
 import PerformanceScoreCard from "@/components/dashboard/PerformanceScoreCard";
 import { motion } from "framer-motion";
@@ -450,6 +452,33 @@ export default function Dashboard() {
 
   const currentBalance = startingBalance + analytics.totalProfit - analytics.totalLoss;
 
+  // ── Weekly trend: last 6 weeks, P&L + win rate per week ──────────────────
+  const weeklyTrend = useMemo(() => {
+    const weekMap: Record<string, { wins: number; total: number; profit: number; loss: number }> = {};
+    trades.forEach((t) => {
+      if (!t.date) return;
+      const d = new Date(t.date + "T12:00:00");
+      if (isNaN(d.getTime())) return;
+      const jan1 = new Date(d.getFullYear(), 0, 1);
+      const weekNum = Math.ceil(((d.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7);
+      const key = `${d.getFullYear()}-W${String(weekNum).padStart(2, "0")}`;
+      if (!weekMap[key]) weekMap[key] = { wins: 0, total: 0, profit: 0, loss: 0 };
+      weekMap[key].total++;
+      if (t.outcome === "WIN") { weekMap[key].wins++; weekMap[key].profit += t.netProfit; }
+      if (t.outcome === "LOSS") { weekMap[key].loss += t.netLoss; }
+    });
+    return Object.keys(weekMap)
+      .sort()
+      .slice(-6)
+      .map((key) => {
+        const w = weekMap[key];
+        const pnl = parseFloat((w.profit - w.loss).toFixed(2));
+        const winRate = w.total > 0 ? Math.round((w.wins / w.total) * 100) : 0;
+        const pf = w.loss > 0 ? parseFloat((w.profit / w.loss).toFixed(2)) : w.profit > 0 ? 4 : 0;
+        return { week: `W${key.split("W")[1]}`, pnl, winRate, pf, trades: w.total };
+      });
+  }, [trades]);
+
   const monthlyPnL = useMemo(() => {
     const now = new Date();
     return trades.reduce((acc, t) => {
@@ -532,6 +561,129 @@ export default function Dashboard() {
           {analytics.dailyPnL.length > 0 ? <ResponsiveContainer width="100%" height={200}><BarChart data={analytics.dailyPnL} margin={{ top: 8, right: 8, bottom: 4, left: 0 }} barCategoryGap="30%"><CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.05)" vertical={false} /><XAxis dataKey="date" tick={{ fontSize: 9, fill: "#64748b" }} tickFormatter={(v) => fmtTradeDate(v, "MMM d")} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 9, fill: "#64748b" }} tickFormatter={(v) => `$${Number(v).toFixed(0)}`} axisLine={false} tickLine={false} width={48} /><ReferenceLine y={0} stroke="rgba(255,255,255,0.35)" strokeWidth={2} /><Tooltip content={<DarkTooltip />} /><Bar dataKey="pnl" radius={[3, 3, 0, 0]} isAnimationActive animationDuration={800} maxBarSize={36}>{analytics.dailyPnL.map((entry, i) => <Cell key={i} fill={entry.pnl >= 0 ? "#22c55e" : "#ef4444"} fillOpacity={1} />)}</Bar></BarChart></ResponsiveContainer> : <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">No trade data yet</div>}
         </motion.div>
       </div>
+
+      {/* Weekly Performance Trend */}
+      {weeklyTrend.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }} className="glass-card p-4 hover:border-white/15 transition-colors">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-3.5 h-3.5 text-primary" />
+              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Weekly Performance Trend</h2>
+            </div>
+            <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />P&amp;L</span>
+              <span className="flex items-center gap-1.5"><span className="w-4 h-[2px] bg-violet-400 inline-block rounded" />Win Rate %</span>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <ComposedChart data={weeklyTrend} margin={{ top: 8, right: 48, bottom: 4, left: 0 }}>
+              <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <XAxis dataKey="week" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+              {/* Left Y: P&L */}
+              <YAxis
+                yAxisId="pnl"
+                tick={{ fontSize: 9, fill: "#64748b" }}
+                tickFormatter={(v) => `$${Number(v).toFixed(0)}`}
+                axisLine={false} tickLine={false} width={48}
+              />
+              {/* Right Y: Win Rate */}
+              <YAxis
+                yAxisId="wr"
+                orientation="right"
+                domain={[0, 100]}
+                tick={{ fontSize: 9, fill: "#a78bfa" }}
+                tickFormatter={(v) => `${v}%`}
+                axisLine={false} tickLine={false} width={36}
+              />
+              <ReferenceLine yAxisId="pnl" y={0} stroke="rgba(255,255,255,0.2)" strokeWidth={1.5} />
+              <Tooltip
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  const pnlEntry = payload.find((p) => p.dataKey === "pnl");
+                  const wrEntry  = payload.find((p) => p.dataKey === "winRate");
+                  const pfEntry  = payload.find((p) => p.dataKey === "pf");
+                  const trEntry  = payload.find((p) => p.dataKey === "trades");
+                  const pnlVal   = pnlEntry?.value as number ?? 0;
+                  return (
+                    <div style={{ background: "hsl(220 14% 11%)", border: "1px solid hsl(220 13% 22%)" }} className="rounded-lg px-3 py-2.5 shadow-xl text-xs space-y-1 min-w-[140px]">
+                      <p className="text-muted-foreground font-semibold mb-1.5">{label}</p>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">P&L</span>
+                        <span className={`font-bold ${pnlVal >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                          {pnlVal >= 0 ? "+" : ""}${Math.abs(pnlVal).toFixed(2)}
+                        </span>
+                      </div>
+                      {wrEntry && (
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Win Rate</span>
+                          <span className="font-bold text-violet-400">{wrEntry.value as number}%</span>
+                        </div>
+                      )}
+                      {pfEntry && (
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Prof. Factor</span>
+                          <span className="font-bold text-yellow-400">{pfEntry.value as number}</span>
+                        </div>
+                      )}
+                      {trEntry && (
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Trades</span>
+                          <span className="font-semibold text-foreground">{trEntry.value as number}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }}
+              />
+              {/* P&L bars */}
+              <Bar yAxisId="pnl" dataKey="pnl" radius={[4, 4, 0, 0]} maxBarSize={44} isAnimationActive animationDuration={800}>
+                {weeklyTrend.map((entry, i) => (
+                  <Cell key={i} fill={entry.pnl >= 0 ? "#22c55e" : "#ef4444"} fillOpacity={0.85} />
+                ))}
+              </Bar>
+              {/* Hidden bars for tooltip data only */}
+              <Bar yAxisId="pnl" dataKey="pf" hide />
+              <Bar yAxisId="pnl" dataKey="trades" hide />
+              {/* Win Rate line */}
+              <Line
+                yAxisId="wr"
+                type="monotone"
+                dataKey="winRate"
+                stroke="#a78bfa"
+                strokeWidth={2}
+                dot={{ r: 4, fill: "#a78bfa", stroke: "#0f172a", strokeWidth: 2 }}
+                activeDot={{ r: 6, fill: "#a78bfa", stroke: "#fff", strokeWidth: 1.5 }}
+                isAnimationActive
+                animationDuration={1000}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+          {/* Summary row */}
+          <div className="mt-3 pt-3 border-t border-white/5 grid grid-cols-3 gap-2 text-center">
+            {(() => {
+              const profitable = weeklyTrend.filter((w) => w.pnl > 0).length;
+              const avgWR = weeklyTrend.length > 0 ? Math.round(weeklyTrend.reduce((a, w) => a + w.winRate, 0) / weeklyTrend.length) : 0;
+              const totalPnL = weeklyTrend.reduce((a, w) => a + w.pnl, 0);
+              return (
+                <>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Profitable Weeks</p>
+                    <p className={`text-base font-bold ${profitable >= weeklyTrend.length / 2 ? "text-emerald-400" : "text-red-400"}`}>{profitable} / {weeklyTrend.length}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Win Rate</p>
+                    <p className={`text-base font-bold ${avgWR >= 50 ? "text-violet-400" : "text-yellow-400"}`}>{avgWR}%</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Period P&L</p>
+                    <p className={`text-base font-bold ${totalPnL >= 0 ? "text-emerald-400" : "text-red-400"}`}>{totalPnL >= 0 ? "+" : ""}${Math.abs(totalPnL).toFixed(2)}</p>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </motion.div>
+      )}
 
       {analytics.totalTrades > 0 && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="glass-card p-4 hover:border-white/15 transition-colors">
