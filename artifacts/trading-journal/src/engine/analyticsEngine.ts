@@ -143,13 +143,15 @@ export function computeAnalytics(trades: Trade[], startingBalance = 0): Analytic
   //   Start=$10  Trade1=-$0.06→$9.94  Trade2=+$0.13→$10.07 (peak!)  Trade3=-$0.57→$9.50
   //   Correct peak=$10.07, drawdown=(10.07-9.50)/10.07=5.66%
   //   Old (daily) peak=$10.00 because net-day=-$0.50 < starting balance
-  let currentEquity = startingBalance;
-  let peak = startingBalance;
+  let currentEquity    = startingBalance;
+  let runningPeak      = startingBalance;   // high-water mark, updates every trade
+  let maxDrawdownAmt   = 0;                 // largest (Peak_t − E_t) seen so far
+  let maxDrawdownPeak  = startingBalance;   // running peak at the moment MaxDD occurred
 
   // Build per-trade equity / drawdown points, then collapse to one point per day
   // (keep the LAST equity value of each day for the chart).
-  const equityByDay: Record<string, number> = {};
-  const drawdownByDay: Record<string, number> = {};
+  const equityByDay: Record<string, number>    = {};
+  const drawdownByDay: Record<string, number>  = {};
 
   sorted.forEach(trade => {
     const pnl = trade.outcome === 'WIN'  ? trade.netProfit
@@ -157,14 +159,21 @@ export function computeAnalytics(trades: Trade[], startingBalance = 0): Analytic
 
     currentEquity = parseFloat((currentEquity + pnl).toFixed(10));
 
-    // Update peak every trade, not every day
-    if (currentEquity > peak) peak = currentEquity;
+    // Step 2: rolling peak — only moves up, never resets
+    if (currentEquity > runningPeak) runningPeak = currentEquity;
 
-    const drawdownAmount = Math.max(peak - currentEquity, 0);
+    // Step 3: drawdown at this point
+    const dd = Math.max(runningPeak - currentEquity, 0);
+
+    // Step 4: keep track of the worst (maximum) drawdown seen across all trades
+    if (dd > maxDrawdownAmt) {
+      maxDrawdownAmt  = dd;
+      maxDrawdownPeak = runningPeak;   // peak before the worst drop
+    }
+
     const dateKey = safeDateKey(trade.date)!;
-
-    equityByDay[dateKey]    = parseFloat(currentEquity.toFixed(2));
-    drawdownByDay[dateKey]  = parseFloat(drawdownAmount.toFixed(2));
+    equityByDay[dateKey]   = parseFloat(currentEquity.toFixed(2));
+    drawdownByDay[dateKey] = parseFloat(dd.toFixed(2));
   });
 
   const equityCurve = Object.keys(equityByDay).sort()
@@ -173,11 +182,14 @@ export function computeAnalytics(trades: Trade[], startingBalance = 0): Analytic
   const drawdownCurve = Object.keys(drawdownByDay).sort()
     .map(date => ({ date, drawdown: drawdownByDay[date] }));
 
-  const finalDrawdownAmount  = parseFloat(Math.max(peak - currentEquity, 0).toFixed(2));
-  const finalDrawdownPercent = peak > 0 ? parseFloat(((finalDrawdownAmount / peak) * 100).toFixed(2)) : 0;
+  // MaxDD% = (maxDrawdownAmt / peak_at_that_moment) × 100
+  const finalDrawdownAmount  = parseFloat(maxDrawdownAmt.toFixed(2));
+  const finalDrawdownPercent = maxDrawdownPeak > 0
+    ? parseFloat(((maxDrawdownAmt / maxDrawdownPeak) * 100).toFixed(2))
+    : 0;
 
   const drawdownStats: DrawdownStats = {
-    peak:            parseFloat(peak.toFixed(2)),
+    peak:            parseFloat(maxDrawdownPeak.toFixed(2)),   // peak before the worst drop
     currentEquity:   parseFloat(currentEquity.toFixed(2)),
     drawdownAmount:  finalDrawdownAmount,
     drawdownPercent: finalDrawdownPercent,
