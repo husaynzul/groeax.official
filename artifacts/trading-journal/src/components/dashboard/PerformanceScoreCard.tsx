@@ -16,43 +16,44 @@ function segPath(cx: number, cy: number, r: number, v0: number, v1: number) {
   return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${la} 0 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
 }
 
-// ─── Semi-Gauge ─────────────────────────────────────────────────────────────
-// Pixel-matched to reference: thick open arch, needle from pivot,
-// labels outside arc, value text cleanly below.
+// ─── Donut Semi-Gauge ────────────────────────────────────────────────────────
+// Thick donut-style half-ring speedometer with needle, matching reference image.
 interface Seg { from: number; to: number; color: string }
 interface Lbl { value: number; text: string }
 
 function SemiGauge({ value, max, segs, lbls }: {
   value: number; max: number; segs: Seg[]; lbls: Lbl[];
 }) {
-  // ── geometry (matches reference image proportions) ────────────────────────
-  const CX = 110;    // horizontal centre
-  const CY = 100;    // pivot Y — arc opens BELOW this line (gap at bottom)
-  const R  = 76;     // arc centre-line radius
-  const TK = 18;     // stroke width — thick band, not a ring (TK/R ≈ 24%)
+  const CX = 115;   // horizontal centre
+  const CY = 105;   // pivot Y
+  const R  = 72;    // arc centre-line radius
+  const TK = 26;    // thick donut stroke — ~36% of radius
 
-  // label orbit just outside outer edge
-  const LR = R + TK / 2 + 10;  // 95
+  // Label orbit — just outside outer edge of donut
+  const LR = R + TK / 2 + 11;
 
-  // viewBox: all labels must fit inside
-  // left "0%" at x≈CX-LR=15 (anchor=end) → left edge ~2 → VBX=0
-  // right "100%" at x≈CX+LR=205 (anchor=start, ~25px wide) → VBX+VBW≥230
-  // top "50%" at y≈CY-LR=5, text y+4=9 → VBY=-10 gives 19px clearance ✓
-  // bottom: pivot at CY, circle r=6 → bottom = CY+8 = 108
-  const VBX = -2;
-  const VBY = -12;
-  const VBW = 238;
-  const VBH = CY + 10 - VBY;   // 122
+  const VBX = -8;
+  const VBY = -16;
+  const VBW = 250;
+  const VBH = CY + 14 - VBY;
+
+  // Small gap between segments (in normalised 0-1 units)
+  const GAP = 0.012;
 
   const ratio = Math.min(Math.max(value / max, 0), 1);
   const θ = ((180 - ratio * 180) * Math.PI) / 180;
-  const nLen = R - TK * 0.55;  // needle tip sits just inside inner arc edge
-  const nx = CX + nLen * Math.cos(θ);
-  const ny = CY - nLen * Math.sin(θ);
+
+  // Needle: tip reaches inner edge of donut, tail is short stub behind pivot
+  const nTip  = R - TK * 0.5 - 2;
+  const nTail = 10;
+  const nx  = CX + nTip  * Math.cos(θ);
+  const ny  = CY - nTip  * Math.sin(θ);
+  const nxt = CX - nTail * Math.cos(θ);
+  const nyt = CY + nTail * Math.sin(θ);
 
   function anchor(v: number) {
-    if (v < 0.12) return "end";
-    if (v > 0.88) return "start";
+    if (v < 0.10) return "end";
+    if (v > 0.90) return "start";
     return "middle";
   }
 
@@ -63,35 +64,27 @@ function SemiGauge({ value, max, segs, lbls }: {
       style={{ display: "block" }}
       aria-hidden
     >
-      {/* background track */}
+      {/* Dark background track */}
       <path
         d={segPath(CX, CY, R, 0, 1)}
-        fill="none" stroke="#182030" strokeWidth={TK} strokeLinecap="butt"
+        fill="none" stroke="#1e2d42" strokeWidth={TK} strokeLinecap="butt"
       />
 
-      {/* coloured arc bands — all butt caps, no overlap between segments */}
-      {segs.map((s, i) => (
-        <path key={i}
-          d={segPath(CX, CY, R, s.from / max, s.to / max)}
-          fill="none" stroke={s.color} strokeWidth={TK} strokeLinecap="butt"
-        />
-      ))}
-
-      {/* rounded tip circles at arc endpoints — placed AFTER segments so they sit on top */}
-      {(() => {
-        const p0 = ptArc(CX, CY, R, 0);                      // left endpoint
-        const p1 = ptArc(CX, CY, R, 1);                      // right endpoint
-        const firstColor = segs[0].color;
-        const lastColor  = segs[segs.length - 1].color;
+      {/* Coloured arc segments with small gap between each */}
+      {segs.map((s, i) => {
+        const t0 = s.from / max;
+        const t1 = s.to   / max;
+        const gapStart = i === 0              ? 0       : GAP / 2;
+        const gapEnd   = i === segs.length - 1 ? 0       : GAP / 2;
         return (
-          <>
-            <circle cx={p0.x.toFixed(1)} cy={p0.y.toFixed(1)} r={TK / 2} fill={firstColor} />
-            <circle cx={p1.x.toFixed(1)} cy={p1.y.toFixed(1)} r={TK / 2} fill={lastColor}  />
-          </>
+          <path key={i}
+            d={segPath(CX, CY, R, t0 + gapStart, t1 - gapEnd)}
+            fill="none" stroke={s.color} strokeWidth={TK} strokeLinecap="round"
+          />
         );
-      })()}
+      })}
 
-      {/* arc labels */}
+      {/* Labels outside the arc */}
       {lbls.map((l, i) => {
         const v = l.value / max;
         const p = ptArc(CX, CY, LR, v);
@@ -99,22 +92,24 @@ function SemiGauge({ value, max, segs, lbls }: {
           <text key={i}
             x={p.x.toFixed(1)} y={(p.y + 4).toFixed(1)}
             textAnchor={anchor(v)}
-            fontSize={9} fill="#64748b" fontFamily="inherit"
+            fontSize={9.5} fill="#64748b" fontFamily="inherit"
           >
             {l.text}
           </text>
         );
       })}
 
-      {/* needle */}
+      {/* Needle — thin white line from stub through pivot to tip */}
       <line
-        x1={CX} y1={CY} x2={nx.toFixed(1)} y2={ny.toFixed(1)}
-        stroke="white" strokeWidth={2.4} strokeLinecap="round"
+        x1={nxt.toFixed(1)} y1={nyt.toFixed(1)}
+        x2={nx.toFixed(1)}  y2={ny.toFixed(1)}
+        stroke="white" strokeWidth={2} strokeLinecap="round"
       />
-      {/* pivot */}
-      <circle cx={CX} cy={CY} r={6.5} fill="#111c2a" />
-      <circle cx={CX} cy={CY} r={4.5} fill="#6b7280" />
-      <circle cx={CX} cy={CY} r={2}   fill="#d1d5db" />
+
+      {/* Pivot dot */}
+      <circle cx={CX} cy={CY} r={7}   fill="#111c2a" />
+      <circle cx={CX} cy={CY} r={5}   fill="#374151" />
+      <circle cx={CX} cy={CY} r={2.5} fill="#9ca3af" />
     </svg>
   );
 }
