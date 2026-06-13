@@ -69,13 +69,24 @@ function SemiGauge({ value, max, segs, lbls }: {
         fill="none" stroke="#182030" strokeWidth={TK} strokeLinecap="butt"
       />
 
-      {/* coloured arc bands — seamless butt joins */}
-      {segs.map((s, i) => (
-        <path key={i}
-          d={segPath(CX, CY, R, s.from / max, s.to / max)}
-          fill="none" stroke={s.color} strokeWidth={TK} strokeLinecap="butt"
-        />
-      ))}
+      {/* coloured arc bands — outer ends rounded, inner junctions butt */}
+      {segs.map((s, i) => {
+        const isFirst = i === 0;
+        const isLast  = i === segs.length - 1;
+        // round only the very start (left) and very end (right) of the whole arc
+        const cap = isFirst ? "round" : isLast ? "round" : "butt";
+        // extend first segment slightly left and last slightly right so
+        // the round cap sits exactly at the arc endpoints
+        const v0 = (s.from - (isFirst ? 0.012 : 0)) / max;
+        const v1 = (s.to   + (isLast  ? 0.012 : 0)) / max;
+        return (
+          <path key={i}
+            d={segPath(CX, CY, R, Math.max(v0,0), Math.min(v1,1))}
+            fill="none" stroke={s.color} strokeWidth={TK}
+            strokeLinecap={cap as "round" | "butt"}
+          />
+        );
+      })}
 
       {/* arc labels */}
       {lbls.map((l, i) => {
@@ -126,11 +137,11 @@ function DrawdownBar({ value, max = 30 }: { value: number; max?: number }) {
 // ─── Consistency Dots ─────────────────────────────────────────────────────────
 function ConsistencyDots({ score }: { score: number }) {
   return (
-    <div className="flex items-center justify-center" style={{ gap: "clamp(5px, 2.5vw, 10px)" }}>
+    <div className="flex items-center justify-center gap-1.5 w-full">
       {Array.from({ length: 5 }).map((_, i) => (
         <div key={i}
           className={`rounded-full border-2 shrink-0 ${i < score ? "bg-emerald-500 border-emerald-400" : "bg-transparent border-[#2a3a52]"}`}
-          style={{ width: "clamp(18px, 7.5vw, 28px)", height: "clamp(18px, 7.5vw, 28px)" }}
+          style={{ width: "clamp(10px, 8%, 20px)", height: "clamp(10px, 8%, 20px)" }}
         />
       ))}
     </div>
