@@ -77,7 +77,7 @@ export default function StreakCard({ trades }: Props) {
         <span className="text-xs font-semibold uppercase tracking-[0.22em] text-white/45">Streaks & Consistency</span>
       </div>
 
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {[
           { label: "Current", value: currentStreak > 0 ? `${currentStreak}${streakType === "WIN" ? "W" : "L"}` : "—", color: currentStreak > 0 && streakType === "WIN" ? "text-emerald-400" : currentStreak > 0 ? "text-red-400" : "text-white/45", icon: streakType === "WIN" ? "🔥" : streakType === "LOSS" ? "❄️" : "—" },
           { label: "Best Win", value: `${longestWin}W`, color: "text-emerald-400", icon: "🏆" },

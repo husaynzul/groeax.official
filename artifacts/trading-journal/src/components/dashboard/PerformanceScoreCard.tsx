@@ -237,25 +237,25 @@ export default function PerformanceScoreCard({ analytics }: Props) {
         <div className="flex flex-col gap-0">
 
           {/* ── Gauges row ────────────────────────────────────── */}
-          <div className="grid grid-cols-2 gap-x-3 w-full">
+          <div className="grid grid-cols-2 gap-x-2 sm:gap-x-3 w-full">
 
             {/* Win Rate */}
-            <div className="flex flex-col items-center min-w-0">
+            <div className="flex flex-col items-center min-w-0 overflow-visible">
               <p className="text-[11px] text-muted-foreground font-medium mb-0.5">Win Rate</p>
-              {/* SVG wrapper: overflow visible so labels show; width 100% */}
-              <div className="w-full" style={{ overflow: "visible" }}>
+              {/* px-1 keeps SVG edge labels from being clipped by parent overflow */}
+              <div className="w-full px-1" style={{ overflow: "visible" }}>
                 <SemiGauge value={winRate} max={100} segs={wrSegs} lbls={wrLbls} />
               </div>
-              <p className={`text-2xl font-bold leading-none -mt-1 ${wLbl.c}`}>
+              <p className={`text-xl sm:text-2xl font-bold leading-none -mt-1 ${wLbl.c}`}>
                 {winRate.toFixed(0)}%
               </p>
               <p className={`text-[11px] font-semibold mt-0.5 ${wLbl.c}`}>{wLbl.t}</p>
             </div>
 
             {/* Profit Factor */}
-            <div className="flex flex-col items-center min-w-0">
+            <div className="flex flex-col items-center min-w-0 overflow-visible">
               <p className="text-[11px] text-muted-foreground font-medium mb-0.5">Profit Factor</p>
-              <div className="w-full" style={{ overflow: "visible" }}>
+              <div className="w-full px-1" style={{ overflow: "visible" }}>
                 <SemiGauge
                   value={Math.min(profitFactor, 4)}
                   max={4}
@@ -263,7 +263,7 @@ export default function PerformanceScoreCard({ analytics }: Props) {
                   lbls={pfLbls}
                 />
               </div>
-              <p className={`text-2xl font-bold leading-none -mt-1 ${pLbl.c}`}>
+              <p className={`text-xl sm:text-2xl font-bold leading-none -mt-1 ${pLbl.c}`}>
                 {profitFactor >= 4 ? "4+" : profitFactor.toFixed(2)}
               </p>
               <p className={`text-[11px] font-semibold mt-0.5 ${pLbl.c}`}>{pLbl.t}</p>

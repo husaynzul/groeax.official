@@ -222,7 +222,7 @@ function MonthlyGoalCard({ monthlyPnL, goal, onSetGoal }: { monthlyPnL: number; 
   const remaining = goal > 0 ? Math.max(goal - monthlyPnL, 0) : 0;
   const filled = Math.max(pct, 0);
   const donutData = [{ value: filled }, { value: Math.max(100 - filled, 0) }];
-  const ringColor = over ? "#10b981" : pct >= 75 ? "#f59e0b" : pct >= 40 ? "#3b82f6" : "#6b7280";
+  const ringColor = over ? "#10b981" : pct >= 75 ? "#22c55e" : pct >= 40 ? "#f59e0b" : "#ef4444";
   function commitGoal() { const v = parseFloat(draft); if (!isNaN(v) && v > 0) onSetGoal(v); setEditing(false); }
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="glass-card p-4 flex flex-col gap-3 hover:border-white/15 transition-colors">
@@ -239,11 +239,11 @@ function MonthlyGoalCard({ monthlyPnL, goal, onSetGoal }: { monthlyPnL: number; 
         </div>
       )}
       {goal > 0 ? (
-        <div className="flex items-center gap-4">
-          <div className="relative shrink-0">
-            <ResponsiveContainer width={100} height={100}>
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <div className="relative shrink-0 mx-auto sm:mx-0">
+            <ResponsiveContainer width={96} height={96}>
               <PieChart>
-                <Pie data={donutData} cx="50%" cy="50%" innerRadius={32} outerRadius={44} startAngle={90} endAngle={-270} dataKey="value" strokeWidth={0} isAnimationActive animationDuration={900}>
+                <Pie data={donutData} cx="50%" cy="50%" innerRadius={30} outerRadius={42} startAngle={90} endAngle={-270} dataKey="value" strokeWidth={0} isAnimationActive animationDuration={900}>
                   <Cell fill={ringColor} />
                   <Cell fill="rgba(255,255,255,0.05)" />
                 </Pie>
@@ -251,7 +251,7 @@ function MonthlyGoalCard({ monthlyPnL, goal, onSetGoal }: { monthlyPnL: number; 
             </ResponsiveContainer>
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="text-sm font-bold" style={{ color: ringColor }}>{pct.toFixed(0)}%</span></div>
           </div>
-          <div className="flex-1 space-y-2">
+          <div className="flex-1 min-w-[120px] space-y-2">
             <div><p className="text-[10px] text-muted-foreground uppercase tracking-wider">This Month</p><p className={`text-xl font-bold ${monthlyPnL >= 0 ? "text-emerald-400" : "text-red-400"}`}>{monthlyPnL >= 0 ? "+" : ""}{fmtMoney(monthlyPnL)}</p></div>
             <div><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Goal</p><p className="text-sm font-semibold text-foreground">{fmtMoney(goal)}</p></div>
             {!over && remaining > 0 && <p className="text-[10px] text-muted-foreground">{fmtMoney(remaining)} remaining</p>}
@@ -507,7 +507,7 @@ export default function Dashboard() {
       </div>
 
       {/* Core metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
         <MetricCard index={0} label="Net P&L" value={fmtMoney(analytics.netBalance)} sub={`${fmtMoney(analytics.totalProfit)} won`} icon={analytics.netBalance >= 0 ? TrendingUp : TrendingDown} color={analytics.netBalance >= 0 ? "text-emerald-400" : "text-red-400"} />
         <MetricCard index={1} label="Win Rate" value={fmtPct(analytics.winRate)} sub={`${analytics.totalTrades} trades`} icon={Target} color={analytics.winRate >= 50 ? "text-emerald-400" : "text-red-400"} />
         <MetricCard index={2} label="Avg Win" value={fmtMoney(analytics.avgWin)} sub={`Avg Loss: ${fmtMoney(analytics.avgLoss)}`} icon={BarChart2} />
@@ -517,7 +517,7 @@ export default function Dashboard() {
 
       {/* Balance metrics row (only when balance is set) */}
       {startingBalance > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <MetricCard index={0} label="Starting Balance" value={fmtMoney(startingBalance)} icon={DollarSign} />
           <MetricCard index={1} label="Current Balance" value={fmtMoney(currentBalance)} sub="auto-updated" icon={Wallet} color={currentBalance >= startingBalance ? "text-emerald-400" : "text-red-400"} />
           <MetricCard index={2} label="Peak Equity" value={fmtMoney(analytics.drawdownStats.peak)} sub="all-time high" icon={Trophy} color="text-violet-400" />
@@ -526,8 +526,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="lg:col-span-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="md:col-span-1 lg:col-span-2">
           <PerformanceScoreCard analytics={analytics} />
         </motion.div>
 
