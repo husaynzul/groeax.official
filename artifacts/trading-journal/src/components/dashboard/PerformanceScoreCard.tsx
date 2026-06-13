@@ -44,8 +44,9 @@ function CSSGauge({
   topColor: string; rightColor: string; leftColor?: string;
   labels: string[];
 }) {
-  const outerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale]   = useState(1);
+  const outerRef   = useRef<HTMLDivElement>(null);
+  const [scale,    setScale]   = useState(1);
+  const [animated, setAnimated] = useState(false);
 
   useEffect(() => {
     const el = outerRef.current;
@@ -54,15 +55,22 @@ function CSSGauge({
       const w = el.getBoundingClientRect().width;
       if (w > 0) setScale(Math.min(1, w / G_TOT));
     };
-    measure();                        // fire immediately — correct size on first paint
+    measure();
     const obs = new ResizeObserver(measure);
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
 
+  // Trigger sweep animation after first paint (50 ms lets the browser render at −90° first)
+  useEffect(() => {
+    const id = setTimeout(() => setAnimated(true), 50);
+    return () => clearTimeout(id);
+  }, []);
+
   // Needle: −90° = left (0 %), 0° = straight up (50 %), +90° = right (100 %)
-  const ratio  = Math.min(Math.max(value / max, 0), 1);
-  const rotate = ratio * 180 - 90;
+  const ratio      = Math.min(Math.max(value / max, 0), 1);
+  const targetRot  = ratio * 180 - 90;
+  const rotate     = animated ? targetRot : -90;
 
   // Arc labels at 135° / 90° / 45°  →  left / top / right
   // Use only the 3 middle labels from the 5-item array (indices 1, 2, 3)
