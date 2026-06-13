@@ -16,85 +16,77 @@ function segPath(cx: number, cy: number, r: number, v0: number, v1: number) {
   return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${la} 0 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
 }
 
-// ─── Semi-Gauge (donut arc style) ─────────────────────────────────────────────
+// ─── Semi-Gauge ─────────────────────────────────────────────────────────────
+// Speedometer-style open semicircle — 180° arc, needle from centre pivot.
+// All dimensions fit inside the viewBox so nothing clips outside the SVG.
 interface Seg { from: number; to: number; color: string }
 interface Lbl { value: number; text: string }
 
 function SemiGauge({ value, max, segs, lbls }: {
   value: number; max: number; segs: Seg[]; lbls: Lbl[];
 }) {
-  const CX = 110;   // arc centre x
-  const CY = 112;   // arc centre y (enough room above for top label)
-  const R  = 74;    // arc radius
-  const TK = 22;    // thick donut stroke
+  // ── geometry ──────────────────────────────────────────────────────────────
+  const CX = 100;   // centre x
+  const CY = 92;    // centre y  (pivot lives here)
+  const R  = 62;    // arc centre-line radius
+  const TK = 17;    // arc stroke width — thick but not a ring
 
-  // viewBox: left/right labels sit at R+TK+10 from centre
-  const LR  = R + TK / 2 + 12; // label orbit radius
-  const VBX = -30;
-  const VBY = -22;
-  const VBW = (CX + LR + 28) - VBX;
-  const VBH = CY + 18 - VBY;
+  // label orbit: just outside the outer edge of the arc
+  const LBL_R = R + TK / 2 + 10;
+
+  // viewBox: add enough padding around the furthest label text
+  // Left label "0%" at x ≈ CX − LBL_R ≈ 29  → need ~26 px left pad
+  // Right label "100%" at x ≈ CX + LBL_R ≈ 171 → need ~32 px right pad
+  // Top label at y ≈ CY − LBL_R ≈ 20 → need ~14 px top pad
+  // Bottom: pivot at CY, plus ~10 px for pivot circle
+  const VBX = CX - LBL_R - 28;            // ≈ −20
+  const VBY = CY - LBL_R - 14;            // ≈ −6
+  const VBW = (CX + LBL_R + 32) - VBX;   // ≈ 240
+  const VBH = CY + 14 - VBY;             // ≈ 112
 
   const ratio = Math.min(Math.max(value / max, 0), 1);
   const θ = ((180 - ratio * 180) * Math.PI) / 180;
-  const nLen = R - 2;
+  // needle tip sits at 85% of inner edge of arc
+  const nLen = R - TK * 0.5 - 2;
   const nx = CX + nLen * Math.cos(θ);
   const ny = CY - nLen * Math.sin(θ);
 
-  function labelAnchor(v: number) {
-    if (v < 0.12) return "end";
-    if (v > 0.88) return "start";
+  function anchor(v: number) {
+    if (v < 0.15) return "end";
+    if (v > 0.85) return "start";
     return "middle";
   }
 
   return (
     <svg
-      viewBox={`${VBX} ${VBY} ${VBW} ${VBH}`}
+      viewBox={`${VBX.toFixed(1)} ${VBY.toFixed(1)} ${VBW.toFixed(1)} ${VBH.toFixed(1)}`}
       width="100%"
-      style={{ display: "block", overflow: "visible" }}
+      style={{ display: "block" }}
       aria-hidden
     >
-      <defs>
-        <filter id="arc-glow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="2.5" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-      </defs>
-
       {/* background track */}
       <path
         d={segPath(CX, CY, R, 0, 1)}
-        fill="none"
-        stroke="#1e2a3a"
-        strokeWidth={TK}
-        strokeLinecap="butt"
+        fill="none" stroke="#1a2535" strokeWidth={TK} strokeLinecap="butt"
       />
 
-      {/* coloured donut segments */}
+      {/* coloured arc segments — seamless, butt caps, no gaps */}
       {segs.map((s, i) => (
         <path key={i}
           d={segPath(CX, CY, R, s.from / max, s.to / max)}
-          fill="none"
-          stroke={s.color}
-          strokeWidth={TK}
-          strokeLinecap="butt"
-          filter="url(#arc-glow)"
-          opacity={0.92}
+          fill="none" stroke={s.color} strokeWidth={TK} strokeLinecap="butt"
         />
       ))}
 
-      {/* tick labels */}
+      {/* labels positioned just outside the arc */}
       {lbls.map((l, i) => {
         const v = l.value / max;
-        const p = ptArc(CX, CY, LR, v);
+        const p = ptArc(CX, CY, LBL_R, v);
         return (
           <text key={i}
-            x={p.x} y={p.y + 4}
-            textAnchor={labelAnchor(v)}
-            fontSize={9.5}
-            fill="#6b7280"
-            fontFamily="inherit"
-            fontWeight="500"
+            x={p.x.toFixed(1)} y={(p.y + 4).toFixed(1)}
+            textAnchor={anchor(v)}
+            fontSize={9} fill="#64748b" fontFamily="inherit"
           >
             {l.text}
           </text>
@@ -104,20 +96,20 @@ function SemiGauge({ value, max, segs, lbls }: {
       {/* needle shadow */}
       <line
         x1={CX} y1={CY}
-        x2={(CX + (nLen - 4) * Math.cos(θ)).toFixed(2)}
-        y2={(CY - (nLen - 4) * Math.sin(θ)).toFixed(2)}
-        stroke="black" strokeWidth={4} strokeLinecap="round" opacity={0.25}
+        x2={(CX + (nLen + 2) * Math.cos(θ)).toFixed(1)}
+        y2={(CY - (nLen + 2) * Math.sin(θ)).toFixed(1)}
+        stroke="#000" strokeWidth={4} strokeLinecap="round" opacity={0.2}
       />
       {/* needle */}
       <line
         x1={CX} y1={CY}
-        x2={nx.toFixed(2)} y2={ny.toFixed(2)}
-        stroke="white" strokeWidth={2.5} strokeLinecap="round"
+        x2={nx.toFixed(1)} y2={ny.toFixed(1)}
+        stroke="white" strokeWidth={2.2} strokeLinecap="round"
       />
-      {/* pivot ring */}
-      <circle cx={CX} cy={CY} r={7} fill="#1e2a3a" />
-      <circle cx={CX} cy={CY} r={5} fill="#8b95a5" />
-      <circle cx={CX} cy={CY} r={2.5} fill="#c0c8d4" />
+      {/* pivot */}
+      <circle cx={CX} cy={CY} r={6} fill="#0f1827" />
+      <circle cx={CX} cy={CY} r={4.5} fill="#6b7280" />
+      <circle cx={CX} cy={CY} r={2} fill="#d1d5db" />
     </svg>
   );
 }
@@ -126,16 +118,16 @@ function SemiGauge({ value, max, segs, lbls }: {
 function DrawdownBar({ value, max = 30 }: { value: number; max?: number }) {
   const pct = Math.min(Math.max(value / max, 0), 1) * 100;
   return (
-    <div className="relative w-full h-[14px] rounded-full bg-[#1e2a3a] overflow-hidden">
+    <div className="relative w-full h-[12px] rounded-full bg-[#1a2535] overflow-hidden">
       <div className="absolute inset-0"
-        style={{ background: "linear-gradient(to right,#22c55e 0%,#f97316 50%,#ef4444 100%)", opacity: 0.25 }} />
+        style={{ background: "linear-gradient(to right,#22c55e 0%,#f97316 50%,#ef4444 100%)", opacity: 0.22 }} />
       <div className="absolute inset-y-0 left-0 rounded-full"
         style={{
           width: `${Math.max(pct, 3)}%`,
           background: "linear-gradient(to right,#22c55e 0%,#f97316 50%,#ef4444 100%)",
         }} />
-      <div className="absolute top-[-2px] bottom-[-2px] w-[3px] rounded-sm bg-white/90 pointer-events-none"
-        style={{ left: `clamp(1px, calc(${pct}% - 1.5px), calc(100% - 4px))` }} />
+      <div className="absolute top-[-2px] bottom-[-2px] w-[2.5px] rounded-sm bg-white/90 pointer-events-none"
+        style={{ left: `clamp(1px, calc(${pct}% - 1.25px), calc(100% - 3.5px))` }} />
     </div>
   );
 }
@@ -143,11 +135,11 @@ function DrawdownBar({ value, max = 30 }: { value: number; max?: number }) {
 // ─── Consistency Dots ─────────────────────────────────────────────────────────
 function ConsistencyDots({ score }: { score: number }) {
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div className="flex items-center justify-center gap-[6px]">
       {Array.from({ length: 5 }).map((_, i) => (
         <div key={i}
           className={`rounded-full border-2 shrink-0 ${i < score ? "bg-emerald-500 border-emerald-400" : "bg-transparent border-[#2a3a52]"}`}
-          style={{ width: "clamp(18px, 8vw, 28px)", height: "clamp(18px, 8vw, 28px)" }}
+          style={{ width: "clamp(16px, 6.5vw, 26px)", height: "clamp(16px, 6.5vw, 26px)" }}
         />
       ))}
     </div>
@@ -235,42 +227,42 @@ export default function PerformanceScoreCard({ analytics }: Props) {
   ];
 
   return (
-    <div className="glass-card p-4 w-full box-border" style={{ overflow: "hidden" }}>
+    <div className="glass-card p-3 w-full">
 
       {/* Header */}
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-2">
         <Zap className="w-3.5 h-3.5 text-primary shrink-0" />
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider select-none">
+        <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider select-none">
           Performance Score
         </h2>
       </div>
 
       {totalTrades === 0 ? (
-        <div className="py-10 text-center text-muted-foreground text-sm">
+        <div className="py-8 text-center text-muted-foreground text-sm">
           Add trades to see your performance score
         </div>
       ) : (
-        <div className="flex flex-col gap-0">
+        <div className="flex flex-col">
 
-          {/* ── Gauges row ────────────────────────────────────── */}
-          <div className="grid grid-cols-2 gap-x-1 w-full">
+          {/* ── Gauges row ──────────────────────────────────── */}
+          <div className="grid grid-cols-2 gap-x-2 w-full">
 
             {/* Win Rate */}
-            <div className="flex flex-col items-center min-w-0 overflow-visible">
-              <p className="text-[11px] text-muted-foreground font-medium mb-0.5">Win Rate</p>
-              <div className="w-full" style={{ overflow: "visible" }}>
+            <div className="flex flex-col items-center min-w-0">
+              <p className="text-[11px] text-muted-foreground font-medium mb-0">Win Rate</p>
+              <div className="w-full">
                 <SemiGauge value={winRate} max={100} segs={wrSegs} lbls={wrLbls} />
               </div>
-              <p className={`text-xl sm:text-2xl font-bold leading-none -mt-2 ${wLbl.c}`}>
+              <p className={`text-lg sm:text-xl font-bold leading-none -mt-3 ${wLbl.c}`}>
                 {winRate.toFixed(0)}%
               </p>
               <p className={`text-[11px] font-semibold mt-0.5 ${wLbl.c}`}>{wLbl.t}</p>
             </div>
 
             {/* Profit Factor */}
-            <div className="flex flex-col items-center min-w-0 overflow-visible">
-              <p className="text-[11px] text-muted-foreground font-medium mb-0.5">Profit Factor</p>
-              <div className="w-full" style={{ overflow: "visible" }}>
+            <div className="flex flex-col items-center min-w-0">
+              <p className="text-[11px] text-muted-foreground font-medium mb-0">Profit Factor</p>
+              <div className="w-full">
                 <SemiGauge
                   value={Math.min(profitFactor, 4)}
                   max={4}
@@ -278,50 +270,50 @@ export default function PerformanceScoreCard({ analytics }: Props) {
                   lbls={pfLbls}
                 />
               </div>
-              <p className={`text-xl sm:text-2xl font-bold leading-none -mt-2 ${pLbl.c}`}>
+              <p className={`text-lg sm:text-xl font-bold leading-none -mt-3 ${pLbl.c}`}>
                 {profitFactor >= 4 ? "4+" : profitFactor.toFixed(2)}
               </p>
               <p className={`text-[11px] font-semibold mt-0.5 ${pLbl.c}`}>{pLbl.t}</p>
             </div>
           </div>
 
-          {/* ── Divider ───────────────────────────────────────── */}
-          <div className="border-t border-white/5 my-3" />
+          {/* ── Divider ─────────────────────────────────────── */}
+          <div className="border-t border-white/5 my-2.5" />
 
-          {/* ── Bottom row: Drawdown + Consistency ────────────── */}
-          <div className="grid grid-cols-2 gap-x-4 w-full">
+          {/* ── Bottom row ──────────────────────────────────── */}
+          <div className="grid grid-cols-2 gap-x-3 w-full">
 
             {/* Max Drawdown */}
-            <div className="flex flex-col items-center gap-2 min-w-0">
+            <div className="flex flex-col items-center gap-1.5 min-w-0">
               <p className="text-[11px] text-muted-foreground font-medium text-center">Max Drawdown</p>
-              <div className="w-full">
-                <div className="flex justify-between text-[9px] text-muted-foreground/60 mb-1 px-0.5">
+              <div className="w-full px-0.5">
+                <div className="flex justify-between text-[8px] text-muted-foreground/50 mb-0.5">
                   <span>0%</span><span>15%</span><span>30%</span>
                 </div>
                 <DrawdownBar value={maxDD} max={30} />
               </div>
-              <p className={`text-2xl font-bold leading-none ${dLbl.c}`}>
+              <p className={`text-xl font-bold leading-none ${dLbl.c}`}>
                 {maxDD.toFixed(1)}%
               </p>
               <p className={`text-[11px] font-semibold ${dLbl.c}`}>{dLbl.t}</p>
             </div>
 
             {/* Consistency */}
-            <div className="flex flex-col items-center gap-2 min-w-0">
+            <div className="flex flex-col items-center gap-1.5 min-w-0">
               <p className="text-[11px] text-muted-foreground font-medium text-center">Consistency</p>
-              <div className="w-full flex items-center justify-center py-1">
+              <div className="w-full flex items-center justify-center py-0.5">
                 <ConsistencyDots score={conScore} />
               </div>
-              <p className={`text-2xl font-bold leading-none ${cLbl.c}`}>
+              <p className={`text-xl font-bold leading-none ${cLbl.c}`}>
                 {conScore} / 5
               </p>
               <p className={`text-[11px] font-semibold ${cLbl.c}`}>{cLbl.t}</p>
             </div>
           </div>
 
-          {/* ── Overall footer ─────────────────────────────────── */}
-          <div className="border-t border-white/5 mt-3 pt-2.5 flex items-center gap-2">
-            <CheckCircle2 className={`w-4 h-4 shrink-0 ${oLbl.c}`} />
+          {/* ── Overall footer ──────────────────────────────── */}
+          <div className="border-t border-white/5 mt-2.5 pt-2 flex items-center gap-2">
+            <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 ${oLbl.c}`} />
             <span className="text-xs text-muted-foreground font-medium">Overall Performance:</span>
             <span className={`text-xs font-bold ${oLbl.c}`}>{oLbl.t}</span>
           </div>
