@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getApiBase } from "@/lib/apiBase";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowDownRight, ArrowUpRight, Shield, Radar, BadgeAlert, TrendingUp, TrendingDown, ChevronDown } from "lucide-react";
 
@@ -36,7 +37,7 @@ export default function LiveTradingSignals() {
 
   useEffect(() => {
     let mounted = true;
-    const base = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+    const base = getApiBase();
     const load = async () => {
       try {
         const res = await fetch(`${base}/api/trading-signal`, {

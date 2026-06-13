@@ -56,7 +56,8 @@ interface Metrics {
 }
 interface StrategyMeta { id:string; name:string; description:string }
 
-const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+import { getApiBase } from "@/lib/apiBase";
+const BASE = getApiBase();
 
 /* ── Drawing tool list ──────────────────────────────────────────── */
 const DRAW_TOOLS = [

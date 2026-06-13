@@ -28,7 +28,8 @@ interface VirtualTrade {
 
 interface SessionStats { wins: number; losses: number; be: number; totalPnl: number }
 
-const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+import { getApiBase } from "@/lib/apiBase";
+const BASE = getApiBase();
 const SPEEDS = [0.5, 1, 2, 4, 8] as const;
 type Speed = (typeof SPEEDS)[number];
 

@@ -151,7 +151,7 @@ export default function AICoach() {
     setMessages([...updatedMessages, assistantMsg]);
 
     try {
-      const basePath = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+      const basePath = (await import("@/lib/apiBase")).getApiBase();
       const res = await fetch(`${basePath}/api/ai/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

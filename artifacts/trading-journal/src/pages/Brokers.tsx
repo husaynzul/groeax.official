@@ -11,7 +11,8 @@ import { useTradeStore } from "@/store/tradeStore";
 import { usePnLRecalculator } from "@/hooks/usePnLRecalculator";
 import type { Trade } from "@/types";
 
-const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+import { getApiBase } from "@/lib/apiBase";
+const BASE = getApiBase();
 
 /* ── Broker catalogue ──────────────────────────────────────────────── */
 interface BrokerDef {

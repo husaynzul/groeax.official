@@ -3,8 +3,9 @@
  * Handles cross-device sync — same data on PC, mobile, tablet.
  */
 import { Trade } from "../types";
+import { getApiBase } from "../lib/apiBase";
 
-const BASE = () => (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+const BASE = getApiBase;
 
 function authHeaders(token: string) {
   return {

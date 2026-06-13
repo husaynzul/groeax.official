@@ -118,7 +118,7 @@ export default function News() {
     setLoading(true);
     setError(null);
     try {
-      const basePath = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+      const basePath = (await import("@/lib/apiBase")).getApiBase();
       const res = await fetch(`${basePath}/api/news/calendar`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: CalEvent[] = await res.json();

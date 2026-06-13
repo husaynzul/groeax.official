@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { getApiBase } from "@/lib/apiBase";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Brain,
@@ -494,7 +495,7 @@ export default function Intelligence() {
   const [filterVerified, setFilterVerified] = useState(false);
   const [activeTab, setActiveTab] = useState<"feed" | "matrix">("feed");
 
-  const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+  const BASE = getApiBase();
 
   const fetchData = useCallback(async () => {
     setError(null);

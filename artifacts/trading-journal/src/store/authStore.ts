@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { getApiBase } from "@/lib/apiBase";
 
 export type Plan = "silver" | "platinum" | "premium" | "free" | "monthly" | "yearly";
 
@@ -57,7 +58,7 @@ export function getSavedToken(): string | null {
   try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
 }
 
-const BASE = () => (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+const BASE = getApiBase;
 
 /** Safe JSON parser — returns null instead of throwing on empty/non-JSON bodies */
 async function safeJson(res: Response): Promise<Record<string, unknown> | null> {

@@ -8,8 +8,18 @@ const rawPort = process.env.PORT;
 const port = rawPort ? Number(rawPort) : 5173;
 const basePath = process.env.BASE_PATH ?? "/";
 
+// In Replit dev mode, point API calls directly at the production server
+// (port 5000 / external port 80) to avoid the double-proxy 502 issue.
+const apiBase =
+  process.env.NODE_ENV !== "production" && process.env.REPLIT_DEV_DOMAIN
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+    : "";
+
 export default defineConfig({
   base: basePath,
+  define: {
+    __VITE_API_BASE__: JSON.stringify(apiBase),
+  },
   plugins: [
     react(),
     tailwindcss(),
