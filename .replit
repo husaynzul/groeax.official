@@ -72,10 +72,7 @@ WHATSAPP_ADMIN_1 = "+923478618727"
 WHATSAPP_ADMIN_2 = "+923278659748"
 ADMIN_EMAIL = "arbinslom@gmail.com"
 EMAIL_SMTP_USER = "arbinslom@gmail.com"
-EMAIL_SMTP_PASSWORD = "escf Irtt ynkj jdyp"
 EMAIL_FROM = "Groeax Payments <noreply@groeax.com>"
-ADMIN_API_TOKEN = "groeax-admin-secret-2026"
-SENDGRID_API_KEY = "escf Irtt ynkj jdyp"
 
 [nix]
 channel = "stable-25_05"
