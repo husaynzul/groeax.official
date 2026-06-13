@@ -145,10 +145,10 @@ function wr(v: number) {
   return             { t: "Weak",       c: "text-red-400"     };
 }
 function pf(v: number) {
-  if (v >= 3)   return { t: "Excellent", c: "text-emerald-400" };
-  if (v >= 1.5) return { t: "Good",      c: "text-emerald-400" };
-  if (v >= 1)   return { t: "Average",   c: "text-yellow-400"  };
-  return               { t: "Weak",      c: "text-red-400"     };
+  if (v >= 3) return { t: "Excellent", c: "text-emerald-400" };
+  if (v >= 2) return { t: "Good",      c: "text-yellow-400"  };
+  if (v >= 1) return { t: "Average",   c: "text-yellow-400"  };
+  return             { t: "Poor",      c: "text-red-400"     };
 }
 function dd(v: number) {
   if (v <= 15) return { t: "Low",      c: "text-emerald-400" };
@@ -206,8 +206,7 @@ export default function PerformanceScoreCard({ analytics }: Props) {
   ];
   const pfSegs: Seg[] = [
     { from: 0, to: 1, color: "#ef4444" },
-    { from: 1, to: 2, color: "#f97316" },
-    { from: 2, to: 3, color: "#eab308" },
+    { from: 1, to: 3, color: "#eab308" },
     { from: 3, to: 4, color: "#22c55e" },
   ];
   const pfLbls: Lbl[] = [
