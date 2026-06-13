@@ -72,7 +72,7 @@ export async function sendPaymentEmail(info: PaymentNotification, adminEmail: st
   `;
 
   try {
-    const transporter = createEmailTransport();
+    const transporter = await createEmailTransport();
     if (!transporter) {
       logger.warn("Email notification skipped — Gmail not configured. Set EMAIL_SMTP_USER and EMAIL_SMTP_PASSWORD env vars with valid Gmail app password.");
       return;
@@ -102,7 +102,7 @@ export async function sendPaymentEmail(info: PaymentNotification, adminEmail: st
   }
 }
 
-function createEmailTransport(): any {
+async function createEmailTransport(): Promise<any> {
   const user = process.env.EMAIL_SMTP_USER;
   const pass = process.env.EMAIL_SMTP_PASSWORD;
 
@@ -111,11 +111,9 @@ function createEmailTransport(): any {
     return null;
   }
 
-  // Lazy import to avoid requiring nodemailer if not used
-  const nodemailer = require("nodemailer");
-  
   // Use Gmail service directly for simpler config
   try {
+    const nodemailer = await import("nodemailer");
     return nodemailer.createTransport({
       service: "gmail",
       auth: {
