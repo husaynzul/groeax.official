@@ -526,6 +526,15 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Mobile-only: compact drawdown pill under balance row */}
+      {startingBalance > 0 && analytics.drawdownStats.drawdownAmount > 0 && (
+        <div className="flex sm:hidden items-center gap-2 px-3 py-2 rounded-xl bg-orange-500/10 border border-orange-500/20 text-xs">
+          <TrendingDown className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+          <span className="text-muted-foreground">Max Drawdown from peak <span className="font-bold text-orange-400">{analytics.drawdownStats.drawdownPercent.toFixed(2)}%</span></span>
+          <span className="ml-auto text-muted-foreground/60">{fmtMoney(analytics.drawdownStats.drawdownAmount)}</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="md:col-span-1 lg:col-span-2">
           <PerformanceScoreCard analytics={analytics} />

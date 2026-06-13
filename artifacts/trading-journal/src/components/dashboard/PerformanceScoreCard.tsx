@@ -1,11 +1,11 @@
+import { useRef, useEffect, useState } from "react";
 import { Zap, CheckCircle2 } from "lucide-react";
 import type { Analytics } from "@/engine/analyticsEngine";
 
 interface Props { analytics: Analytics }
 
-// ─── CSS Border Gauge ────────────────────────────────────────────────────────
-// Exact CSS-border semicircle technique: thick half-ring via border + border-radius,
-// with a dynamic needle and outer arc labels.
+// ─── Responsive CSS Border Gauge ─────────────────────────────────────────────
+// Uses a ResizeObserver to scale the fixed-px gauge to fit any container width.
 function CSSGauge({
   value, max,
   topColor, rightColor, leftColor = "transparent",
@@ -13,131 +13,152 @@ function CSSGauge({
 }: {
   value: number; max: number;
   topColor: string; rightColor: string; leftColor?: string;
-  labels: string[]; // [far-left, quarter-left, top, quarter-right, far-right]
+  labels: string[];
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  // Natural gauge dimensions (design units)
+  const IW = 150; // inner width
+  const IH = 75;  // inner height
+  const BW = 18;  // border width
+  const BR = IW / 2 + BW;
+
+  // Natural full width = gauge + label bleed on each side
+  const BLEED  = 22;
+  const naturalW = IW + BW * 2 + BLEED * 2; // ≈ 226px
+  const naturalH = IH + BW + 14 + BLEED;     // top label space + bleed
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(([entry]) => {
+      const w = entry.contentRect.width;
+      setScale(w >= naturalW ? 1 : w / naturalW);
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [naturalW]);
+
   const ratio  = Math.min(Math.max(value / max, 0), 1);
-  // −90° = pointing left (0), 0° = pointing up (50%), +90° = pointing right (100%)
   const rotate = ratio * 180 - 90;
 
-  // Dimensions (CSS box-sizing: content-box so border adds to size)
-  const IW = 150; // inner width
-  const IH = 75;  // inner height (half of IW for a perfect semicircle)
-  const BW = 18;  // border width
-  const BR = IW / 2 + BW; // border-radius for outer curve
-
-  // needle length = nearly the inner radius
   const needleH = IH - 4;
+  const totalW  = IW + BW * 2;
 
-  // Wrapper total size including border
-  const totalW = IW + BW * 2;
+  // Label geometry
+  const LR = BR + 12;
+  const cx = totalW / 2 + BLEED;
+  const cy = IH + BW + BLEED;
 
-  // Label positions — computed at arc midpoints, outside the border
-  // Arc goes from left (180° CCW from right) to right (0°) as value 0→1
-  // labelPositions: [0%, 25%, 50%, 75%, 100%] as angles 180°→90°→0°
-  const labelAngles = [180, 135, 90, 45, 0]; // degrees from 3-o'clock (east)
-  const LR = BR + 11; // radius to label center
-  const cx = totalW / 2;  // center x of arc within wrapper
-  const cy = IH + BW;     // center y of arc within wrapper (bottom of semicircle)
-
+  const labelAngles = [180, 135, 90, 45, 0];
+  const textAnchors = ["end", "end", "middle", "start", "start"] as const;
   const labelPositions = labelAngles.map(deg => {
     const rad = (deg * Math.PI) / 180;
     return { x: cx + LR * Math.cos(rad), y: cy - LR * Math.sin(rad) };
   });
 
-  const textAnchors = ["end", "end", "middle", "start", "start"] as const;
-
   return (
-    <div style={{ position: "relative", width: totalW, margin: "0 auto" }}>
-
-      {/* Labels outside arc */}
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-        {labels.map((txt, i) => (
-          <span
-            key={i}
-            style={{
-              position: "absolute",
-              fontSize: 9,
-              color: "#64748b",
-              fontFamily: "inherit",
-              lineHeight: 1,
-              left: labelPositions[i].x,
-              top: labelPositions[i].y,
-              transform: textAnchors[i] === "end"
-                ? "translate(-100%, -50%)"
-                : textAnchors[i] === "start"
-                  ? "translate(0, -50%)"
-                  : "translate(-50%, -50%)",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {txt}
-          </span>
-        ))}
-      </div>
-
-      {/* Gauge shell — background track */}
+    <div ref={containerRef} style={{ width: "100%" }}>
       <div
         style={{
-          width: IW,
-          height: IH,
-          border: `${BW}px solid #2f3747`,
-          borderBottom: "none",
-          borderRadius: `${BR}px ${BR}px 0 0`,
-          position: "relative",
-          boxSizing: "content-box",
-          margin: "0 auto",
-          marginTop: 14, // room for top label
+          width: naturalW,
+          height: naturalH,
+          transformOrigin: "top center",
+          transform: `scale(${scale})`,
+          marginBottom: scale < 1 ? naturalH * (scale - 1) : 0,
         }}
       >
-        {/* Colour overlay — ::before equivalent */}
+        {/* Labels */}
+        <div style={{ position: "absolute", width: naturalW, height: naturalH, pointerEvents: "none" }}>
+          {labels.map((txt, i) => (
+            <span
+              key={i}
+              style={{
+                position: "absolute",
+                fontSize: 9,
+                color: "#64748b",
+                fontFamily: "inherit",
+                lineHeight: 1,
+                left: labelPositions[i].x,
+                top: labelPositions[i].y,
+                transform: textAnchors[i] === "end"
+                  ? "translate(-100%, -50%)"
+                  : textAnchors[i] === "start"
+                    ? "translate(0, -50%)"
+                    : "translate(-50%, -50%)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {txt}
+            </span>
+          ))}
+        </div>
+
+        {/* Gauge shell */}
         <div
           style={{
             position: "absolute",
-            top: -BW,
-            left: -BW,
+            left: BLEED,
+            top: BLEED,
             width: IW,
             height: IH,
-            border: `${BW}px solid transparent`,
-            borderTopColor: topColor,
-            borderRightColor: rightColor,
-            borderLeftColor: leftColor,
+            border: `${BW}px solid #2f3747`,
             borderBottom: "none",
             borderRadius: `${BR}px ${BR}px 0 0`,
             boxSizing: "content-box",
-            pointerEvents: "none",
           }}
-        />
+        >
+          {/* Colour overlay */}
+          <div
+            style={{
+              position: "absolute",
+              top: -BW,
+              left: -BW,
+              width: IW,
+              height: IH,
+              border: `${BW}px solid transparent`,
+              borderTopColor: topColor,
+              borderRightColor: rightColor,
+              borderLeftColor: leftColor,
+              borderBottom: "none",
+              borderRadius: `${BR}px ${BR}px 0 0`,
+              boxSizing: "content-box",
+              pointerEvents: "none",
+            }}
+          />
 
-        {/* Needle */}
-        <div
-          style={{
-            position: "absolute",
-            width: 3,
-            height: needleH,
-            background: "white",
-            bottom: 0,
-            left: "50%",
-            transform: `translateX(-50%) rotate(${rotate}deg)`,
-            transformOrigin: "bottom center",
-            borderRadius: "2px 2px 0 0",
-          }}
-        />
+          {/* Needle */}
+          <div
+            style={{
+              position: "absolute",
+              width: 3,
+              height: needleH,
+              background: "white",
+              bottom: 0,
+              left: "50%",
+              transform: `translateX(-50%) rotate(${rotate}deg)`,
+              transformOrigin: "bottom center",
+              borderRadius: "2px 2px 0 0",
+            }}
+          />
 
-        {/* Pivot dot */}
-        <div
-          style={{
-            position: "absolute",
-            width: 13,
-            height: 13,
-            background: "#6b7280",
-            borderRadius: "50%",
-            bottom: -6.5,
-            left: "50%",
-            transform: "translateX(-50%)",
-            border: "2px solid #111c2a",
-            zIndex: 1,
-          }}
-        />
+          {/* Pivot */}
+          <div
+            style={{
+              position: "absolute",
+              width: 13,
+              height: 13,
+              background: "#6b7280",
+              borderRadius: "50%",
+              bottom: -6.5,
+              left: "50%",
+              transform: "translateX(-50%)",
+              border: "2px solid #111c2a",
+              zIndex: 1,
+            }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -248,10 +269,10 @@ export default function PerformanceScoreCard({ analytics }: Props) {
         <div className="flex flex-col gap-0">
 
           {/* ── Gauges row ──────────────────────────────────── */}
-          <div className="grid grid-cols-2 gap-x-2 w-full">
+          <div className="grid grid-cols-2 gap-x-3 w-full">
 
             {/* Win Rate */}
-            <div className="flex flex-col items-center min-w-0 overflow-visible">
+            <div className="flex flex-col items-center min-w-0">
               <p className="text-[11px] text-muted-foreground font-medium mb-1">Win Rate</p>
               <CSSGauge
                 value={winRate}
@@ -261,14 +282,14 @@ export default function PerformanceScoreCard({ analytics }: Props) {
                 leftColor="transparent"
                 labels={["0%", "25%", "50%", "75%", "100%"]}
               />
-              <p className={`text-xl sm:text-2xl font-bold leading-none mt-3 ${wLbl.c}`}>
+              <p className={`text-xl sm:text-2xl font-bold leading-none mt-1 ${wLbl.c}`}>
                 {winRate.toFixed(0)}%
               </p>
               <p className={`text-[11px] font-semibold mt-0.5 ${wLbl.c}`}>{wLbl.t}</p>
             </div>
 
             {/* Profit Factor */}
-            <div className="flex flex-col items-center min-w-0 overflow-visible">
+            <div className="flex flex-col items-center min-w-0">
               <p className="text-[11px] text-muted-foreground font-medium mb-1">Profit Factor</p>
               <CSSGauge
                 value={Math.min(profitFactor, 4)}
@@ -278,7 +299,7 @@ export default function PerformanceScoreCard({ analytics }: Props) {
                 leftColor="#2ecc71"
                 labels={["0", "1", "2", "3", "4+"]}
               />
-              <p className={`text-xl sm:text-2xl font-bold leading-none mt-3 ${pLbl.c}`}>
+              <p className={`text-xl sm:text-2xl font-bold leading-none mt-1 ${pLbl.c}`}>
                 {profitFactor >= 4 ? "4+" : profitFactor.toFixed(2)}
               </p>
               <p className={`text-[11px] font-semibold mt-0.5 ${pLbl.c}`}>{pLbl.t}</p>

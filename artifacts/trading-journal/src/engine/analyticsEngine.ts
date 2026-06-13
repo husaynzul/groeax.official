@@ -134,34 +134,53 @@ export function computeAnalytics(trades: Trade[], startingBalance = 0): Analytic
   const weeklyPnL = Object.keys(weeklyMap).sort().map(week => ({ week, pnl: weeklyMap[week] }));
   const monthlyPnL = Object.keys(monthlyMap).sort().map(month => ({ month, pnl: monthlyMap[month] }));
 
-  // Equity curve & drawdown — peak equity method (correct professional approach)
-  // equity  = startingBalance + cumulative P&L  (never just profit)
-  // peak    = highest equity ever reached        (starts at startingBalance)
-  // drawdown = (peak - equity) / peak * 100
+  // ── Per-trade equity & peak tracking ────────────────────────────────────────
+  // Iterate over individual trades (already sorted by date) so intra-day peaks
+  // are captured correctly.  Daily aggregation loses them because multiple trades
+  // on the same day get summed before the peak check.
+  //
+  // Example fix:
+  //   Start=$10  Trade1=-$0.06→$9.94  Trade2=+$0.13→$10.07 (peak!)  Trade3=-$0.57→$9.50
+  //   Correct peak=$10.07, drawdown=(10.07-9.50)/10.07=5.66%
+  //   Old (daily) peak=$10.00 because net-day=-$0.50 < starting balance
   let currentEquity = startingBalance;
   let peak = startingBalance;
-  const equityCurve: { date: string; equity: number }[] = [];
-  const drawdownCurve: { date: string; drawdown: number }[] = [];
 
-  dailyPnL.forEach(day => {
-    currentEquity += day.pnl;
+  // Build per-trade equity / drawdown points, then collapse to one point per day
+  // (keep the LAST equity value of each day for the chart).
+  const equityByDay: Record<string, number> = {};
+  const drawdownByDay: Record<string, number> = {};
 
-    // Update peak only when equity reaches a new high
+  sorted.forEach(trade => {
+    const pnl = trade.outcome === 'WIN'  ? trade.netProfit
+               : trade.outcome === 'LOSS' ? -trade.netLoss : 0;
+
+    currentEquity = parseFloat((currentEquity + pnl).toFixed(10));
+
+    // Update peak every trade, not every day
     if (currentEquity > peak) peak = currentEquity;
 
     const drawdownAmount = Math.max(peak - currentEquity, 0);
+    const dateKey = safeDateKey(trade.date)!;
 
-    equityCurve.push({ date: day.date, equity: parseFloat(currentEquity.toFixed(2)) });
-    drawdownCurve.push({ date: day.date, drawdown: parseFloat(drawdownAmount.toFixed(2)) });
+    equityByDay[dateKey]    = parseFloat(currentEquity.toFixed(2));
+    drawdownByDay[dateKey]  = parseFloat(drawdownAmount.toFixed(2));
   });
 
-  const finalDrawdownAmount = Math.max(peak - currentEquity, 0);
-  const finalDrawdownPercent = peak > 0 ? (finalDrawdownAmount / peak) * 100 : 0;
+  const equityCurve = Object.keys(equityByDay).sort()
+    .map(date => ({ date, equity: equityByDay[date] }));
+
+  const drawdownCurve = Object.keys(drawdownByDay).sort()
+    .map(date => ({ date, drawdown: drawdownByDay[date] }));
+
+  const finalDrawdownAmount  = parseFloat(Math.max(peak - currentEquity, 0).toFixed(2));
+  const finalDrawdownPercent = peak > 0 ? parseFloat(((finalDrawdownAmount / peak) * 100).toFixed(2)) : 0;
+
   const drawdownStats: DrawdownStats = {
-    peak: parseFloat(peak.toFixed(2)),
-    currentEquity: parseFloat(currentEquity.toFixed(2)),
-    drawdownAmount: parseFloat(finalDrawdownAmount.toFixed(2)),
-    drawdownPercent: parseFloat(finalDrawdownPercent.toFixed(2)),
+    peak:            parseFloat(peak.toFixed(2)),
+    currentEquity:   parseFloat(currentEquity.toFixed(2)),
+    drawdownAmount:  finalDrawdownAmount,
+    drawdownPercent: finalDrawdownPercent,
   };
 
   const rrScatter = sorted.map(t => ({
