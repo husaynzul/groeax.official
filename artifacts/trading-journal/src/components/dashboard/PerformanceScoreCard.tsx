@@ -17,49 +17,48 @@ function segPath(cx: number, cy: number, r: number, v0: number, v1: number) {
 }
 
 // ─── Semi-Gauge ─────────────────────────────────────────────────────────────
-// Speedometer-style open semicircle — 180° arc, needle from centre pivot.
-// All dimensions fit inside the viewBox so nothing clips outside the SVG.
+// Pixel-matched to reference: thick open arch, needle from pivot,
+// labels outside arc, value text cleanly below.
 interface Seg { from: number; to: number; color: string }
 interface Lbl { value: number; text: string }
 
 function SemiGauge({ value, max, segs, lbls }: {
   value: number; max: number; segs: Seg[]; lbls: Lbl[];
 }) {
-  // ── geometry ──────────────────────────────────────────────────────────────
-  const CX = 100;   // centre x
-  const CY = 92;    // centre y  (pivot lives here)
-  const R  = 62;    // arc centre-line radius
-  const TK = 17;    // arc stroke width — thick but not a ring
+  // ── geometry (matches reference image proportions) ────────────────────────
+  const CX = 110;    // horizontal centre
+  const CY = 100;    // pivot Y — arc opens BELOW this line (gap at bottom)
+  const R  = 76;     // arc centre-line radius
+  const TK = 18;     // stroke width — thick band, not a ring (TK/R ≈ 24%)
 
-  // label orbit: just outside the outer edge of the arc
-  const LBL_R = R + TK / 2 + 10;
+  // label orbit just outside outer edge
+  const LR = R + TK / 2 + 10;  // 95
 
-  // viewBox: add enough padding around the furthest label text
-  // Left label "0%" at x ≈ CX − LBL_R ≈ 29  → need ~26 px left pad
-  // Right label "100%" at x ≈ CX + LBL_R ≈ 171 → need ~32 px right pad
-  // Top label at y ≈ CY − LBL_R ≈ 20 → need ~14 px top pad
-  // Bottom: pivot at CY, plus ~10 px for pivot circle
-  const VBX = CX - LBL_R - 28;            // ≈ −20
-  const VBY = CY - LBL_R - 14;            // ≈ −6
-  const VBW = (CX + LBL_R + 32) - VBX;   // ≈ 240
-  const VBH = CY + 14 - VBY;             // ≈ 112
+  // viewBox: all labels must fit inside
+  // left "0%" at x≈CX-LR=15 (anchor=end) → left edge ~2 → VBX=0
+  // right "100%" at x≈CX+LR=205 (anchor=start, ~25px wide) → VBX+VBW≥230
+  // top "50%" at y≈CY-LR=5, text y+4=9 → VBY=-10 gives 19px clearance ✓
+  // bottom: pivot at CY, circle r=6 → bottom = CY+8 = 108
+  const VBX = -2;
+  const VBY = -12;
+  const VBW = 238;
+  const VBH = CY + 10 - VBY;   // 122
 
   const ratio = Math.min(Math.max(value / max, 0), 1);
   const θ = ((180 - ratio * 180) * Math.PI) / 180;
-  // needle tip sits at 85% of inner edge of arc
-  const nLen = R - TK * 0.5 - 2;
+  const nLen = R - TK * 0.55;  // needle tip sits just inside inner arc edge
   const nx = CX + nLen * Math.cos(θ);
   const ny = CY - nLen * Math.sin(θ);
 
   function anchor(v: number) {
-    if (v < 0.15) return "end";
-    if (v > 0.85) return "start";
+    if (v < 0.12) return "end";
+    if (v > 0.88) return "start";
     return "middle";
   }
 
   return (
     <svg
-      viewBox={`${VBX.toFixed(1)} ${VBY.toFixed(1)} ${VBW.toFixed(1)} ${VBH.toFixed(1)}`}
+      viewBox={`${VBX} ${VBY} ${VBW} ${VBH}`}
       width="100%"
       style={{ display: "block" }}
       aria-hidden
@@ -67,10 +66,10 @@ function SemiGauge({ value, max, segs, lbls }: {
       {/* background track */}
       <path
         d={segPath(CX, CY, R, 0, 1)}
-        fill="none" stroke="#1a2535" strokeWidth={TK} strokeLinecap="butt"
+        fill="none" stroke="#182030" strokeWidth={TK} strokeLinecap="butt"
       />
 
-      {/* coloured arc segments — seamless, butt caps, no gaps */}
+      {/* coloured arc bands — seamless butt joins */}
       {segs.map((s, i) => (
         <path key={i}
           d={segPath(CX, CY, R, s.from / max, s.to / max)}
@@ -78,10 +77,10 @@ function SemiGauge({ value, max, segs, lbls }: {
         />
       ))}
 
-      {/* labels positioned just outside the arc */}
+      {/* arc labels */}
       {lbls.map((l, i) => {
         const v = l.value / max;
-        const p = ptArc(CX, CY, LBL_R, v);
+        const p = ptArc(CX, CY, LR, v);
         return (
           <text key={i}
             x={p.x.toFixed(1)} y={(p.y + 4).toFixed(1)}
@@ -93,23 +92,15 @@ function SemiGauge({ value, max, segs, lbls }: {
         );
       })}
 
-      {/* needle shadow */}
-      <line
-        x1={CX} y1={CY}
-        x2={(CX + (nLen + 2) * Math.cos(θ)).toFixed(1)}
-        y2={(CY - (nLen + 2) * Math.sin(θ)).toFixed(1)}
-        stroke="#000" strokeWidth={4} strokeLinecap="round" opacity={0.2}
-      />
       {/* needle */}
       <line
-        x1={CX} y1={CY}
-        x2={nx.toFixed(1)} y2={ny.toFixed(1)}
-        stroke="white" strokeWidth={2.2} strokeLinecap="round"
+        x1={CX} y1={CY} x2={nx.toFixed(1)} y2={ny.toFixed(1)}
+        stroke="white" strokeWidth={2.4} strokeLinecap="round"
       />
       {/* pivot */}
-      <circle cx={CX} cy={CY} r={6} fill="#0f1827" />
+      <circle cx={CX} cy={CY} r={6.5} fill="#111c2a" />
       <circle cx={CX} cy={CY} r={4.5} fill="#6b7280" />
-      <circle cx={CX} cy={CY} r={2} fill="#d1d5db" />
+      <circle cx={CX} cy={CY} r={2}   fill="#d1d5db" />
     </svg>
   );
 }
@@ -118,7 +109,7 @@ function SemiGauge({ value, max, segs, lbls }: {
 function DrawdownBar({ value, max = 30 }: { value: number; max?: number }) {
   const pct = Math.min(Math.max(value / max, 0), 1) * 100;
   return (
-    <div className="relative w-full h-[12px] rounded-full bg-[#1a2535] overflow-hidden">
+    <div className="relative w-full h-[13px] rounded-full bg-[#182030] overflow-hidden">
       <div className="absolute inset-0"
         style={{ background: "linear-gradient(to right,#22c55e 0%,#f97316 50%,#ef4444 100%)", opacity: 0.22 }} />
       <div className="absolute inset-y-0 left-0 rounded-full"
@@ -135,11 +126,11 @@ function DrawdownBar({ value, max = 30 }: { value: number; max?: number }) {
 // ─── Consistency Dots ─────────────────────────────────────────────────────────
 function ConsistencyDots({ score }: { score: number }) {
   return (
-    <div className="flex items-center justify-center gap-[6px]">
+    <div className="flex items-center justify-center" style={{ gap: "clamp(5px, 2.5vw, 10px)" }}>
       {Array.from({ length: 5 }).map((_, i) => (
         <div key={i}
           className={`rounded-full border-2 shrink-0 ${i < score ? "bg-emerald-500 border-emerald-400" : "bg-transparent border-[#2a3a52]"}`}
-          style={{ width: "clamp(16px, 6.5vw, 26px)", height: "clamp(16px, 6.5vw, 26px)" }}
+          style={{ width: "clamp(18px, 7.5vw, 28px)", height: "clamp(18px, 7.5vw, 28px)" }}
         />
       ))}
     </div>
@@ -227,7 +218,7 @@ export default function PerformanceScoreCard({ analytics }: Props) {
   ];
 
   return (
-    <div className="glass-card p-3 w-full">
+    <div className="glass-card p-3 sm:p-4 w-full">
 
       {/* Header */}
       <div className="flex items-center gap-2 mb-2">
@@ -242,10 +233,10 @@ export default function PerformanceScoreCard({ analytics }: Props) {
           Add trades to see your performance score
         </div>
       ) : (
-        <div className="flex flex-col">
+        <div className="flex flex-col gap-0">
 
           {/* ── Gauges row ──────────────────────────────────── */}
-          <div className="grid grid-cols-2 gap-x-2 w-full">
+          <div className="grid grid-cols-2 gap-x-1 w-full">
 
             {/* Win Rate */}
             <div className="flex flex-col items-center min-w-0">
@@ -253,7 +244,8 @@ export default function PerformanceScoreCard({ analytics }: Props) {
               <div className="w-full">
                 <SemiGauge value={winRate} max={100} segs={wrSegs} lbls={wrLbls} />
               </div>
-              <p className={`text-lg sm:text-xl font-bold leading-none -mt-3 ${wLbl.c}`}>
+              {/* value text sits directly below the SVG — no negative margin */}
+              <p className={`text-xl sm:text-2xl font-bold leading-none mt-1 ${wLbl.c}`}>
                 {winRate.toFixed(0)}%
               </p>
               <p className={`text-[11px] font-semibold mt-0.5 ${wLbl.c}`}>{wLbl.t}</p>
@@ -270,7 +262,7 @@ export default function PerformanceScoreCard({ analytics }: Props) {
                   lbls={pfLbls}
                 />
               </div>
-              <p className={`text-lg sm:text-xl font-bold leading-none -mt-3 ${pLbl.c}`}>
+              <p className={`text-xl sm:text-2xl font-bold leading-none mt-1 ${pLbl.c}`}>
                 {profitFactor >= 4 ? "4+" : profitFactor.toFixed(2)}
               </p>
               <p className={`text-[11px] font-semibold mt-0.5 ${pLbl.c}`}>{pLbl.t}</p>
@@ -286,8 +278,8 @@ export default function PerformanceScoreCard({ analytics }: Props) {
             {/* Max Drawdown */}
             <div className="flex flex-col items-center gap-1.5 min-w-0">
               <p className="text-[11px] text-muted-foreground font-medium text-center">Max Drawdown</p>
-              <div className="w-full px-0.5">
-                <div className="flex justify-between text-[8px] text-muted-foreground/50 mb-0.5">
+              <div className="w-full">
+                <div className="flex justify-between text-[8.5px] text-muted-foreground/50 mb-1">
                   <span>0%</span><span>15%</span><span>30%</span>
                 </div>
                 <DrawdownBar value={maxDD} max={30} />
@@ -301,9 +293,7 @@ export default function PerformanceScoreCard({ analytics }: Props) {
             {/* Consistency */}
             <div className="flex flex-col items-center gap-1.5 min-w-0">
               <p className="text-[11px] text-muted-foreground font-medium text-center">Consistency</p>
-              <div className="w-full flex items-center justify-center py-0.5">
-                <ConsistencyDots score={conScore} />
-              </div>
+              <ConsistencyDots score={conScore} />
               <p className={`text-xl font-bold leading-none ${cLbl.c}`}>
                 {conScore} / 5
               </p>
