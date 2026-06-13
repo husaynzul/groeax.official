@@ -92,9 +92,9 @@ function fmtPnLCompact(n: number): string {
   return `${sign}$${abs.toFixed(0)}`;
 }
 
-function MetricCard({ label, value, sub, icon: Icon, color = "text-foreground", index }: { label: string; value: string; sub?: string; icon: React.ElementType; color?: string; index: number; }) {
+function MetricCard({ label, value, sub, icon: Icon, color = "text-foreground", index, className }: { label: string; value: string; sub?: string; icon: React.ElementType; color?: string; index: number; className?: string; }) {
   return (
-    <motion.div custom={index} initial="hidden" animate="show" variants={FADE_UP} className="glass-card p-4 flex flex-col gap-1.5 hover:border-white/15 transition-colors">
+    <motion.div custom={index} initial="hidden" animate="show" variants={FADE_UP} className={`glass-card p-4 flex flex-col gap-1.5 hover:border-white/15 transition-colors ${className ?? ""}`}>
       <div className="flex items-center gap-2 text-muted-foreground"><Icon className="w-3.5 h-3.5" /><span className="text-xs uppercase tracking-wider">{label}</span></div>
       <p className={`text-2xl font-bold ${color}`}>{value}</p>
       {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
@@ -506,32 +506,23 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Core metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+      {/* Core metrics — 5 cards, last spans 2 cols on mobile so no orphan */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <MetricCard index={0} label="Net P&L" value={fmtMoney(analytics.netBalance)} sub={`${fmtMoney(analytics.totalProfit)} won`} icon={analytics.netBalance >= 0 ? TrendingUp : TrendingDown} color={analytics.netBalance >= 0 ? "text-emerald-400" : "text-red-400"} />
         <MetricCard index={1} label="Win Rate" value={fmtPct(analytics.winRate)} sub={`${analytics.totalTrades} trades`} icon={Target} color={analytics.winRate >= 50 ? "text-emerald-400" : "text-red-400"} />
         <MetricCard index={2} label="Avg Win" value={fmtMoney(analytics.avgWin)} sub={`Avg Loss: ${fmtMoney(analytics.avgLoss)}`} icon={BarChart2} />
-        <MetricCard index={3} label="Best Trade" value={analytics.bestTrade ? fmtMoney(analytics.bestTrade.netProfit) : "—"} sub={analytics.bestTrade?.pair} icon={Trophy} color="text-emerald-400" />
-        <MetricCard index={4} label="Worst Trade" value={analytics.worstTrade ? `-${fmtMoney(analytics.worstTrade.netLoss)}` : "—"} sub={analytics.worstTrade?.pair} icon={AlertCircle} color="text-red-400" />
+        <MetricCard index={3} label="Best Trade" value={analytics.bestTrade ? fmtMoney(analytics.bestTrade.netProfit) : "—"} sub={analytics.bestTrade?.pair} icon={Trophy} color={analytics.bestTrade ? "text-emerald-400" : undefined} />
+        <MetricCard index={4} label="Worst Trade" value={analytics.worstTrade ? `-${fmtMoney(analytics.worstTrade.netLoss)}` : "—"} sub={analytics.worstTrade?.pair} icon={AlertCircle} color={analytics.worstTrade ? "text-red-400" : undefined} className="col-span-2 sm:col-span-1" />
       </div>
 
-      {/* Balance metrics row (only when balance is set) */}
+      {/* Balance metrics row — 5 cards, last spans 2 cols on mobile so no orphan */}
       {startingBalance > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <MetricCard index={0} label="Starting Balance" value={fmtMoney(startingBalance)} icon={DollarSign} />
           <MetricCard index={1} label="Current Balance" value={fmtMoney(currentBalance)} sub="auto-updated" icon={Wallet} color={currentBalance >= startingBalance ? "text-emerald-400" : "text-red-400"} />
           <MetricCard index={2} label="Peak Equity" value={fmtMoney(analytics.drawdownStats.peak)} sub="all-time high" icon={Trophy} color="text-violet-400" />
           <MetricCard index={3} label="Account Growth" value={`${startingBalance > 0 ? ((currentBalance - startingBalance) / startingBalance * 100).toFixed(2) : "0.00"}%`} sub="since start" icon={Percent} color={currentBalance >= startingBalance ? "text-emerald-400" : "text-red-400"} />
-          <MetricCard index={4} label="Max Drawdown" value={`${analytics.drawdownStats.drawdownPercent.toFixed(2)}%`} sub={`${fmtMoney(analytics.drawdownStats.drawdownAmount)} from peak`} icon={TrendingDown} color="text-orange-400" />
-        </div>
-      )}
-
-      {/* Mobile-only: compact drawdown pill under balance row */}
-      {startingBalance > 0 && analytics.drawdownStats.drawdownAmount > 0 && (
-        <div className="flex sm:hidden items-center gap-2 px-3 py-2 rounded-xl bg-orange-500/10 border border-orange-500/20 text-xs">
-          <TrendingDown className="w-3.5 h-3.5 text-orange-400 shrink-0" />
-          <span className="text-muted-foreground">Max Drawdown from peak <span className="font-bold text-orange-400">{analytics.drawdownStats.drawdownPercent.toFixed(2)}%</span></span>
-          <span className="ml-auto text-muted-foreground/60">{fmtMoney(analytics.drawdownStats.drawdownAmount)}</span>
+          <MetricCard index={4} label="Max Drawdown" value={`${analytics.drawdownStats.drawdownPercent.toFixed(2)}%`} sub={`${fmtMoney(analytics.drawdownStats.drawdownAmount)} from peak`} icon={TrendingDown} color="text-orange-400" className="col-span-2 sm:col-span-1" />
         </div>
       )}
 
