@@ -18,7 +18,7 @@ const G_IH  = 125;   // content height (matches HTML height:125px)
 const G_BW  = 25;    // border width   (matches HTML border:25px)
 const G_BR  = 150;   // border-radius  (matches HTML border-radius:250px 250px 0 0 → outer = G_IW/2 + G_BW)
 const G_TOT = G_IW + G_BW * 2;   // 300 — full outer width including both borders
-const N_H   = 90;    // needle height
+const N_H   = 115;   // needle height — longer so it's clearly visible at small scale
 const C_D   = 18;    // center dot diameter
 const LTOP  = 18;    // space reserved ABOVE the ring for the top arc label
 
@@ -254,7 +254,7 @@ export default function PerformanceScoreCard({ analytics }: Props) {
     <div className="glass-card p-3 sm:p-4 w-full">
 
       {/* Header */}
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-2">
         <Zap className="w-3.5 h-3.5 text-primary shrink-0" />
         <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           Performance Score
@@ -266,7 +266,7 @@ export default function PerformanceScoreCard({ analytics }: Props) {
           Add trades to see your performance score
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
 
           {/* ── Two gauges side by side ────────────── */}
           <div className="grid grid-cols-2 gap-2">
@@ -279,7 +279,7 @@ export default function PerformanceScoreCard({ analytics }: Props) {
                 topColor="#f0b84b" rightColor="#66c04f" leftColor="transparent"
                 labels={["0%", "25%", "50%", "75%", "100%"]}
               />
-              <p className={`text-2xl font-bold leading-tight mt-2 ${wLbl.c}`}>
+              <p className={`text-2xl font-bold leading-tight mt-1 ${wLbl.c}`}>
                 {winRate.toFixed(0)}%
               </p>
               <p className={`text-xs font-semibold mt-0.5 ${wLbl.c}`}>{wLbl.t}</p>
@@ -293,7 +293,7 @@ export default function PerformanceScoreCard({ analytics }: Props) {
                 topColor="#e74c3c" rightColor="#f1c40f" leftColor="#2ecc71"
                 labels={["0", "1", "2", "3", "4+"]}
               />
-              <p className={`text-2xl font-bold leading-tight mt-2 ${pLbl.c}`}>
+              <p className={`text-2xl font-bold leading-tight mt-1 ${pLbl.c}`}>
                 {pf >= 4 ? "4+" : pf.toFixed(2)}
               </p>
               <p className={`text-xs font-semibold mt-0.5 ${pLbl.c}`}>{pLbl.t}</p>
