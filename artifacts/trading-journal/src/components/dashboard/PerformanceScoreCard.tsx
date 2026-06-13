@@ -69,24 +69,27 @@ function SemiGauge({ value, max, segs, lbls }: {
         fill="none" stroke="#182030" strokeWidth={TK} strokeLinecap="butt"
       />
 
-      {/* coloured arc bands — outer ends rounded, inner junctions butt */}
-      {segs.map((s, i) => {
-        const isFirst = i === 0;
-        const isLast  = i === segs.length - 1;
-        // round only the very start (left) and very end (right) of the whole arc
-        const cap = isFirst ? "round" : isLast ? "round" : "butt";
-        // extend first segment slightly left and last slightly right so
-        // the round cap sits exactly at the arc endpoints
-        const v0 = (s.from - (isFirst ? 0.012 : 0)) / max;
-        const v1 = (s.to   + (isLast  ? 0.012 : 0)) / max;
+      {/* coloured arc bands — all butt caps, no overlap between segments */}
+      {segs.map((s, i) => (
+        <path key={i}
+          d={segPath(CX, CY, R, s.from / max, s.to / max)}
+          fill="none" stroke={s.color} strokeWidth={TK} strokeLinecap="butt"
+        />
+      ))}
+
+      {/* rounded tip circles at arc endpoints — placed AFTER segments so they sit on top */}
+      {(() => {
+        const p0 = ptArc(CX, CY, R, 0);                      // left endpoint
+        const p1 = ptArc(CX, CY, R, 1);                      // right endpoint
+        const firstColor = segs[0].color;
+        const lastColor  = segs[segs.length - 1].color;
         return (
-          <path key={i}
-            d={segPath(CX, CY, R, Math.max(v0,0), Math.min(v1,1))}
-            fill="none" stroke={s.color} strokeWidth={TK}
-            strokeLinecap={cap as "round" | "butt"}
-          />
+          <>
+            <circle cx={p0.x.toFixed(1)} cy={p0.y.toFixed(1)} r={TK / 2} fill={firstColor} />
+            <circle cx={p1.x.toFixed(1)} cy={p1.y.toFixed(1)} r={TK / 2} fill={lastColor}  />
+          </>
         );
-      })}
+      })()}
 
       {/* arc labels */}
       {lbls.map((l, i) => {
