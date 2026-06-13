@@ -3,114 +3,143 @@ import type { Analytics } from "@/engine/analyticsEngine";
 
 interface Props { analytics: Analytics }
 
-// ─── SVG Math ────────────────────────────────────────────────────────────────
-function ptArc(cx: number, cy: number, r: number, v: number) {
-  const θ = ((180 - v * 180) * Math.PI) / 180;
-  return { x: cx + r * Math.cos(θ), y: cy - r * Math.sin(θ) };
-}
-
-function segPath(cx: number, cy: number, r: number, v0: number, v1: number) {
-  const s = ptArc(cx, cy, r, v0);
-  const e = ptArc(cx, cy, r, v1);
-  const la = Math.abs(v1 - v0) > 0.5 ? 1 : 0;
-  return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${la} 0 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
-}
-
-// ─── Donut Semi-Gauge ────────────────────────────────────────────────────────
-// Thick donut-style half-ring speedometer with needle, matching reference image.
-interface Seg { from: number; to: number; color: string }
-interface Lbl { value: number; text: string }
-
-function SemiGauge({ value, max, segs, lbls }: {
-  value: number; max: number; segs: Seg[]; lbls: Lbl[];
+// ─── CSS Border Gauge ────────────────────────────────────────────────────────
+// Exact CSS-border semicircle technique: thick half-ring via border + border-radius,
+// with a dynamic needle and outer arc labels.
+function CSSGauge({
+  value, max,
+  topColor, rightColor, leftColor = "transparent",
+  labels,
+}: {
+  value: number; max: number;
+  topColor: string; rightColor: string; leftColor?: string;
+  labels: string[]; // [far-left, quarter-left, top, quarter-right, far-right]
 }) {
-  const CX = 115;   // horizontal centre
-  const CY = 105;   // pivot Y
-  const R  = 72;    // arc centre-line radius
-  const TK = 26;    // thick donut stroke — ~36% of radius
+  const ratio  = Math.min(Math.max(value / max, 0), 1);
+  // −90° = pointing left (0), 0° = pointing up (50%), +90° = pointing right (100%)
+  const rotate = ratio * 180 - 90;
 
-  // Label orbit — just outside outer edge of donut
-  const LR = R + TK / 2 + 11;
+  // Dimensions (CSS box-sizing: content-box so border adds to size)
+  const IW = 150; // inner width
+  const IH = 75;  // inner height (half of IW for a perfect semicircle)
+  const BW = 18;  // border width
+  const BR = IW / 2 + BW; // border-radius for outer curve
 
-  const VBX = -8;
-  const VBY = -16;
-  const VBW = 250;
-  const VBH = CY + 14 - VBY;
+  // needle length = nearly the inner radius
+  const needleH = IH - 4;
 
-  // Small gap between segments (in normalised 0-1 units)
-  const GAP = 0.012;
+  // Wrapper total size including border
+  const totalW = IW + BW * 2;
 
-  const ratio = Math.min(Math.max(value / max, 0), 1);
-  const θ = ((180 - ratio * 180) * Math.PI) / 180;
+  // Label positions — computed at arc midpoints, outside the border
+  // Arc goes from left (180° CCW from right) to right (0°) as value 0→1
+  // labelPositions: [0%, 25%, 50%, 75%, 100%] as angles 180°→90°→0°
+  const labelAngles = [180, 135, 90, 45, 0]; // degrees from 3-o'clock (east)
+  const LR = BR + 11; // radius to label center
+  const cx = totalW / 2;  // center x of arc within wrapper
+  const cy = IH + BW;     // center y of arc within wrapper (bottom of semicircle)
 
-  // Needle: tip reaches inner edge of donut, tail is short stub behind pivot
-  const nTip  = R - TK * 0.5 - 2;
-  const nTail = 10;
-  const nx  = CX + nTip  * Math.cos(θ);
-  const ny  = CY - nTip  * Math.sin(θ);
-  const nxt = CX - nTail * Math.cos(θ);
-  const nyt = CY + nTail * Math.sin(θ);
+  const labelPositions = labelAngles.map(deg => {
+    const rad = (deg * Math.PI) / 180;
+    return { x: cx + LR * Math.cos(rad), y: cy - LR * Math.sin(rad) };
+  });
 
-  function anchor(v: number) {
-    if (v < 0.10) return "end";
-    if (v > 0.90) return "start";
-    return "middle";
-  }
+  const textAnchors = ["end", "end", "middle", "start", "start"] as const;
 
   return (
-    <svg
-      viewBox={`${VBX} ${VBY} ${VBW} ${VBH}`}
-      width="100%"
-      style={{ display: "block" }}
-      aria-hidden
-    >
-      {/* Dark background track */}
-      <path
-        d={segPath(CX, CY, R, 0, 1)}
-        fill="none" stroke="#1e2d42" strokeWidth={TK} strokeLinecap="butt"
-      />
+    <div style={{ position: "relative", width: totalW, margin: "0 auto" }}>
 
-      {/* Coloured arc segments with small gap between each */}
-      {segs.map((s, i) => {
-        const t0 = s.from / max;
-        const t1 = s.to   / max;
-        const gapStart = i === 0              ? 0       : GAP / 2;
-        const gapEnd   = i === segs.length - 1 ? 0       : GAP / 2;
-        return (
-          <path key={i}
-            d={segPath(CX, CY, R, t0 + gapStart, t1 - gapEnd)}
-            fill="none" stroke={s.color} strokeWidth={TK} strokeLinecap="round"
-          />
-        );
-      })}
-
-      {/* Labels outside the arc */}
-      {lbls.map((l, i) => {
-        const v = l.value / max;
-        const p = ptArc(CX, CY, LR, v);
-        return (
-          <text key={i}
-            x={p.x.toFixed(1)} y={(p.y + 4).toFixed(1)}
-            textAnchor={anchor(v)}
-            fontSize={9.5} fill="#64748b" fontFamily="inherit"
+      {/* Labels outside arc */}
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+        {labels.map((txt, i) => (
+          <span
+            key={i}
+            style={{
+              position: "absolute",
+              fontSize: 9,
+              color: "#64748b",
+              fontFamily: "inherit",
+              lineHeight: 1,
+              left: labelPositions[i].x,
+              top: labelPositions[i].y,
+              transform: textAnchors[i] === "end"
+                ? "translate(-100%, -50%)"
+                : textAnchors[i] === "start"
+                  ? "translate(0, -50%)"
+                  : "translate(-50%, -50%)",
+              whiteSpace: "nowrap",
+            }}
           >
-            {l.text}
-          </text>
-        );
-      })}
+            {txt}
+          </span>
+        ))}
+      </div>
 
-      {/* Needle — thin white line from stub through pivot to tip */}
-      <line
-        x1={nxt.toFixed(1)} y1={nyt.toFixed(1)}
-        x2={nx.toFixed(1)}  y2={ny.toFixed(1)}
-        stroke="white" strokeWidth={2} strokeLinecap="round"
-      />
+      {/* Gauge shell — background track */}
+      <div
+        style={{
+          width: IW,
+          height: IH,
+          border: `${BW}px solid #2f3747`,
+          borderBottom: "none",
+          borderRadius: `${BR}px ${BR}px 0 0`,
+          position: "relative",
+          boxSizing: "content-box",
+          margin: "0 auto",
+          marginTop: 14, // room for top label
+        }}
+      >
+        {/* Colour overlay — ::before equivalent */}
+        <div
+          style={{
+            position: "absolute",
+            top: -BW,
+            left: -BW,
+            width: IW,
+            height: IH,
+            border: `${BW}px solid transparent`,
+            borderTopColor: topColor,
+            borderRightColor: rightColor,
+            borderLeftColor: leftColor,
+            borderBottom: "none",
+            borderRadius: `${BR}px ${BR}px 0 0`,
+            boxSizing: "content-box",
+            pointerEvents: "none",
+          }}
+        />
 
-      {/* Pivot dot */}
-      <circle cx={CX} cy={CY} r={7}   fill="#111c2a" />
-      <circle cx={CX} cy={CY} r={5}   fill="#374151" />
-      <circle cx={CX} cy={CY} r={2.5} fill="#9ca3af" />
-    </svg>
+        {/* Needle */}
+        <div
+          style={{
+            position: "absolute",
+            width: 3,
+            height: needleH,
+            background: "white",
+            bottom: 0,
+            left: "50%",
+            transform: `translateX(-50%) rotate(${rotate}deg)`,
+            transformOrigin: "bottom center",
+            borderRadius: "2px 2px 0 0",
+          }}
+        />
+
+        {/* Pivot dot */}
+        <div
+          style={{
+            position: "absolute",
+            width: 13,
+            height: 13,
+            background: "#6b7280",
+            borderRadius: "50%",
+            bottom: -6.5,
+            left: "50%",
+            transform: "translateX(-50%)",
+            border: "2px solid #111c2a",
+            zIndex: 1,
+          }}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -200,32 +229,6 @@ export default function PerformanceScoreCard({ analytics }: Props) {
   const cLbl = cs(conScore);
   const oLbl = ov(overall);
 
-  const wrSegs: Seg[] = [
-    { from: 0,  to: 25,  color: "#6b7280" },
-    { from: 25, to: 50,  color: "#f97316" },
-    { from: 50, to: 75,  color: "#eab308" },
-    { from: 75, to: 100, color: "#22c55e" },
-  ];
-  const wrLbls: Lbl[] = [
-    { value: 0,   text: "0%"   },
-    { value: 25,  text: "25%"  },
-    { value: 50,  text: "50%"  },
-    { value: 75,  text: "75%"  },
-    { value: 100, text: "100%" },
-  ];
-  const pfSegs: Seg[] = [
-    { from: 0, to: 1, color: "#ef4444" },
-    { from: 1, to: 3, color: "#eab308" },
-    { from: 3, to: 4, color: "#22c55e" },
-  ];
-  const pfLbls: Lbl[] = [
-    { value: 0, text: "0"  },
-    { value: 1, text: "1"  },
-    { value: 2, text: "2"  },
-    { value: 3, text: "3"  },
-    { value: 4, text: "4+" },
-  ];
-
   return (
     <div className="glass-card p-3 sm:p-4 w-full">
 
@@ -245,33 +248,37 @@ export default function PerformanceScoreCard({ analytics }: Props) {
         <div className="flex flex-col gap-0">
 
           {/* ── Gauges row ──────────────────────────────────── */}
-          <div className="grid grid-cols-2 gap-x-1 w-full">
+          <div className="grid grid-cols-2 gap-x-2 w-full">
 
             {/* Win Rate */}
-            <div className="flex flex-col items-center min-w-0">
-              <p className="text-[11px] text-muted-foreground font-medium mb-0">Win Rate</p>
-              <div className="w-full">
-                <SemiGauge value={winRate} max={100} segs={wrSegs} lbls={wrLbls} />
-              </div>
-              {/* value text sits directly below the SVG — no negative margin */}
-              <p className={`text-xl sm:text-2xl font-bold leading-none mt-1 ${wLbl.c}`}>
+            <div className="flex flex-col items-center min-w-0 overflow-visible">
+              <p className="text-[11px] text-muted-foreground font-medium mb-1">Win Rate</p>
+              <CSSGauge
+                value={winRate}
+                max={100}
+                topColor="#f0b84b"
+                rightColor="#66c04f"
+                leftColor="transparent"
+                labels={["0%", "25%", "50%", "75%", "100%"]}
+              />
+              <p className={`text-xl sm:text-2xl font-bold leading-none mt-3 ${wLbl.c}`}>
                 {winRate.toFixed(0)}%
               </p>
               <p className={`text-[11px] font-semibold mt-0.5 ${wLbl.c}`}>{wLbl.t}</p>
             </div>
 
             {/* Profit Factor */}
-            <div className="flex flex-col items-center min-w-0">
-              <p className="text-[11px] text-muted-foreground font-medium mb-0">Profit Factor</p>
-              <div className="w-full">
-                <SemiGauge
-                  value={Math.min(profitFactor, 4)}
-                  max={4}
-                  segs={pfSegs}
-                  lbls={pfLbls}
-                />
-              </div>
-              <p className={`text-xl sm:text-2xl font-bold leading-none mt-1 ${pLbl.c}`}>
+            <div className="flex flex-col items-center min-w-0 overflow-visible">
+              <p className="text-[11px] text-muted-foreground font-medium mb-1">Profit Factor</p>
+              <CSSGauge
+                value={Math.min(profitFactor, 4)}
+                max={4}
+                topColor="#e74c3c"
+                rightColor="#f1c40f"
+                leftColor="#2ecc71"
+                labels={["0", "1", "2", "3", "4+"]}
+              />
+              <p className={`text-xl sm:text-2xl font-bold leading-none mt-3 ${pLbl.c}`}>
                 {profitFactor >= 4 ? "4+" : profitFactor.toFixed(2)}
               </p>
               <p className={`text-[11px] font-semibold mt-0.5 ${pLbl.c}`}>{pLbl.t}</p>
@@ -279,7 +286,7 @@ export default function PerformanceScoreCard({ analytics }: Props) {
           </div>
 
           {/* ── Divider ─────────────────────────────────────── */}
-          <div className="border-t border-white/5 my-2.5" />
+          <div className="border-t border-white/5 my-3" />
 
           {/* ── Bottom row ──────────────────────────────────── */}
           <div className="grid grid-cols-2 gap-x-3 w-full">
