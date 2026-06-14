@@ -2,18 +2,15 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 const rawPort = process.env.PORT;
 const port = rawPort ? Number(rawPort) : 5173;
 const basePath = process.env.BASE_PATH ?? "/";
 
-// In Replit dev mode, point API calls directly at the production server
-// (port 5000 / external port 80) to avoid the double-proxy 502 issue.
-const apiBase =
-  process.env.NODE_ENV !== "production" && process.env.REPLIT_DEV_DOMAIN
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-    : "";
+// VITE_API_URL: set this at build time to your API server URL.
+//   - Local dev: leave unset — the dev server proxy handles /api → localhost:5000
+//   - Vercel build: set to your Railway/Render API URL, e.g. https://api.yourapp.com
+const apiBase = process.env.VITE_API_URL ?? "";
 
 export default defineConfig({
   base: basePath,
@@ -23,20 +20,6 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
-      ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer({
-              root: path.resolve(import.meta.dirname, ".."),
-            }),
-          ),
-          await import("@replit/vite-plugin-dev-banner").then((m) =>
-            m.devBanner(),
-          ),
-        ]
-      : []),
   ],
   resolve: {
     alias: {
@@ -60,7 +43,7 @@ export default defineConfig({
     },
     proxy: {
       "/api": {
-        target: "http://localhost:5000",
+        target: process.env.VITE_API_URL ?? "http://localhost:5000",
         changeOrigin: true,
         ws: true,
       },

@@ -48,12 +48,8 @@ function calcExpiry(subscribePlan: SubscribePlan): Date {
 }
 
 function getPublicBaseUrl(req: import("express").Request): string {
-  const replitDomains = process.env.REPLIT_DOMAINS;
-  if (replitDomains) {
-    return `https://${replitDomains.split(",")[0]}`;
-  }
-  const devDomain = process.env.REPLIT_DEV_DOMAIN;
-  if (devDomain) return `https://${devDomain}`;
+  const configured = process.env.PUBLIC_URL;
+  if (configured) return configured.replace(/\/$/, "");
   return `${req.protocol}://${req.get("host")}`;
 }
 

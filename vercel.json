@@ -1,0 +1,12 @@
+{
+  "buildCommand": "pnpm install && pnpm --filter @workspace/trading-journal run build",
+  "outputDirectory": "artifacts/trading-journal/dist/public",
+  "installCommand": "pnpm install",
+  "framework": null,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "env": {
+    "VITE_API_URL": "@vite_api_url"
+  }
+}
