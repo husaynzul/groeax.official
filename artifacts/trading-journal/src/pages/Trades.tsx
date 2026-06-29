@@ -140,270 +140,257 @@ export default function Trades() {
     "bg-card border border-input rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors";
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="p-3 sm:p-4 md:p-6">
       {/* P&L recalc toast */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl border text-sm font-medium transition-all
+        <div className={`fixed bottom-20 md:bottom-6 left-3 right-3 md:left-auto md:right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl border text-sm font-medium transition-all
           ${toast.ok ? "bg-emerald-950 border-emerald-700 text-emerald-300" : "bg-red-950 border-red-700 text-red-300"}`}>
           {toast.ok ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
-          {toast.msg}
+          <span className="truncate">{toast.msg}</span>
         </div>
       )}
-      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-        <div>
+
+      {/* ── Page header ── */}
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="min-w-0">
           <h1 className="text-xl font-bold text-foreground">Trades</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {analytics.totalTrades} total &nbsp;|&nbsp;
+          <p className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-1.5">
+            <span>{analytics.totalTrades} total</span>
+            <span className="text-muted-foreground/40">·</span>
             <span className="text-emerald-400">{fmtMoney(analytics.totalProfit)} won</span>
-            &nbsp;|&nbsp;
+            <span className="text-muted-foreground/40">·</span>
             <span className="text-red-400">{fmtMoney(analytics.totalLoss)} lost</span>
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {trades.length > 0 && (
-            <button
-              onClick={handleRecalculate}
-              disabled={recalcRunning}
-              title="FIFO-match buy/sell fills and compute realised P&L for all synced trades"
-              className="flex items-center gap-2 border border-border hover:border-primary/50 bg-card hover:bg-accent text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${recalcRunning ? "animate-spin" : ""}`} />
-              Recalc P&amp;L
-            </button>
-          )}
-          <button
-            onClick={() => setOcrOpen(true)}
-            className="flex items-center gap-2 border border-blue-500/30 hover:border-blue-500/60 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-            title="Import trade from a platform screenshot using AI"
-          >
-            <Camera className="w-4 h-4" />
-            Import Screenshot
-          </button>
-          <button
-            onClick={() => setImportOpen(true)}
-            className="flex items-center gap-2 border border-border hover:border-primary/50 bg-card hover:bg-accent text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            <Upload className="w-4 h-4" />
-            Import CSV
-          </button>
-          {trades.length > 0 && (
-            <button
-              onClick={() => exportTradesToCSV(trades)}
-              className="flex items-center gap-2 border border-border hover:border-primary/50 bg-card hover:bg-accent text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Export CSV
-            </button>
-          )}
-          <button
-            onClick={() => setAddOpen(true)}
-            data-testid="button-add-trade-page"
-            className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Trade
-          </button>
-        </div>
+        <button
+          onClick={() => setAddOpen(true)}
+          data-testid="button-add-trade-page"
+          className="shrink-0 flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          <span className="hidden xs:inline">Add Trade</span>
+          <span className="xs:hidden">Add</span>
+        </button>
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-4">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+      {/* ── Secondary action buttons — stacked on mobile, row on desktop ── */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <button
+          onClick={() => setOcrOpen(true)}
+          className="flex items-center gap-1.5 border border-blue-500/30 hover:border-blue-500/60 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 px-3 py-2 rounded-lg text-xs font-medium transition-colors"
+        >
+          <Camera className="w-3.5 h-3.5 shrink-0" />
+          <span>Screenshot</span>
+        </button>
+        <button
+          onClick={() => setImportOpen(true)}
+          className="flex items-center gap-1.5 border border-border hover:border-primary/50 bg-card hover:bg-accent text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg text-xs font-medium transition-colors"
+        >
+          <Upload className="w-3.5 h-3.5 shrink-0" />
+          <span>CSV</span>
+        </button>
+        {trades.length > 0 && (
+          <button
+            onClick={() => exportTradesToCSV(trades)}
+            className="flex items-center gap-1.5 border border-border hover:border-primary/50 bg-card hover:bg-accent text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg text-xs font-medium transition-colors"
+          >
+            <Download className="w-3.5 h-3.5 shrink-0" />
+            <span>Export</span>
+          </button>
+        )}
+        {trades.length > 0 && (
+          <button
+            onClick={handleRecalculate}
+            disabled={recalcRunning}
+            className="flex items-center gap-1.5 border border-border hover:border-primary/50 bg-card hover:bg-accent text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${recalcRunning ? "animate-spin" : ""}`} />
+            <span>Recalc</span>
+          </button>
+        )}
+      </div>
+
+      {/* ── Filters ── */}
+      <div className="space-y-2 mb-4">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <input
             type="search"
             placeholder="Search pair, notes..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             data-testid="input-search-trades"
-            className="bg-card border border-input rounded-lg pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+            className="w-full bg-card border border-input rounded-lg pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
           />
         </div>
-
-        <select
-          value={filterPair}
-          onChange={(e) => setFilterPair(e.target.value)}
-          className={selectClass}
-          data-testid="select-filter-pair"
-        >
-          <option value="all">All Pairs</option>
-          {allPairs.map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
-        </select>
-
-        <select
-          value={filterDirection}
-          onChange={(e) => setFilterDirection(e.target.value)}
-          className={selectClass}
-          data-testid="select-filter-direction"
-        >
-          <option value="all">All Directions</option>
-          <option value="BUY">BUY</option>
-          <option value="SELL">SELL</option>
-        </select>
-
-        <select
-          value={filterOutcome}
-          onChange={(e) => setFilterOutcome(e.target.value)}
-          className={selectClass}
-          data-testid="select-filter-outcome"
-        >
-          <option value="all">All Outcomes</option>
-          <option value="WIN">Win</option>
-          <option value="LOSS">Loss</option>
-          <option value="BE">Breakeven</option>
-        </select>
+        <div className="grid grid-cols-3 gap-2">
+          <select value={filterPair} onChange={(e) => setFilterPair(e.target.value)} className={selectClass} data-testid="select-filter-pair">
+            <option value="all">All Pairs</option>
+            {allPairs.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <select value={filterDirection} onChange={(e) => setFilterDirection(e.target.value)} className={selectClass} data-testid="select-filter-direction">
+            <option value="all">All Dir.</option>
+            <option value="BUY">BUY</option>
+            <option value="SELL">SELL</option>
+          </select>
+          <select value={filterOutcome} onChange={(e) => setFilterOutcome(e.target.value)} className={selectClass} data-testid="select-filter-outcome">
+            <option value="all">All</option>
+            <option value="WIN">Win</option>
+            <option value="LOSS">Loss</option>
+            <option value="BE">BE</option>
+          </select>
+        </div>
       </div>
 
       {sorted.length === 0 ? (
-        <div className="glass-card p-12 text-center">
+        <div className="glass-card p-10 text-center">
           <p className="text-muted-foreground text-sm">
             {trades.length === 0
-              ? "No trades yet. Click \"Add Trade\" to log your first trade."
+              ? "No trades yet. Tap \"Add\" to log your first trade."
               : "No trades match your filters."}
           </p>
         </div>
       ) : (
-        <div className="glass-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  {(
-                    [
-                      { key: "date", label: "Date" },
-                      { key: "pair", label: "Pair" },
-                      { key: "direction", label: "Dir" },
-                    ] as { key: SortKey; label: string }[]
-                  ).map(({ key, label }) => (
-                    <th
-                      key={key}
-                      className="text-left text-xs text-muted-foreground py-3 px-4 font-medium cursor-pointer hover:text-foreground transition-colors"
-                      onClick={() => toggleSort(key)}
+        <>
+          {/* ── Mobile card list (hidden on md+) ── */}
+          <div className="md:hidden space-y-2">
+            {sorted.map((t) => (
+              <button
+                key={t.id}
+                data-testid={`row-trade-${t.id}`}
+                onClick={() => setSelectedTrade(t)}
+                className="w-full text-left glass-card p-3.5 hover:border-white/15 transition-colors active:scale-[0.99]"
+              >
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-semibold text-sm text-foreground truncate">{t.pair}</span>
+                    <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                      t.direction === "BUY" ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
+                    }`}>{t.direction}</span>
+                  </div>
+                  <span className={`shrink-0 text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                    t.outcome === "WIN" ? "bg-emerald-500/15 text-emerald-400" :
+                    t.outcome === "LOSS" ? "bg-red-500/15 text-red-400" : "bg-muted text-muted-foreground"
+                  }`}>{t.outcome ?? "—"}</span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground min-w-0">
+                    <span>{fmtTradeDate(t.date, "MM/dd/yy")}</span>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span>{t.rr.toFixed(2)}R</span>
+                    {t.strategy && (
+                      <>
+                        <span className="text-muted-foreground/40">·</span>
+                        <span className="truncate">{t.strategy}</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className={`text-sm font-bold ${
+                      t.outcome === "WIN" ? "text-emerald-400" :
+                      t.outcome === "LOSS" ? "text-red-400" : "text-muted-foreground"
+                    }`}>
+                      {t.outcome === "WIN" ? `+${fmtMoney(t.netProfit)}` :
+                       t.outcome === "LOSS" ? `-${fmtMoney(t.netLoss)}` : "BE"}
+                    </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEditTrade(t); }}
+                      data-testid={`button-edit-trade-${t.id}`}
+                      className="p-1.5 text-muted-foreground hover:text-foreground rounded hover:bg-white/5 transition-colors"
                     >
-                      <div className="flex items-center gap-1">
-                        {label}
-                        <SortIcon k={key} />
-                      </div>
-                    </th>
-                  ))}
-                  <th className="text-right text-xs text-muted-foreground py-3 px-4 font-medium">Entry</th>
-                  <th className="text-right text-xs text-muted-foreground py-3 px-4 font-medium">SL</th>
-                  <th className="text-right text-xs text-muted-foreground py-3 px-4 font-medium">TP</th>
-                  <th className="text-right text-xs text-muted-foreground py-3 px-4 font-medium">Lot</th>
-                  <th
-                    className="text-right text-xs text-muted-foreground py-3 px-4 font-medium cursor-pointer hover:text-foreground transition-colors"
-                    onClick={() => toggleSort("netProfit")}
-                  >
-                    <div className="flex items-center justify-end gap-1">
-                      Net P&L <SortIcon k="netProfit" />
-                    </div>
-                  </th>
-                  <th
-                    className="text-right text-xs text-muted-foreground py-3 px-4 font-medium cursor-pointer hover:text-foreground transition-colors"
-                    onClick={() => toggleSort("rr")}
-                  >
-                    <div className="flex items-center justify-end gap-1">
-                      R:R <SortIcon k="rr" />
-                    </div>
-                  </th>
-                  <th
-                    className="text-right text-xs text-muted-foreground py-3 px-4 font-medium cursor-pointer hover:text-foreground transition-colors"
-                    onClick={() => toggleSort("outcome")}
-                  >
-                    <div className="flex items-center justify-end gap-1">
-                      Result <SortIcon k="outcome" />
-                    </div>
-                  </th>
-                  <th className="text-right text-xs text-muted-foreground py-3 px-4 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.map((t) => (
-                  <tr
-                    key={t.id}
-                    data-testid={`row-trade-${t.id}`}
-                    onClick={() => setSelectedTrade(t)}
-                    className="border-b border-border/40 hover:bg-accent/20 transition-colors cursor-pointer group"
-                  >
-                    <td className="py-2.5 px-4 text-xs text-muted-foreground">
-                      {fmtTradeDate(t.date, "MM/dd/yyyy")}
-                    </td>
-                    <td className="py-2.5 px-4 text-xs font-medium">{t.pair}</td>
-                    <td className="py-2.5 px-4">
-                      <span
-                        className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                          t.direction === "BUY"
-                            ? "bg-emerald-500/20 text-emerald-400"
-                            : "bg-red-500/20 text-red-400"
-                        }`}
-                      >
-                        {t.direction}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-4 text-right text-xs text-muted-foreground">{t.entryPrice}</td>
-                    <td className="py-2.5 px-4 text-right text-xs text-muted-foreground">{t.stopLoss}</td>
-                    <td className="py-2.5 px-4 text-right text-xs text-muted-foreground">{t.takeProfit}</td>
-                    <td className="py-2.5 px-4 text-right text-xs text-muted-foreground">{t.lotSize}</td>
-                    <td
-                      className={`py-2.5 px-4 text-right text-xs font-semibold ${
-                        t.outcome === "WIN"
-                          ? "text-emerald-400"
-                          : t.outcome === "LOSS"
-                          ? "text-red-400"
-                          : "text-muted-foreground"
-                      }`}
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteTrade(t.id); }}
+                      data-testid={`button-delete-trade-${t.id}`}
+                      className="p-1.5 text-muted-foreground hover:text-red-400 rounded hover:bg-red-500/10 transition-colors"
                     >
-                      {t.outcome === "WIN"
-                        ? `+${fmtMoney(t.netProfit)}`
-                        : t.outcome === "LOSS"
-                        ? `-${fmtMoney(t.netLoss)}`
-                        : "BE"}
-                    </td>
-                    <td className="py-2.5 px-4 text-right text-xs text-muted-foreground">
-                      {t.rr.toFixed(2)}R
-                    </td>
-                    <td className="py-2.5 px-4 text-right">
-                      <span
-                        className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                          t.outcome === "WIN"
-                            ? "bg-emerald-500/20 text-emerald-400"
-                            : t.outcome === "LOSS"
-                            ? "bg-red-500/20 text-red-400"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {t.outcome ?? "—"}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setEditTrade(t); }}
-                          data-testid={`button-edit-trade-${t.id}`}
-                          className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded hover:bg-accent"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); deleteTrade(t.id); }}
-                          data-testid={`button-delete-trade-${t.id}`}
-                          className="text-muted-foreground hover:text-red-400 transition-colors p-1 rounded hover:bg-red-500/10"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </button>
+            ))}
           </div>
-        </div>
+
+          {/* ── Desktop table (hidden on mobile) ── */}
+          <div className="hidden md:block glass-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    {(
+                      [
+                        { key: "date", label: "Date" },
+                        { key: "pair", label: "Pair" },
+                        { key: "direction", label: "Dir" },
+                      ] as { key: SortKey; label: string }[]
+                    ).map(({ key, label }) => (
+                      <th
+                        key={key}
+                        className="text-left text-xs text-muted-foreground py-3 px-4 font-medium cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => toggleSort(key)}
+                      >
+                        <div className="flex items-center gap-1">{label}<SortIcon k={key} /></div>
+                      </th>
+                    ))}
+                    <th className="text-right text-xs text-muted-foreground py-3 px-4 font-medium">Entry</th>
+                    <th className="text-right text-xs text-muted-foreground py-3 px-4 font-medium">SL</th>
+                    <th className="text-right text-xs text-muted-foreground py-3 px-4 font-medium">TP</th>
+                    <th className="text-right text-xs text-muted-foreground py-3 px-4 font-medium">Lot</th>
+                    <th className="text-right text-xs text-muted-foreground py-3 px-4 font-medium cursor-pointer hover:text-foreground transition-colors" onClick={() => toggleSort("netProfit")}>
+                      <div className="flex items-center justify-end gap-1">Net P&L <SortIcon k="netProfit" /></div>
+                    </th>
+                    <th className="text-right text-xs text-muted-foreground py-3 px-4 font-medium cursor-pointer hover:text-foreground transition-colors" onClick={() => toggleSort("rr")}>
+                      <div className="flex items-center justify-end gap-1">R:R <SortIcon k="rr" /></div>
+                    </th>
+                    <th className="text-right text-xs text-muted-foreground py-3 px-4 font-medium cursor-pointer hover:text-foreground transition-colors" onClick={() => toggleSort("outcome")}>
+                      <div className="flex items-center justify-end gap-1">Result <SortIcon k="outcome" /></div>
+                    </th>
+                    <th className="text-right text-xs text-muted-foreground py-3 px-4 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.map((t) => (
+                    <tr
+                      key={t.id}
+                      data-testid={`row-trade-${t.id}`}
+                      onClick={() => setSelectedTrade(t)}
+                      className="border-b border-border/40 hover:bg-accent/20 transition-colors cursor-pointer group"
+                    >
+                      <td className="py-2.5 px-4 text-xs text-muted-foreground">{fmtTradeDate(t.date, "MM/dd/yyyy")}</td>
+                      <td className="py-2.5 px-4 text-xs font-medium">{t.pair}</td>
+                      <td className="py-2.5 px-4">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${t.direction === "BUY" ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}`}>{t.direction}</span>
+                      </td>
+                      <td className="py-2.5 px-4 text-right text-xs text-muted-foreground">{t.entryPrice}</td>
+                      <td className="py-2.5 px-4 text-right text-xs text-muted-foreground">{t.stopLoss}</td>
+                      <td className="py-2.5 px-4 text-right text-xs text-muted-foreground">{t.takeProfit}</td>
+                      <td className="py-2.5 px-4 text-right text-xs text-muted-foreground">{t.lotSize}</td>
+                      <td className={`py-2.5 px-4 text-right text-xs font-semibold ${t.outcome === "WIN" ? "text-emerald-400" : t.outcome === "LOSS" ? "text-red-400" : "text-muted-foreground"}`}>
+                        {t.outcome === "WIN" ? `+${fmtMoney(t.netProfit)}` : t.outcome === "LOSS" ? `-${fmtMoney(t.netLoss)}` : "BE"}
+                      </td>
+                      <td className="py-2.5 px-4 text-right text-xs text-muted-foreground">{t.rr.toFixed(2)}R</td>
+                      <td className="py-2.5 px-4 text-right">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${t.outcome === "WIN" ? "bg-emerald-500/20 text-emerald-400" : t.outcome === "LOSS" ? "bg-red-500/20 text-red-400" : "bg-muted text-muted-foreground"}`}>{t.outcome ?? "—"}</span>
+                      </td>
+                      <td className="py-2.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={(e) => { e.stopPropagation(); setEditTrade(t); }} data-testid={`button-edit-trade-${t.id}`} className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded hover:bg-accent"><Edit2 className="w-3.5 h-3.5" /></button>
+                          <button onClick={(e) => { e.stopPropagation(); deleteTrade(t.id); }} data-testid={`button-delete-trade-${t.id}`} className="text-muted-foreground hover:text-red-400 transition-colors p-1 rounded hover:bg-red-500/10"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
 
       {trades.length > 0 && (
-        <div className="mt-6 pt-4 border-t border-border">
+        <div className="mt-5 pt-4 border-t border-border">
           {!confirmClear ? (
             <button
               onClick={() => setConfirmClear(true)}
@@ -414,24 +401,18 @@ export default function Trades() {
               Clear All Data
             </button>
           ) : (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm text-muted-foreground">
-                This will permanently delete all {trades.length} trades.
+                Delete all {trades.length} trades?
               </span>
               <button
-                onClick={() => {
-                  clearAll();
-                  setConfirmClear(false);
-                }}
+                onClick={() => { clearAll(); setConfirmClear(false); }}
                 data-testid="button-confirm-clear"
                 className="text-sm font-medium text-red-400 hover:text-red-300 transition-colors px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20"
               >
                 Yes, clear all
               </button>
-              <button
-                onClick={() => setConfirmClear(false)}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
+              <button onClick={() => setConfirmClear(false)} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Cancel
               </button>
             </div>

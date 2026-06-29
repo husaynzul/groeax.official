@@ -281,16 +281,16 @@ export default function Analytics() {
           </div>
           {hasStrategy ? (
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={analytics.strategyStats} layout="vertical" margin={{ left: 8, right: 16 }}>
+              <BarChart data={analytics.strategyStats} layout="vertical" margin={{ left: 4, right: 12 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
                 <XAxis
                   type="number" tick={{ fontSize: 9, fill: "hsl(215 20% 50%)" }}
                   tickFormatter={(v) => `$${v}`}
                 />
                 <YAxis
-                  type="category" dataKey="name" width={110}
+                  type="category" dataKey="name" width={80}
                   tick={{ fontSize: 9, fill: "hsl(215 20% 50%)" }}
-                  tickFormatter={(v: string) => v.length > 14 ? v.slice(0, 13) + "…" : v}
+                  tickFormatter={(v: string) => v.length > 11 ? v.slice(0, 10) + "…" : v}
                 />
                 <Tooltip content={<StrategyTooltip />} />
                 <ReferenceLine x={0} stroke="rgba(255,255,255,0.15)" />

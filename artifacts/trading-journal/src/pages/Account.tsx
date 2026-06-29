@@ -46,12 +46,12 @@ export default function Account() {
         </button>
       </nav>
 
-      <div className="max-w-2xl mx-auto px-6 py-12">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-4xl font-black tracking-tight mb-8">Account Settings</h1>
+          <h1 className="text-2xl sm:text-4xl font-black tracking-tight mb-6 sm:mb-8">Account Settings</h1>
 
           {/* Profile */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-8 mb-6">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 sm:p-8 mb-6">
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
               <UserIcon className="w-5 h-5 text-white/50" /> Profile
             </h2>

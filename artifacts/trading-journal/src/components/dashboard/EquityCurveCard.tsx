@@ -203,45 +203,45 @@ export default function EquityCurveCard({
       className="glass-card p-4 hover:border-white/15 transition-colors"
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex flex-wrap items-start justify-between gap-2 mb-1">
         <div className="flex items-center gap-2">
           <TrendingUp className="w-3.5 h-3.5 text-primary shrink-0" />
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
             Equity Curve
           </h2>
         </div>
-        <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] text-muted-foreground">
           <span className="flex items-center gap-1.5">
-            <span className="w-5 h-[3px] rounded-full bg-emerald-500 inline-block" />
+            <span className="w-4 h-[3px] rounded-full bg-emerald-500 inline-block shrink-0" />
             Your Account
           </span>
           <span className="flex items-center gap-1.5">
             <span
-              className="inline-block w-5 h-[2px]"
+              className="inline-block w-4 h-[2px] shrink-0"
               style={{ background: "repeating-linear-gradient(90deg,#6366f1 0,#6366f1 4px,transparent 4px,transparent 8px)" }}
             />
-            S&P 500 (10%/yr)
+            S&P 500
           </span>
         </div>
       </div>
 
       {/* Sub-header: current balance */}
-      <div className="mb-4">
-        <span className={`text-2xl font-bold ${myReturnPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+      <div className="mb-4 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <span className={`text-xl sm:text-2xl font-bold ${myReturnPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
           {fmtMoney(currentBalance)}
         </span>
-        <span className={`text-sm font-semibold ml-2 ${myReturnPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+        <span className={`text-sm font-semibold ${myReturnPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
           {fmtPct(myReturnPct)}
         </span>
         {base > 0 && (
-          <span className="text-xs text-muted-foreground ml-2">
+          <span className="text-xs text-muted-foreground">
             from {fmtMoney(base)}
           </span>
         )}
       </div>
 
       {/* Chart */}
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={240}>
         <ComposedChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <defs>
             <linearGradient id="equityAreaGrad" x1="0" y1="0" x2="0" y2="1">

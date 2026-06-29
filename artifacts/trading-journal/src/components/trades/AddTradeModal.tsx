@@ -256,16 +256,16 @@ export default function AddTradeModal({ open, onClose, editTrade, prefill, broke
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-2xl bg-card border-card-border max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-16px)] max-w-2xl bg-card border-card-border max-h-[92dvh] overflow-y-auto p-4 sm:p-6 rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold">
+          <DialogTitle className="text-base sm:text-lg font-semibold">
             {editTrade ? "Edit Trade" : "Add New Trade"}
           </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit as never)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <FormField
                 control={form.control}
                 name="pair"

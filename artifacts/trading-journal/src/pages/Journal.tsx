@@ -143,16 +143,17 @@ export default function Journal() {
       </div>
 
       <div className="glass-card overflow-hidden">
-        <div className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_1fr_auto] border-b border-border">
+        {/* Day headers: 7 cols on mobile, 8 on sm (adds Week column) */}
+        <div className="grid grid-cols-7 sm:grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_1fr_auto] border-b border-border">
           {dayHeaders.map((h) => (
             <div
               key={h}
-              className="text-center text-[11px] text-muted-foreground py-2.5 font-medium border-r border-border last:border-r-0"
+              className="text-center text-[10px] sm:text-[11px] text-muted-foreground py-2 sm:py-2.5 font-medium border-r border-border last:border-r-0"
             >
               {h}
             </div>
           ))}
-          <div className="text-center text-[11px] text-muted-foreground py-2.5 font-medium px-2">
+          <div className="hidden sm:block text-center text-[11px] text-muted-foreground py-2.5 font-medium px-2">
             Week
           </div>
         </div>
@@ -164,11 +165,11 @@ export default function Journal() {
           return (
             <div
               key={wi}
-              className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_1fr_auto] border-b border-border last:border-b-0"
+              className="grid grid-cols-7 sm:grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_1fr_auto] border-b border-border last:border-b-0"
             >
               {week.map((day, di) => {
                 if (!day) {
-                  return <div key={`empty-${wi}-${di}`} className="border-r border-border min-h-[80px]" />;
+                  return <div key={`empty-${wi}-${di}`} className="border-r border-border min-h-[52px] sm:min-h-[80px]" />;
                 }
                 const key = format(day, "yyyy-MM-dd");
                 const dayTrades = analytics.tradesByDate[key] ?? [];
@@ -192,7 +193,7 @@ export default function Journal() {
                     key={key}
                     onClick={() => setSelectedDate(isSelected ? null : key)}
                     data-testid={`journal-day-${key}`}
-                    className={`border-r border-border min-h-[80px] p-2 text-left transition-all hover:bg-accent/20 ${
+                    className={`border-r border-border min-h-[52px] sm:min-h-[80px] p-1 sm:p-2 text-left transition-all hover:bg-accent/20 overflow-hidden ${
                       hasTrades
                         ? pnl > 0
                           ? "bg-emerald-500/10"
@@ -203,16 +204,16 @@ export default function Journal() {
                     } ${isSelected ? "ring-1 ring-inset ring-primary/50" : ""}`}
                   >
                     <span
-                      className={`text-xs font-medium ${
+                      className={`text-[10px] sm:text-xs font-medium ${
                         isToday(day) ? "text-primary" : "text-muted-foreground"
                       }`}
                     >
                       {format(day, "d")}
                     </span>
                     {hasTrades && (
-                      <div className="mt-1 space-y-0.5">
+                      <div className="mt-0.5 sm:mt-1 space-y-px sm:space-y-0.5">
                         <p
-                          className={`text-[10px] font-semibold ${
+                          className={`text-[8px] sm:text-[10px] font-semibold leading-tight truncate ${
                             pnl > 0
                               ? "text-emerald-400"
                               : pnl < 0
@@ -223,17 +224,18 @@ export default function Journal() {
                           {pnl > 0 ? "+" : ""}
                           {fmtMoney(pnl)}
                         </p>
-                        <p className="text-[9px] text-muted-foreground">
-                          {dayTrades.length} trade{dayTrades.length !== 1 ? "s" : ""}
+                        <p className="text-[7px] sm:text-[9px] text-muted-foreground leading-tight">
+                          {dayTrades.length}t
                         </p>
-                        <p className="text-[9px] text-muted-foreground">{wr.toFixed(0)}%</p>
+                        <p className="hidden sm:block text-[9px] text-muted-foreground">{wr.toFixed(0)}%</p>
                       </div>
                     )}
                   </button>
                 );
               })}
 
-              <div className="min-h-[80px] flex flex-col items-center justify-center px-2 bg-secondary/20">
+              {/* Week summary — hidden on mobile */}
+              <div className="hidden sm:flex min-h-[80px] flex-col items-center justify-center px-2 bg-secondary/20">
                 {weekStats.trades > 0 ? (
                   <>
                     <p
@@ -244,12 +246,8 @@ export default function Journal() {
                       {weekStats.pnl >= 0 ? "+" : ""}
                       {fmtMoney(weekStats.pnl)}
                     </p>
-                    <p className="text-[9px] text-muted-foreground mt-0.5">
-                      {weekStats.trades}T
-                    </p>
-                    <p className="text-[9px] text-muted-foreground">
-                      {weekStats.winRate.toFixed(0)}%
-                    </p>
+                    <p className="text-[9px] text-muted-foreground mt-0.5">{weekStats.trades}T</p>
+                    <p className="text-[9px] text-muted-foreground">{weekStats.winRate.toFixed(0)}%</p>
                   </>
                 ) : (
                   <span className="text-[9px] text-muted-foreground/40">—</span>
