@@ -38,32 +38,32 @@ function MetricChip({
   sub: string;
 }) {
   return (
-    <div className="glass-card p-3.5 flex flex-col gap-2.5 hover:border-white/15 transition-colors cursor-pointer active:scale-[0.98]">
+    <div className="glass-card p-3 flex flex-col gap-2 hover:border-white/15 transition-colors cursor-pointer active:scale-[0.98]">
       {/* Row: icon + text + chevron */}
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2.5">
         {/* Colored icon square */}
         <div
-          className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
+          className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center"
           style={{ background: iconBg }}
         >
-          <Icon className="w-5 h-5" style={{ color: iconColor }} />
+          <Icon className="w-4.5 h-4.5" style={{ color: iconColor }} />
         </div>
 
         {/* Text block */}
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-0.5 leading-tight">
+          <p className="text-[9px] text-muted-foreground uppercase tracking-wide font-semibold mb-0.5 leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
             {label}
           </p>
-          <p className={`text-[1.4rem] font-bold leading-tight ${ratingColor}`}>{value}</p>
-          <p className={`text-xs font-semibold mt-0.5 ${ratingColor}`}>{rating}</p>
+          <p className={`text-lg font-bold leading-tight ${ratingColor}`}>{value}</p>
+          <p className={`text-[11px] font-semibold mt-0.5 ${ratingColor}`}>{rating}</p>
         </div>
 
         {/* Chevron */}
-        <span className="text-muted-foreground/30 text-base font-bold mt-1 shrink-0">›</span>
+        <span className="text-muted-foreground/30 text-base font-bold mt-0.5 shrink-0">›</span>
       </div>
 
       {/* Sub-text */}
-      <p className="text-[10px] text-muted-foreground/55 leading-tight">{sub}</p>
+      <p className="text-[9px] text-muted-foreground/55 leading-tight line-clamp-1">{sub}</p>
     </div>
   );
 }
@@ -186,7 +186,7 @@ export default function PerformanceScoreCard({
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
               Net P&L {startingBalance > 0 ? "%" : ""}
             </p>
-            <p className={`text-4xl font-bold leading-tight ${isPositive ? "text-emerald-400" : "text-red-400"}`}>
+            <p className={`text-3xl sm:text-4xl font-bold leading-tight ${isPositive ? "text-emerald-400" : "text-red-400"}`}>
               {isPositive ? "+" : ""}{startingBalance > 0 ? `${fmt2(netPnLPct)}%` : `$${Math.abs(analytics.netBalance).toFixed(2)}`}
             </p>
           </div>
@@ -267,7 +267,7 @@ export default function PerformanceScoreCard({
           })()}
 
           {/* 2×2 metric chips */}
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-2 gap-2">
             <MetricChip
               icon={BarChart2}
               iconBg="linear-gradient(135deg,#7c3aed,#9f67fa)"
