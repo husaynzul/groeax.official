@@ -20,6 +20,8 @@ const fmt2 = (n: number) => n.toFixed(2);
 
 function MetricChip({
   icon: Icon,
+  iconBg,
+  iconColor,
   label,
   value,
   rating,
@@ -27,6 +29,8 @@ function MetricChip({
   sub,
 }: {
   icon: React.ElementType;
+  iconBg: string;
+  iconColor: string;
   label: string;
   value: string;
   rating: string;
@@ -34,19 +38,32 @@ function MetricChip({
   sub: string;
 }) {
   return (
-    <div className="glass-card p-3.5 flex flex-col gap-1 hover:border-white/15 transition-colors">
-      <div className="flex items-center justify-between mb-0.5">
-        <div className="flex items-center gap-1.5">
-          <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
-            {label}
-          </span>
+    <div className="glass-card p-3.5 flex flex-col gap-2.5 hover:border-white/15 transition-colors cursor-pointer active:scale-[0.98]">
+      {/* Row: icon + text + chevron */}
+      <div className="flex items-start gap-3">
+        {/* Colored icon square */}
+        <div
+          className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
+          style={{ background: iconBg }}
+        >
+          <Icon className="w-5 h-5" style={{ color: iconColor }} />
         </div>
-        <span className="text-[10px] font-bold text-muted-foreground/40">›</span>
+
+        {/* Text block */}
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-0.5 leading-tight">
+            {label}
+          </p>
+          <p className={`text-[1.4rem] font-bold leading-tight ${ratingColor}`}>{value}</p>
+          <p className={`text-xs font-semibold mt-0.5 ${ratingColor}`}>{rating}</p>
+        </div>
+
+        {/* Chevron */}
+        <span className="text-muted-foreground/30 text-base font-bold mt-1 shrink-0">›</span>
       </div>
-      <p className={`text-2xl font-bold leading-tight ${ratingColor}`}>{value}</p>
-      <p className={`text-xs font-semibold ${ratingColor}`}>{rating}</p>
-      <p className="text-[10px] text-muted-foreground/60 leading-tight mt-0.5">{sub}</p>
+
+      {/* Sub-text */}
+      <p className="text-[10px] text-muted-foreground/55 leading-tight">{sub}</p>
     </div>
   );
 }
@@ -253,6 +270,8 @@ export default function PerformanceScoreCard({
           <div className="grid grid-cols-2 gap-2.5">
             <MetricChip
               icon={BarChart2}
+              iconBg="linear-gradient(135deg,#7c3aed,#9f67fa)"
+              iconColor="#ffffff"
               label="Profit Factor"
               value={pf >= 4 ? "4.00+" : fmt2(pf)}
               rating={pfRating.t}
@@ -261,6 +280,8 @@ export default function PerformanceScoreCard({
             />
             <MetricChip
               icon={Target}
+              iconBg="linear-gradient(135deg,#334155,#475569)"
+              iconColor="#e2e8f0"
               label="Average R:R"
               value={`${fmt2(avgRR)}R`}
               rating={rrRating.t}
@@ -269,6 +290,8 @@ export default function PerformanceScoreCard({
             />
             <MetricChip
               icon={Shield}
+              iconBg="linear-gradient(135deg,#b91c1c,#ef4444)"
+              iconColor="#ffffff"
               label="Consistency"
               value={`${consistency}%`}
               rating={conRating.t}
@@ -277,6 +300,8 @@ export default function PerformanceScoreCard({
             />
             <MetricChip
               icon={TrendingUp}
+              iconBg="linear-gradient(135deg,#1e3a4c,#2d5066)"
+              iconColor="#94a3b8"
               label="Avg Return"
               value={`${avgReturnPct >= 0 ? "+" : ""}${fmt2(avgReturnPct)}%`}
               rating={retRating.t}

@@ -26,17 +26,31 @@ function daysBetween(a: string, b: string): number {
   return (new Date(b + "T12:00:00").getTime() - new Date(a + "T12:00:00").getTime()) / 86400000;
 }
 
+function subtractOneDay(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00");
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
 function buildChartData(
   equityCurve: EquityPoint[],
   startingBalance: number,
 ) {
   if (!equityCurve.length) return [];
   const firstDate = equityCurve[0].date;
-  const base = startingBalance > 0 ? startingBalance : equityCurve[0].equity;
+  const base = startingBalance > 0 ? startingBalance : 0;
 
-  return equityCurve.map((pt) => {
-    const days = daysBetween(firstDate, pt.date);
-    const spy  = parseFloat((base * Math.pow(1.10, days / 365)).toFixed(2));
+  // Prepend a "day 0" starting balance point so the curve always starts from base
+  const points: EquityPoint[] = base > 0
+    ? [{ date: subtractOneDay(firstDate), equity: base }, ...equityCurve]
+    : equityCurve;
+
+  const anchorDate = points[0].date;
+
+  return points.map((pt) => {
+    const days = daysBetween(anchorDate, pt.date);
+    const spyBase = base > 0 ? base : points[0].equity;
+    const spy  = parseFloat(((spyBase > 0 ? spyBase : 1) * Math.pow(1.10, days / 365)).toFixed(2));
     return { date: pt.date, equity: pt.equity, spy };
   });
 }
@@ -160,7 +174,7 @@ export default function EquityCurveCard({
     },
   ];
 
-  if (chartData.length < 2) {
+  if (chartData.length === 0) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -175,7 +189,7 @@ export default function EquityCurveCard({
           </h2>
         </div>
         <div className="h-[300px] flex items-center justify-center text-muted-foreground text-sm">
-          Add at least 2 trades to see the equity curve
+          Add trades to see the equity curve
         </div>
       </motion.div>
     );
