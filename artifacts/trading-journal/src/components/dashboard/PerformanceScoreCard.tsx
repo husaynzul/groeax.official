@@ -57,15 +57,26 @@ function CumulReturnTooltip({ active, payload, label }: {
   if (!active || !payload?.length) return null;
   const v = payload[0].value as number;
   return (
-    <div
-      style={{ background: "hsl(220 14% 11%)", border: "1px solid hsl(220 13% 22%)" }}
-      className="rounded-lg px-3 py-2 shadow-xl text-xs"
-    >
-      <p className="text-muted-foreground mb-1">{label}</p>
-      <p className={`font-bold ${v >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+    <div style={{ background: "#111", border: "1px solid #2b2b2b", borderRadius: 8, padding: "12px 14px" }} className="shadow-xl text-xs">
+      <p style={{ color: "#888", marginBottom: 4 }}>{label}</p>
+      <p style={{ fontWeight: 700, color: v >= 0 ? "#22c55e" : "#ef4444" }}>
         {v >= 0 ? "+" : ""}{fmt2(v)}%
       </p>
     </div>
+  );
+}
+
+function LastDot(props: {
+  cx?: number; cy?: number; index?: number; dataLength: number;
+  lineColor: string;
+}) {
+  const { cx = 0, cy = 0, index = 0, dataLength, lineColor } = props;
+  if (index !== dataLength - 1) return null;
+  return (
+    <circle
+      cx={cx} cy={cy} r={6}
+      fill={lineColor} stroke="#ffffff" strokeWidth={2}
+    />
   );
 }
 
@@ -164,55 +175,79 @@ export default function PerformanceScoreCard({
           </div>
 
           {/* Cumulative Return chart */}
-          {cumulData.length > 1 && (
-            <div>
-              <p className="text-[10px] text-muted-foreground mb-2 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                Cumulative Return (%)
-              </p>
-              <ResponsiveContainer width="100%" height={160}>
-                <AreaChart data={cumulData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                  <defs>
-                    <linearGradient id="cumulGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={isPositive ? "#22c55e" : "#ef4444"} stopOpacity={0.25} />
-                      <stop offset="100%" stopColor={isPositive ? "#22c55e" : "#ef4444"} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 8, fill: "#64748b" }}
-                    tickFormatter={(v: string) => {
-                      const d = new Date(v + "T12:00:00");
-                      return isNaN(d.getTime()) ? v : `${d.toLocaleString("en", { month: "short" })} ${d.getDate()}`;
-                    }}
-                    axisLine={false}
-                    tickLine={false}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis
-                    tick={{ fontSize: 8, fill: "#64748b" }}
-                    tickFormatter={(v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}%`}
-                    axisLine={false}
-                    tickLine={false}
-                    width={40}
-                  />
-                  <Tooltip content={<CumulReturnTooltip />} />
-                  <Area
-                    type="monotone"
-                    dataKey="return"
-                    stroke={isPositive ? "#22c55e" : "#ef4444"}
-                    strokeWidth={2}
-                    fill="url(#cumulGrad)"
-                    dot={false}
-                    activeDot={{ r: 5, fill: isPositive ? "#22c55e" : "#ef4444", stroke: "#fff", strokeWidth: 1.5 }}
-                    isAnimationActive
-                    animationDuration={900}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+          {cumulData.length > 1 && (() => {
+            const lineColor = isPositive ? "#22c55e" : "#ef4444";
+            const vals = cumulData.map((d) => d.return);
+            const rawMin = Math.min(...vals);
+            const rawMax = Math.max(...vals);
+            const yMin = Math.floor((Math.min(rawMin, 0) - 2) / 5) * 5;
+            const yMax = Math.ceil((Math.max(rawMax, 0) + 2) / 5) * 5;
+            return (
+              <div>
+                <p className="text-[10px] text-muted-foreground mb-2 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full inline-block" style={{ background: lineColor }} />
+                  Cumulative Return (%)
+                </p>
+                <ResponsiveContainer width="100%" height={240}>
+                  <AreaChart data={cumulData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                    <defs>
+                      <linearGradient id="cumulGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={lineColor} stopOpacity={0.45} />
+                        <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="0"
+                      stroke="rgba(255,255,255,0.08)"
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 9, fill: "#888" }}
+                      tickFormatter={(v: string) => {
+                        const d = new Date(v + "T12:00:00");
+                        return isNaN(d.getTime()) ? v : `${d.toLocaleString("en", { month: "short" })} ${d.getDate()}`;
+                      }}
+                      axisLine={false}
+                      tickLine={false}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis
+                      domain={[yMin, yMax]}
+                      tickCount={Math.round((yMax - yMin) / 5) + 1}
+                      tick={{ fontSize: 9, fill: "#888" }}
+                      tickFormatter={(v: number) => `${v}%`}
+                      axisLine={false}
+                      tickLine={false}
+                      width={38}
+                    />
+                    <Tooltip content={<CumulReturnTooltip />} />
+                    <Area
+                      type="monotone"
+                      dataKey="return"
+                      stroke={lineColor}
+                      strokeWidth={4}
+                      fill="url(#cumulGrad)"
+                      dot={(dotProps: { cx?: number; cy?: number; index?: number }) => (
+                        <LastDot
+                          key={dotProps.index}
+                          cx={dotProps.cx}
+                          cy={dotProps.cy}
+                          index={dotProps.index}
+                          dataLength={cumulData.length}
+                          lineColor={lineColor}
+                        />
+                      )}
+                      activeDot={{ r: 8, fill: lineColor, stroke: "#fff", strokeWidth: 2 }}
+                      isAnimationActive
+                      animationDuration={2200}
+                      animationEasing="ease-out"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            );
+          })()}
 
           {/* 2×2 metric chips */}
           <div className="grid grid-cols-2 gap-2.5">
