@@ -22,6 +22,7 @@ import {
   Line,
 } from "recharts";
 import PerformanceScoreCard from "@/components/dashboard/PerformanceScoreCard";
+import EquityCurveCard from "@/components/dashboard/EquityCurveCard";
 import { motion } from "framer-motion";
 import {
   TrendingUp,
@@ -557,16 +558,20 @@ export default function Dashboard() {
 
       <StreakCard trades={trades} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card p-4 hover:border-white/15 transition-colors">
-          <div className="flex items-center gap-2 mb-4"><TrendingUp className="w-3.5 h-3.5 text-primary" /><h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Equity Curve</h2></div>
-          {analytics.equityCurve.length > 0 ? <ResponsiveContainer width="100%" height={200}><AreaChart data={analytics.equityCurve} margin={{ top: 28, right: 24, bottom: 4, left: 0 }}><defs><linearGradient id="equityGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#4ade80" stopOpacity={0.18} /><stop offset="100%" stopColor="#4ade80" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.05)" vertical={false} /><XAxis dataKey="date" tick={{ fontSize: 9, fill: "#64748b" }} tickFormatter={(v) => fmtTradeDate(v, "MMM d")} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 9, fill: "#64748b" }} tickFormatter={(v) => `$${Number(v).toFixed(0)}`} axisLine={false} tickLine={false} width={48} /><Tooltip content={<DarkTooltip />} /><Area type="linear" dataKey="equity" stroke="#4ade80" strokeWidth={2} fill="url(#equityGrad)" dot={{ r: 4, fill: "#4ade80", stroke: "#0f172a", strokeWidth: 2 }} activeDot={{ r: 6, fill: "#4ade80", stroke: "#fff", strokeWidth: 1.5 }} isAnimationActive animationDuration={900} /></AreaChart></ResponsiveContainer> : <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">No trade data yet</div>}
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="glass-card p-4 hover:border-white/15 transition-colors">
-          <div className="flex items-center gap-2 mb-4"><BarChart2 className="w-3.5 h-3.5 text-primary" /><h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Net Daily P&amp;L</h2></div>
-          {analytics.dailyPnL.length > 0 ? <ResponsiveContainer width="100%" height={200}><BarChart data={analytics.dailyPnL} margin={{ top: 8, right: 8, bottom: 4, left: 0 }} barCategoryGap="30%"><CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.05)" vertical={false} /><XAxis dataKey="date" tick={{ fontSize: 9, fill: "#64748b" }} tickFormatter={(v) => fmtTradeDate(v, "MMM d")} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 9, fill: "#64748b" }} tickFormatter={(v) => `$${Number(v).toFixed(0)}`} axisLine={false} tickLine={false} width={48} /><ReferenceLine y={0} stroke="rgba(255,255,255,0.35)" strokeWidth={2} /><Tooltip content={<DarkTooltip />} /><Bar dataKey="pnl" radius={[3, 3, 0, 0]} isAnimationActive animationDuration={800} maxBarSize={36}>{analytics.dailyPnL.map((entry, i) => <Cell key={i} fill={entry.pnl >= 0 ? "#22c55e" : "#ef4444"} fillOpacity={1} />)}</Bar></BarChart></ResponsiveContainer> : <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">No trade data yet</div>}
-        </motion.div>
-      </div>
+      {/* Enhanced Equity Curve with benchmark comparison */}
+      <EquityCurveCard
+        equityCurve={analytics.equityCurve}
+        startingBalance={startingBalance}
+        currentBalance={currentBalance}
+        maxDrawdownPct={analytics.drawdownStats.drawdownPercent}
+        netPnL={analytics.netBalance}
+      />
+
+      {/* Net Daily P&L */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="glass-card p-4 hover:border-white/15 transition-colors">
+        <div className="flex items-center gap-2 mb-4"><BarChart2 className="w-3.5 h-3.5 text-primary" /><h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Net Daily P&amp;L</h2></div>
+        {analytics.dailyPnL.length > 0 ? <ResponsiveContainer width="100%" height={200}><BarChart data={analytics.dailyPnL} margin={{ top: 8, right: 8, bottom: 4, left: 0 }} barCategoryGap="30%"><CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.05)" vertical={false} /><XAxis dataKey="date" tick={{ fontSize: 9, fill: "#64748b" }} tickFormatter={(v) => fmtTradeDate(v, "MMM d")} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 9, fill: "#64748b" }} tickFormatter={(v) => `$${Number(v).toFixed(0)}`} axisLine={false} tickLine={false} width={48} /><ReferenceLine y={0} stroke="rgba(255,255,255,0.35)" strokeWidth={2} /><Tooltip content={<DarkTooltip />} /><Bar dataKey="pnl" radius={[3, 3, 0, 0]} isAnimationActive animationDuration={800} maxBarSize={36}>{analytics.dailyPnL.map((entry, i) => <Cell key={i} fill={entry.pnl >= 0 ? "#22c55e" : "#ef4444"} fillOpacity={1} />)}</Bar></BarChart></ResponsiveContainer> : <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">No trade data yet</div>}
+      </motion.div>
 
       {/* Weekly Performance Trend */}
       {weeklyTrend.length > 0 && (
