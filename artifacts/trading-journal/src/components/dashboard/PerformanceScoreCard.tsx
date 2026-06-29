@@ -1,264 +1,150 @@
-import { useEffect, useRef, useState } from "react";
-import { Zap, CheckCircle2 } from "lucide-react";
+import { useMemo } from "react";
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
+import {
+  Zap, TrendingUp, TrendingDown, Target, Shield, BarChart2,
+  CheckCircle, AlertTriangle, Focus,
+} from "lucide-react";
 import type { Analytics } from "@/engine/analyticsEngine";
+import { Trade } from "@/types";
 
-interface Props { analytics: Analytics }
+interface Props {
+  analytics: Analytics;
+  trades: Trade[];
+  startingBalance: number;
+  currentBalance: number;
+}
 
-// ─── Exact HTML Gauge ─────────────────────────────────────────────────────────
-// Dimensions match the provided HTML exactly:
-//   .gauge  { width:250px; height:125px; border:25px solid #2f3747; border-radius:250px 250px 0 0 }
-//   .needle { width:4px; height:90px }
-//   .center { width:18px; height:18px }
-//
-// On narrow screens the whole gauge block is CSS-scaled down (scale transform)
-// so proportions NEVER change — only the overall size shrinks.
+const fmt2 = (n: number) => n.toFixed(2);
 
-const G_IW  = 250;   // content width  (matches HTML width:250px)
-const G_IH  = 125;   // content height (matches HTML height:125px)
-const G_BW  = 25;    // border width   (matches HTML border:25px)
-const G_BR  = 150;   // border-radius  (matches HTML border-radius:250px 250px 0 0 → outer = G_IW/2 + G_BW)
-const G_TOT = G_IW + G_BW * 2;   // 300 — full outer width including both borders
-const N_H   = 115;   // needle height — longer so it's clearly visible at small scale
-const C_D   = 18;    // center dot diameter
-const LTOP  = 18;    // space reserved ABOVE the ring for the top arc label
-
-// Arc-center within the inner-block coordinate system:
-//   ring's margin-top = LTOP = 18
-//   ring's top border = G_BW = 25  → ring content top  = LTOP + G_BW = 43
-//   ring content height = G_IH = 125 → ring content bottom = 168
-const ARC_CX = G_TOT / 2;                        // 150
-const ARC_CY = LTOP + G_BW + G_IH;               // 168
-
-// Radius to arc-label centres (just outside the outer border edge)
-const LR = G_BR + 14;                             // 164
-
-// Inner-block natural height: top label space + ring rendered height + centre-dot bleed
-const NATURAL_H = ARC_CY + Math.ceil(C_D / 2) + 2; // 168 + 9 + 2 = 179
-
-function CSSGauge({
-  value, max,
-  topColor, rightColor, leftColor = "transparent",
-  labels,          // [far-left, quarter-left, top, quarter-right, far-right]
+function MetricChip({
+  icon: Icon,
+  label,
+  value,
+  rating,
+  ratingColor,
+  sub,
 }: {
-  value: number; max: number;
-  topColor: string; rightColor: string; leftColor?: string;
-  labels: string[];
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  rating: string;
+  ratingColor: string;
+  sub: string;
 }) {
-  const outerRef   = useRef<HTMLDivElement>(null);
-  const [scale,    setScale]   = useState(1);
-  const [animated, setAnimated] = useState(false);
-
-  useEffect(() => {
-    const el = outerRef.current;
-    if (!el) return;
-    const measure = () => {
-      const w = el.getBoundingClientRect().width;
-      if (w > 0) setScale(Math.min(1, w / G_TOT));
-    };
-    measure();
-    const obs = new ResizeObserver(measure);
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-
-  // Trigger sweep animation after first paint (50 ms lets the browser render at −90° first)
-  useEffect(() => {
-    const id = setTimeout(() => setAnimated(true), 50);
-    return () => clearTimeout(id);
-  }, []);
-
-  // Needle: −90° = left (0 %), 0° = straight up (50 %), +90° = right (100 %)
-  const ratio      = Math.min(Math.max(value / max, 0), 1);
-  const targetRot  = ratio * 180 - 90;
-  const rotate     = animated ? targetRot : -90;
-
-  // Arc labels at 135° / 90° / 45°  →  left / top / right
-  // Use only the 3 middle labels from the 5-item array (indices 1, 2, 3)
-  const midAngles  = [135, 90, 45] as const;
-  const midAnchors = ["end", "middle", "start"] as const;
-  const midLabels  = [labels[1], labels[2], labels[3]];
-
-  const midPos = midAngles.map(deg => {
-    const rad = (deg * Math.PI) / 180;
-    // Position in inner-block coordinates (0,0 = top-left of inner block)
-    return {
-      x: ARC_CX + LR * Math.cos(rad),
-      y: ARC_CY - LR * Math.sin(rad),   // subtract because y grows downward
-    };
-  });
-
   return (
-    // Outer div: measured for available column width
-    <div ref={outerRef} style={{ width: "100%", height: NATURAL_H * scale, position: "relative" }}>
-
-      {/* Inner block: fixed G_TOT × NATURAL_H, centred, scaled */}
-      <div
-        style={{
-          position:        "absolute",
-          top:             0,
-          left:            "50%",
-          width:           G_TOT,
-          height:          NATURAL_H,
-          transform:       `translateX(-50%) scale(${scale})`,
-          transformOrigin: "top center",
-        }}
-      >
-        {/* ── Arc labels (3 middle positions) ── */}
-        {midLabels.map((txt, i) => (
-          <span
-            key={i}
-            style={{
-              position:   "absolute",
-              fontSize:   11,
-              lineHeight: 1,
-              color:      "#64748b",
-              fontFamily: "inherit",
-              whiteSpace: "nowrap",
-              left:       midPos[i].x,
-              top:        midPos[i].y,
-              transform:
-                midAnchors[i] === "end"    ? "translate(-100%,-50%)"
-                : midAnchors[i] === "start" ? "translate(0,-50%)"
-                : "translate(-50%,-50%)",
-            }}
-          >
-            {txt}
+    <div className="glass-card p-3.5 flex flex-col gap-1 hover:border-white/15 transition-colors">
+      <div className="flex items-center justify-between mb-0.5">
+        <div className="flex items-center gap-1.5">
+          <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
+            {label}
           </span>
-        ))}
-
-        {/* ── Gauge ring (exact copy of HTML .gauge) ── */}
-        <div
-          style={{
-            width:         G_IW,
-            height:        G_IH,
-            borderTop:     `${G_BW}px solid #2f3747`,
-            borderLeft:    `${G_BW}px solid #2f3747`,
-            borderRight:   `${G_BW}px solid #2f3747`,
-            borderBottom:  "none",
-            borderRadius:  `${G_BR}px ${G_BR}px 0 0`,
-            position:      "relative",
-            margin:        `${LTOP}px auto 0`,
-            boxSizing:     "content-box",
-          }}
-        >
-          {/* Colour overlay — equivalent to HTML .gauge::before */}
-          <div
-            style={{
-              position:      "absolute",
-              top:           -G_BW,
-              left:          -G_BW,
-              width:         G_IW,
-              height:        G_IH,
-              borderTop:     `${G_BW}px solid ${topColor}`,
-              borderRight:   `${G_BW}px solid ${rightColor}`,
-              borderLeft:    `${G_BW}px solid ${leftColor}`,
-              borderBottom:  "none",
-              borderRadius:  `${G_BR}px ${G_BR}px 0 0`,
-              boxSizing:     "content-box",
-              pointerEvents: "none",
-            }}
-          />
-
-          {/* Needle — matches HTML .needle (width:4; height:90) */}
-          <div
-            style={{
-              position:        "absolute",
-              width:           4,
-              height:          N_H,
-              background:      "white",
-              bottom:          0,
-              left:            "50%",
-              transform:       `translateX(-50%) rotate(${rotate}deg)`,
-              transformOrigin: "bottom center",
-              borderRadius:    "2px 2px 0 0",
-              transition:      "transform 0.7s cubic-bezier(0.4,0,0.2,1)",
-            }}
-          />
-
-          {/* Centre dot — matches HTML .center (width:18; height:18) */}
-          <div
-            style={{
-              position:     "absolute",
-              width:        C_D,
-              height:       C_D,
-              background:   "#6b7280",
-              borderRadius: "50%",
-              bottom:       -(C_D / 2),
-              left:         "50%",
-              transform:    "translateX(-50%)",
-              border:       "2px solid #111c2a",
-              zIndex:       1,
-            }}
-          />
         </div>
+        <span className="text-[10px] font-bold text-muted-foreground/40">›</span>
       </div>
+      <p className={`text-2xl font-bold leading-tight ${ratingColor}`}>{value}</p>
+      <p className={`text-xs font-semibold ${ratingColor}`}>{rating}</p>
+      <p className="text-[10px] text-muted-foreground/60 leading-tight mt-0.5">{sub}</p>
     </div>
   );
 }
 
-// ─── Drawdown Bar ─────────────────────────────────────────────────────────────
-function DrawdownBar({ value, max = 30 }: { value: number; max?: number }) {
-  const pct = Math.min(Math.max(value / max, 0), 1) * 100;
+function CumulReturnTooltip({ active, payload, label }: {
+  active?: boolean; payload?: { value: number }[]; label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  const v = payload[0].value as number;
   return (
-    <div className="relative w-full h-[13px] rounded-full bg-[#182030] overflow-hidden">
-      <div className="absolute inset-0"
-        style={{ background: "linear-gradient(to right,#22c55e 0%,#f97316 50%,#ef4444 100%)", opacity: 0.22 }} />
-      <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-700"
-        style={{
-          width:      `${Math.max(pct, 3)}%`,
-          background: "linear-gradient(to right,#22c55e 0%,#f97316 50%,#ef4444 100%)",
-        }} />
-      <div className="absolute top-[-2px] bottom-[-2px] w-[2.5px] rounded-sm bg-white/90 pointer-events-none"
-        style={{ left: `clamp(1px, calc(${pct}% - 1.25px), calc(100% - 3.5px))` }} />
+    <div
+      style={{ background: "hsl(220 14% 11%)", border: "1px solid hsl(220 13% 22%)" }}
+      className="rounded-lg px-3 py-2 shadow-xl text-xs"
+    >
+      <p className="text-muted-foreground mb-1">{label}</p>
+      <p className={`font-bold ${v >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+        {v >= 0 ? "+" : ""}{fmt2(v)}%
+      </p>
     </div>
   );
 }
 
-// ─── Consistency Dots ─────────────────────────────────────────────────────────
-function ConsistencyDots({ score }: { score: number }) {
+export default function PerformanceScoreCard({
+  analytics,
+  trades,
+  startingBalance,
+  currentBalance,
+}: Props) {
+  const {
+    totalTrades, totalProfit, totalLoss, winRate,
+    equityCurve, drawdownStats, avgWin, avgLoss,
+  } = analytics;
+
+  const pf = totalLoss > 0 ? totalProfit / totalLoss : totalProfit > 0 ? 4 : 0;
+  const maxDD = drawdownStats.drawdownPercent;
+
+  const avgRR = useMemo(() => {
+    const valid = trades.filter((t) => (t.rr ?? 0) > 0);
+    return valid.length > 0 ? valid.reduce((s, t) => s + (t.rr ?? 0), 0) / valid.length : 0;
+  }, [trades]);
+
+  const netPnLPct = useMemo(() => {
+    if (startingBalance > 0) return ((currentBalance - startingBalance) / startingBalance) * 100;
+    if (equityCurve.length > 0) {
+      const first = equityCurve[0].equity;
+      const last = equityCurve[equityCurve.length - 1].equity;
+      return first > 0 ? ((last - first) / first) * 100 : 0;
+    }
+    return 0;
+  }, [startingBalance, currentBalance, equityCurve]);
+
+  const avgReturnPct = totalTrades > 0 ? netPnLPct / totalTrades : 0;
+
+  const consistency = useMemo(() => {
+    const wrScore = winRate / 100;
+    const riskScore = avgRR >= 2 ? 1 : avgRR >= 1 ? 0.75 : avgRR >= 0.5 ? 0.4 : 0.15;
+    const freqScore = totalTrades >= 20 ? 1 : totalTrades >= 10 ? 0.75 : totalTrades >= 5 ? 0.5 : 0.25;
+    return Math.round((wrScore * 0.40 + riskScore * 0.30 + freqScore * 0.30) * 100);
+  }, [winRate, avgRR, totalTrades]);
+
+  const cumulData = useMemo(() => {
+    const base = startingBalance > 0 ? startingBalance : equityCurve[0]?.equity ?? 1;
+    return equityCurve.map((pt) => ({
+      date: pt.date,
+      return: base > 0 ? +((pt.equity - base) / base * 100).toFixed(3) : 0,
+    }));
+  }, [equityCurve, startingBalance]);
+
+  const isPositive = netPnLPct >= 0;
+
+  const pfRating  = pf >= 2 ? { t: "Excellent", c: "text-emerald-400" } : pf >= 1.5 ? { t: "Good", c: "text-emerald-400" } : pf >= 1.2 ? { t: "Average", c: "text-yellow-400" } : pf >= 1 ? { t: "Below Avg", c: "text-orange-400" } : { t: "Poor", c: "text-red-400" };
+  const rrRating  = avgRR >= 2 ? { t: "Above Target", c: "text-emerald-400" } : avgRR >= 1.5 ? { t: "On Target", c: "text-yellow-400" } : avgRR >= 1 ? { t: "Near Target", c: "text-orange-400" } : { t: "Below Target", c: "text-red-400" };
+  const conRating = consistency >= 80 ? { t: "Excellent", c: "text-emerald-400" } : consistency >= 65 ? { t: "Good", c: "text-emerald-400" } : consistency >= 45 ? { t: "Average", c: "text-yellow-400" } : { t: "Weak", c: "text-red-400" };
+  const retRating = avgReturnPct >= 1 ? { t: "Excellent", c: "text-emerald-400" } : avgReturnPct >= 0.3 ? { t: "Good", c: "text-emerald-400" } : avgReturnPct >= 0 ? { t: "Average", c: "text-yellow-400" } : { t: "Losing", c: "text-red-400" };
+
+  const insights = useMemo(() => {
+    const list: { icon: React.ElementType; text: string; type: "good" | "warn" | "info" }[] = [];
+    if (pf >= 1.5) list.push({ icon: CheckCircle, text: "Your profitability is above average", type: "good" });
+    else if (pf < 1) list.push({ icon: AlertTriangle, text: "Work on increasing your profit factor", type: "warn" });
+    if (maxDD > 20) list.push({ icon: AlertTriangle, text: "Work on reducing drawdowns", type: "warn" });
+    else if (maxDD <= 10 && totalTrades > 0) list.push({ icon: CheckCircle, text: "Drawdown is well controlled", type: "good" });
+    if (avgRR >= 2) list.push({ icon: Focus, text: "Focus on high R:R setups", type: "info" });
+    else if (avgRR < 1.5 && totalTrades > 0) list.push({ icon: AlertTriangle, text: "Improve your R:R to at least 1.5", type: "warn" });
+    if (winRate >= 60) list.push({ icon: CheckCircle, text: "Win rate is strong — maintain discipline", type: "good" });
+    return list.slice(0, 3);
+  }, [pf, maxDD, avgRR, winRate, totalTrades]);
+
   return (
-    <div className="flex items-center justify-center gap-1.5">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i}
-          className={`w-5 h-5 rounded-full border-2 shrink-0 transition-colors ${
-            i < score ? "bg-emerald-500 border-emerald-400" : "bg-transparent border-[#2a3a52]"
-          }`}
-        />
-      ))}
-    </div>
-  );
-}
-
-// ─── Rating helpers ───────────────────────────────────────────────────────────
-const rateWR  = (v: number) => v >= 70 ? {t:"Excellent",c:"text-emerald-400"} : v >= 55 ? {t:"Good",c:"text-emerald-400"} : v >= 45 ? {t:"Average",c:"text-yellow-400"} : {t:"Weak",c:"text-red-400"};
-const ratePF  = (v: number) => v >= 3  ? {t:"Excellent",c:"text-emerald-400"} : v >= 2  ? {t:"Good",c:"text-emerald-400"} : v >= 1  ? {t:"Average",c:"text-yellow-400"} : {t:"Poor",c:"text-red-400"};
-const rateDD  = (v: number) => v <= 15 ? {t:"Low",c:"text-emerald-400"}       : v <= 25 ? {t:"Moderate",c:"text-yellow-400"} : {t:"High",c:"text-red-400"};
-const rateCon = (s: number) => s >= 5  ? {t:"Excellent",c:"text-emerald-400"} : s >= 4  ? {t:"High",c:"text-emerald-400"}   : s >= 3  ? {t:"Average",c:"text-yellow-400"} : {t:"Low",c:"text-red-400"};
-const rateOv  = (s: number) => s >= 4.5? {t:"Excellent",c:"text-emerald-400"} : s >= 3.5? {t:"Strong",c:"text-emerald-400"} : s >= 2.5? {t:"Good",c:"text-yellow-400"}    : s >= 1.5? {t:"Fair",c:"text-orange-400"} : {t:"Weak",c:"text-red-400"};
-
-// ─── Main component ───────────────────────────────────────────────────────────
-export default function PerformanceScoreCard({ analytics }: Props) {
-  const { winRate, totalProfit, totalLoss, drawdownStats, totalTrades, avgWin, avgLoss } = analytics;
-  const pf       = totalLoss > 0 ? totalProfit / totalLoss : totalProfit > 0 ? 4 : 0;
-  const maxDD    = drawdownStats.drawdownPercent;
-  const conScore = [winRate >= 50, pf >= 1.5, maxDD <= 15, avgWin >= avgLoss, totalTrades >= 5].filter(Boolean).length;
-  const overall  = (winRate / 100) * 1.5 + (Math.min(pf, 4) / 4) * 1.5 + Math.max(0, 1 - maxDD / 30) + (conScore / 5);
-
-  const wLbl = rateWR(winRate);
-  const pLbl = ratePF(pf);
-  const dLbl = rateDD(maxDD);
-  const cLbl = rateCon(conScore);
-  const oLbl = rateOv(overall);
-
-  return (
-    <div className="glass-card p-3 sm:p-4 w-full">
-
+    <div className="glass-card p-4 w-full space-y-4">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-2">
-        <Zap className="w-3.5 h-3.5 text-primary shrink-0" />
-        <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          Performance Score
-        </h2>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Zap className="w-3.5 h-3.5 text-primary shrink-0" />
+          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Trading Performance
+          </h2>
+        </div>
+        <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">All Time</span>
       </div>
 
       {totalTrades === 0 ? (
@@ -266,71 +152,134 @@ export default function PerformanceScoreCard({ analytics }: Props) {
           Add trades to see your performance score
         </div>
       ) : (
-        <div className="space-y-3">
-
-          {/* ── Two gauges side by side ────────────── */}
-          <div className="grid grid-cols-2 gap-2">
-
-            {/* Win Rate */}
-            <div className="flex flex-col items-center min-w-0 overflow-hidden">
-              <p className="text-[11px] text-muted-foreground font-medium mb-1 tracking-wide">Win Rate</p>
-              <CSSGauge
-                value={winRate} max={100}
-                topColor="#f0b84b" rightColor="#66c04f" leftColor="transparent"
-                labels={["0%", "25%", "50%", "75%", "100%"]}
-              />
-              <p className={`text-2xl font-bold leading-tight mt-1 ${wLbl.c}`}>
-                {winRate.toFixed(0)}%
-              </p>
-              <p className={`text-xs font-semibold mt-0.5 ${wLbl.c}`}>{wLbl.t}</p>
-            </div>
-
-            {/* Profit Factor */}
-            <div className="flex flex-col items-center min-w-0 overflow-hidden">
-              <p className="text-[11px] text-muted-foreground font-medium mb-1 tracking-wide">Profit Factor</p>
-              <CSSGauge
-                value={Math.min(pf, 4)} max={4}
-                topColor="#e74c3c" rightColor="#f1c40f" leftColor="#2ecc71"
-                labels={["0", "1", "2", "3", "4+"]}
-              />
-              <p className={`text-2xl font-bold leading-tight mt-1 ${pLbl.c}`}>
-                {pf >= 4 ? "4+" : pf.toFixed(2)}
-              </p>
-              <p className={`text-xs font-semibold mt-0.5 ${pLbl.c}`}>{pLbl.t}</p>
-            </div>
+        <>
+          {/* Net P&L % */}
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
+              Net P&L {startingBalance > 0 ? "%" : ""}
+            </p>
+            <p className={`text-4xl font-bold leading-tight ${isPositive ? "text-emerald-400" : "text-red-400"}`}>
+              {isPositive ? "+" : ""}{startingBalance > 0 ? `${fmt2(netPnLPct)}%` : `$${Math.abs(analytics.netBalance).toFixed(2)}`}
+            </p>
           </div>
 
-          <div className="border-t border-white/5" />
+          {/* Cumulative Return chart */}
+          {cumulData.length > 1 && (
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-2 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                Cumulative Return (%)
+              </p>
+              <ResponsiveContainer width="100%" height={160}>
+                <AreaChart data={cumulData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                  <defs>
+                    <linearGradient id="cumulGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={isPositive ? "#22c55e" : "#ef4444"} stopOpacity={0.25} />
+                      <stop offset="100%" stopColor={isPositive ? "#22c55e" : "#ef4444"} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 8, fill: "#64748b" }}
+                    tickFormatter={(v: string) => {
+                      const d = new Date(v + "T12:00:00");
+                      return isNaN(d.getTime()) ? v : `${d.toLocaleString("en", { month: "short" })} ${d.getDate()}`;
+                    }}
+                    axisLine={false}
+                    tickLine={false}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 8, fill: "#64748b" }}
+                    tickFormatter={(v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}%`}
+                    axisLine={false}
+                    tickLine={false}
+                    width={40}
+                  />
+                  <Tooltip content={<CumulReturnTooltip />} />
+                  <Area
+                    type="monotone"
+                    dataKey="return"
+                    stroke={isPositive ? "#22c55e" : "#ef4444"}
+                    strokeWidth={2}
+                    fill="url(#cumulGrad)"
+                    dot={false}
+                    activeDot={{ r: 5, fill: isPositive ? "#22c55e" : "#ef4444", stroke: "#fff", strokeWidth: 1.5 }}
+                    isAnimationActive
+                    animationDuration={900}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
-          {/* ── Drawdown + Consistency ─────────────── */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* 2×2 metric chips */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <MetricChip
+              icon={BarChart2}
+              label="Profit Factor"
+              value={pf >= 4 ? "4.00+" : fmt2(pf)}
+              rating={pfRating.t}
+              ratingColor={pfRating.c}
+              sub="> 1.5 is considered good"
+            />
+            <MetricChip
+              icon={Target}
+              label="Average R:R"
+              value={`${fmt2(avgRR)}R`}
+              rating={rrRating.t}
+              ratingColor={rrRating.c}
+              sub="Target: 2.00R+"
+            />
+            <MetricChip
+              icon={Shield}
+              label="Consistency"
+              value={`${consistency}%`}
+              rating={conRating.t}
+              ratingColor={conRating.c}
+              sub="Based on risk, returns & discipline"
+            />
+            <MetricChip
+              icon={TrendingUp}
+              label="Avg Return"
+              value={`${avgReturnPct >= 0 ? "+" : ""}${fmt2(avgReturnPct)}%`}
+              rating={retRating.t}
+              ratingColor={retRating.c}
+              sub="Avg profit per completed trade"
+            />
+          </div>
 
-            <div className="flex flex-col gap-1.5">
-              <p className="text-[11px] text-muted-foreground font-medium">Max Drawdown</p>
-              <div className="flex justify-between text-[9px] text-muted-foreground/50">
-                <span>0%</span><span>15%</span><span>30%</span>
+          {/* Performance Insights */}
+          {insights.length > 0 && (
+            <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Zap className="w-3 h-3 text-primary" />
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Performance Insights
+                </span>
+                <span className="ml-auto text-[10px] text-muted-foreground/40">Key insights to help you improve</span>
               </div>
-              <DrawdownBar value={maxDD} max={30} />
-              <p className={`text-xl font-bold leading-tight mt-0.5 ${dLbl.c}`}>{maxDD.toFixed(1)}%</p>
-              <p className={`text-xs font-semibold ${dLbl.c}`}>{dLbl.t}</p>
+              <div className="flex flex-wrap gap-2">
+                {insights.map((ins, i) => {
+                  const { icon: Ic, text, type } = ins;
+                  const style =
+                    type === "good"
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                      : type === "warn"
+                        ? "bg-orange-500/10 text-orange-400 border-orange-500/20"
+                        : "bg-blue-500/10 text-blue-400 border-blue-500/20";
+                  return (
+                    <div key={i} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-medium ${style}`}>
+                      <Ic className="w-3 h-3 shrink-0" />
+                      {text}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-
-            <div className="flex flex-col gap-1.5 items-center">
-              <p className="text-[11px] text-muted-foreground font-medium">Consistency</p>
-              <ConsistencyDots score={conScore} />
-              <p className={`text-xl font-bold leading-tight mt-0.5 ${cLbl.c}`}>{conScore} / 5</p>
-              <p className={`text-xs font-semibold ${cLbl.c}`}>{cLbl.t}</p>
-            </div>
-          </div>
-
-          {/* ── Overall Performance ────────────────── */}
-          <div className="border-t border-white/5 pt-1 flex items-center gap-2">
-            <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 ${oLbl.c}`} />
-            <span className="text-xs text-muted-foreground font-medium">Overall Performance:</span>
-            <span className={`text-xs font-bold ${oLbl.c}`}>{oLbl.t}</span>
-          </div>
-
-        </div>
+          )}
+        </>
       )}
     </div>
   );

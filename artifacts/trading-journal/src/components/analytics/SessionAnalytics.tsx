@@ -118,9 +118,10 @@ export default function SessionAnalytics({ trades }: { trades: Trade[] }) {
     fullMark: 100,
   }));
 
-  const bestSession = hasTagged
-    ? stats.filter((s) => s.trades > 0).sort((a, b) => b.totalPnL - a.totalPnL)[0]
-    : null;
+  const activeSessions = hasTagged ? stats.filter((s) => s.trades > 0) : [];
+  const sorted = [...activeSessions].sort((a, b) => b.totalPnL - a.totalPnL);
+  const bestSession = activeSessions.length > 0 && sorted[0].totalPnL > 0 ? sorted[0] : null;
+  const worstSession = activeSessions.length > 0 && sorted[sorted.length - 1].totalPnL < 0 ? sorted[sorted.length - 1] : null;
   const mostActive = hasTagged
     ? stats.filter((s) => s.trades > 0).sort((a, b) => b.trades - a.trades)[0]
     : null;
@@ -147,7 +148,7 @@ export default function SessionAnalytics({ trades }: { trades: Trade[] }) {
       ) : (
         <>
           {/* Summary banners */}
-          {(bestSession || mostActive) && (
+          {(bestSession || worstSession || mostActive) && (
             <div className="flex flex-wrap gap-3">
               {bestSession && (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400">
@@ -158,7 +159,16 @@ export default function SessionAnalytics({ trades }: { trades: Trade[] }) {
                   </span>
                 </div>
               )}
-              {mostActive && mostActive.session !== bestSession?.session && (
+              {worstSession && worstSession.session !== bestSession?.session && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+                  <span className="text-base">{SESSION_CONFIG[worstSession.session].flag}</span>
+                  <span>
+                    <span className="font-semibold">{worstSession.label}</span> is your worst session
+                    ({fmtMoney(worstSession.totalPnL)})
+                  </span>
+                </div>
+              )}
+              {mostActive && mostActive.session !== bestSession?.session && mostActive.session !== worstSession?.session && (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400">
                   <span className="text-base">{SESSION_CONFIG[mostActive.session].flag}</span>
                   <span>

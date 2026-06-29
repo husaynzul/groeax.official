@@ -93,10 +93,11 @@ function fmtPnLCompact(n: number): string {
 }
 
 function MetricCard({ label, value, sub, icon: Icon, color = "text-foreground", index, className }: { label: string; value: string; sub?: string; icon: React.ElementType; color?: string; index: number; className?: string; }) {
+  const valFontClass = value.length > 10 ? "text-base" : value.length > 7 ? "text-xl" : "text-2xl";
   return (
     <motion.div custom={index} initial="hidden" animate="show" variants={FADE_UP} className={`glass-card p-4 flex flex-col gap-1.5 hover:border-white/15 transition-colors ${className ?? ""}`}>
       <div className="flex items-center gap-2 text-muted-foreground"><Icon className="w-3.5 h-3.5" /><span className="text-xs uppercase tracking-wider">{label}</span></div>
-      <p className={`text-2xl font-bold ${color}`}>{value}</p>
+      <p className={`font-bold leading-tight truncate ${valFontClass} ${color}`}>{value}</p>
       {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
     </motion.div>
   );
@@ -528,7 +529,12 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="md:col-span-1 lg:col-span-2">
-          <PerformanceScoreCard analytics={analytics} />
+          <PerformanceScoreCard
+            analytics={analytics}
+            trades={trades}
+            startingBalance={startingBalance}
+            currentBalance={currentBalance}
+          />
         </motion.div>
 
         <div className="flex flex-col gap-4">
@@ -572,37 +578,26 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
               <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />P&amp;L</span>
-              <span className="flex items-center gap-1.5"><span className="w-4 h-[2px] bg-violet-400 inline-block rounded" />Win Rate %</span>
             </div>
           </div>
           <ResponsiveContainer width="100%" height={220}>
-            <ComposedChart data={weeklyTrend} margin={{ top: 8, right: 48, bottom: 4, left: 0 }}>
+            <ComposedChart data={weeklyTrend} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
               <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.05)" vertical={false} />
               <XAxis dataKey="week" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
-              {/* Left Y: P&L */}
               <YAxis
                 yAxisId="pnl"
                 tick={{ fontSize: 9, fill: "#64748b" }}
                 tickFormatter={(v) => `$${Number(v).toFixed(0)}`}
                 axisLine={false} tickLine={false} width={48}
               />
-              {/* Right Y: Win Rate */}
-              <YAxis
-                yAxisId="wr"
-                orientation="right"
-                domain={[0, 100]}
-                tick={{ fontSize: 9, fill: "#a78bfa" }}
-                tickFormatter={(v) => `${v}%`}
-                axisLine={false} tickLine={false} width={36}
-              />
               <ReferenceLine yAxisId="pnl" y={0} stroke="rgba(255,255,255,0.2)" strokeWidth={1.5} />
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
                   const pnlEntry = payload.find((p) => p.dataKey === "pnl");
-                  const wrEntry  = payload.find((p) => p.dataKey === "winRate");
                   const pfEntry  = payload.find((p) => p.dataKey === "pf");
                   const trEntry  = payload.find((p) => p.dataKey === "trades");
+                  const wrEntry  = payload.find((p) => p.dataKey === "winRate");
                   const pnlVal   = pnlEntry?.value as number ?? 0;
                   return (
                     <div style={{ background: "hsl(220 14% 11%)", border: "1px solid hsl(220 13% 22%)" }} className="rounded-lg px-3 py-2.5 shadow-xl text-xs space-y-1 min-w-[140px]">
@@ -644,18 +639,7 @@ export default function Dashboard() {
               {/* Hidden bars for tooltip data only */}
               <Bar yAxisId="pnl" dataKey="pf" hide />
               <Bar yAxisId="pnl" dataKey="trades" hide />
-              {/* Win Rate line */}
-              <Line
-                yAxisId="wr"
-                type="monotone"
-                dataKey="winRate"
-                stroke="#a78bfa"
-                strokeWidth={2}
-                dot={{ r: 4, fill: "#a78bfa", stroke: "#0f172a", strokeWidth: 2 }}
-                activeDot={{ r: 6, fill: "#a78bfa", stroke: "#fff", strokeWidth: 1.5 }}
-                isAnimationActive
-                animationDuration={1000}
-              />
+              <Bar yAxisId="pnl" dataKey="winRate" hide />
             </ComposedChart>
           </ResponsiveContainer>
           {/* Summary row */}
