@@ -1,0 +1,554 @@
+‎this is HTML code of Replace Proformance score section i meed this 
+<!DOCTYPE html>
+‎<html lang="en">
+‎<head>
+‎<meta charset="UTF-8">
+‎<meta name="viewport" content="width=device-width, initial-scale=1.0">
+‎<title>Trading Performance</title>
+‎<style>
+‎  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+‎
+‎  * { margin: 0; padding: 0; box-sizing: border-box; }
+‎
+‎  :root {
+‎    --bg-primary:    #0e0f11;
+‎    --bg-card:       #171a1f;
+‎    --bg-card2:      #1c1f26;
+‎    --border:        #252932;
+‎    --green:         #2ecc71;
+‎    --green-dim:     #1a7a45;
+‎    --green-text:    #3ddc84;
+‎    --green-glow:    rgba(46,204,113,0.15);
+‎    --orange:        #f59e0b;
+‎    --blue:          #60a5fa;
+‎    --text-primary:  #f0f2f5;
+‎    --text-secondary:#8b92a5;
+‎    --text-muted:    #555e72;
+‎    --chart-line:    #2ecc71;
+‎    --chart-fill1:   rgba(46,204,113,0.25);
+‎    --chart-fill2:   rgba(46,204,113,0.02);
+‎  }
+‎
+‎  body {
+‎    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+‎    background: var(--bg-primary);
+‎    color: var(--text-primary);
+‎    min-height: 100vh;
+‎    display: flex;
+‎    justify-content: center;
+‎    padding: 0;
+‎  }
+‎
+‎  .phone-frame {
+‎    width: 100%;
+‎    max-width: 430px;
+‎    background: var(--bg-primary);
+‎    min-height: 100vh;
+‎    overflow: hidden;
+‎    padding: 20px 16px 40px;
+‎  }
+‎
+‎  /* ── Header ── */
+‎  .header {
+‎    display: flex;
+‎    align-items: center;
+‎    justify-content: space-between;
+‎    margin-bottom: 22px;
+‎  }
+‎  .header-left { display: flex; align-items: center; gap: 10px; }
+‎  .header-icon {
+‎    width: 38px; height: 38px;
+‎    background: var(--bg-card2);
+‎    border: 1px solid var(--border);
+‎    border-radius: 10px;
+‎    display: flex; align-items: center; justify-content: center;
+‎  }
+‎  .header-icon svg { width: 20px; height: 20px; color: var(--text-secondary); }
+‎  .header-title h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; color: var(--text-primary); }
+‎  .header-title p  { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+‎
+‎  .date-pill {
+‎    display: flex; align-items: center; gap: 6px;
+‎    background: var(--bg-card2);
+‎    border: 1px solid var(--border);
+‎    border-radius: 10px;
+‎    padding: 7px 12px;
+‎    font-size: 13px; font-weight: 500; color: var(--text-primary);
+‎    cursor: pointer; user-select: none;
+‎  }
+‎  .date-pill svg { width: 14px; height: 14px; color: var(--text-secondary); }
+‎  .date-pill .chevron { color: var(--text-muted); font-size: 10px; }
+‎
+‎  /* ── Net P&L ── */
+‎  .pnl-section { margin-bottom: 16px; }
+‎  .pnl-label {
+‎    display: flex; align-items: center; gap: 5px;
+‎    font-size: 12px; color: var(--text-secondary); font-weight: 500; margin-bottom: 4px;
+‎  }
+‎  .pnl-label .info-icon {
+‎    width: 14px; height: 14px; border-radius: 50%;
+‎    border: 1px solid var(--text-muted);
+‎    display: flex; align-items: center; justify-content: center;
+‎    font-size: 9px; color: var(--text-muted); cursor: pointer;
+‎  }
+‎  .pnl-percent { font-size: 38px; font-weight: 800; color: var(--green-text); letter-spacing: -1px; line-height: 1.1; }
+‎  .pnl-dollar  { font-size: 14px; font-weight: 600; color: var(--green-text); margin-top: 2px; }
+‎
+‎  /* ── Tab Toggle ── */
+‎  .tab-group {
+‎    display: flex; background: var(--bg-card2); border: 1px solid var(--border);
+‎    border-radius: 10px; padding: 3px; gap: 2px;
+‎    width: fit-content; margin-left: auto; margin-bottom: 16px; margin-top: -54px;
+‎  }
+‎  .tab-btn {
+‎    padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 500;
+‎    border: none; cursor: pointer; transition: all 0.2s;
+‎    background: transparent; color: var(--text-secondary);
+‎  }
+‎  .tab-btn.active { background: var(--green); color: #000; font-weight: 600; }
+‎
+‎  /* ── Chart Card ── */
+‎  .chart-card {
+‎    background: var(--bg-card);
+‎    border: 1px solid var(--border);
+‎    border-radius: 16px;
+‎    padding: 16px 12px 8px;
+‎    margin-bottom: 12px;
+‎    margin-top: 24px;
+‎    position: relative;
+‎  }
+‎  .chart-legend {
+‎    display: flex; align-items: center; gap: 6px;
+‎    font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;
+‎  }
+‎  .legend-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+‎
+‎  .chart-wrap { position: relative; height: 160px; }
+‎  .chart-svg { width: 100%; height: 100%; overflow: visible; }
+‎
+‎  /* Y-axis labels */
+‎  .y-labels {
+‎    position: absolute; left: 0; top: 0; bottom: 22px;
+‎    display: flex; flex-direction: column; justify-content: space-between;
+‎    pointer-events: none;
+‎  }
+‎  .y-label { font-size: 10px; color: var(--text-muted); }
+‎
+‎  /* X-axis labels */
+‎  .x-labels {
+‎    display: flex; justify-content: space-between;
+‎    padding: 6px 0 0; margin-top: 4px;
+‎  }
+‎  .x-label { font-size: 10px; color: var(--text-muted); }
+‎
+‎  /* ── Metric Cards ── */
+‎  .metrics-grid {
+‎    display: grid; grid-template-columns: 1fr 1fr;
+‎    gap: 10px; margin-bottom: 12px;
+‎  }
+‎  .metric-card {
+‎    background: var(--bg-card);
+‎    border: 1px solid var(--border);
+‎    border-radius: 14px;
+‎    padding: 16px 14px 12px;
+‎    position: relative;
+‎    cursor: pointer;
+‎    transition: border-color 0.2s;
+‎  }
+‎  .metric-card:hover { border-color: #333a48; }
+‎
+‎  .metric-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+‎  .metric-icon-wrap {
+‎    width: 36px; height: 36px;
+‎    background: var(--bg-card2);
+‎    border: 1px solid var(--border);
+‎    border-radius: 10px;
+‎    display: flex; align-items: center; justify-content: center;
+‎  }
+‎  .metric-icon-wrap svg { width: 18px; height: 18px; color: var(--text-secondary); }
+‎  .metric-chevron { color: var(--text-muted); font-size: 16px; margin-top: 2px; }
+‎
+‎  .metric-label {
+‎    display: flex; align-items: center; gap: 4px;
+‎    font-size: 11px; color: var(--text-secondary); font-weight: 500; margin-bottom: 6px;
+‎  }
+‎  .metric-label .info-icon {
+‎    width: 12px; height: 12px; border-radius: 50%;
+‎    border: 1px solid var(--text-muted);
+‎    display: flex; align-items: center; justify-content: center;
+‎    font-size: 8px; color: var(--text-muted);
+‎  }
+‎  .metric-value { font-size: 28px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; line-height: 1.1; }
+‎  .metric-status { font-size: 12px; font-weight: 600; margin-top: 2px; }
+‎  .metric-status.green  { color: var(--green-text); }
+‎  .metric-status.orange { color: var(--orange); }
+‎  .metric-hint { font-size: 10px; color: var(--text-muted); margin-top: 8px; line-height: 1.4; }
+‎
+‎  /* ── Insights Card ── */
+‎  .insights-card {
+‎    background: var(--bg-card);
+‎    border: 1px solid var(--border);
+‎    border-radius: 16px;
+‎    padding: 16px;
+‎    margin-bottom: 16px;
+‎  }
+‎  .insights-header {
+‎    display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+‎  }
+‎  .insights-title-row { display: flex; align-items: center; gap: 10px; }
+‎  .insights-star-wrap {
+‎    width: 36px; height: 36px;
+‎    background: var(--bg-card2);
+‎    border: 1px solid var(--border);
+‎    border-radius: 10px;
+‎    display: flex; align-items: center; justify-content: center;
+‎  }
+‎  .insights-star-wrap svg { width: 18px; height: 18px; color: var(--text-secondary); }
+‎  .insights-title   { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+‎  .insights-sub     { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+‎  .view-details-btn {
+‎    display: flex; align-items: center; gap: 4px;
+‎    background: var(--bg-card2); border: 1px solid var(--border);
+‎    border-radius: 8px; padding: 6px 12px;
+‎    font-size: 12px; font-weight: 500; color: var(--text-primary);
+‎    cursor: pointer; white-space: nowrap;
+‎  }
+‎  .view-details-btn svg { width: 12px; height: 12px; color: var(--text-muted); }
+‎
+‎  .insights-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+‎  .insight-item { display: flex; flex-direction: column; gap: 4px; }
+‎  .insight-icon-row { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+‎  .insight-dot {
+‎    width: 28px; height: 28px; border-radius: 50%;
+‎    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+‎  }
+‎  .insight-dot.green  { background: rgba(46,204,113,0.15); }
+‎  .insight-dot.orange { background: rgba(245,158,11,0.15); }
+‎  .insight-dot.blue   { background: rgba(96,165,250,0.15); }
+‎  .insight-dot svg    { width: 14px; height: 14px; }
+‎  .insight-dot.green  svg { color: var(--green); }
+‎  .insight-dot.orange svg { color: var(--orange); }
+‎  .insight-dot.blue   svg { color: var(--blue); }
+‎
+‎  .insight-text  { font-size: 11px; color: var(--text-secondary); font-weight: 500; line-height: 1.35; }
+‎  .insight-text .highlight-green  { color: var(--green-text); font-weight: 600; }
+‎  .insight-text .highlight-orange { color: var(--orange); font-weight: 600; }
+‎  .insight-text .highlight-blue   { color: var(--blue); font-weight: 600; }
+‎  .insight-sub-text { font-size: 10px; color: var(--text-muted); line-height: 1.3; }
+‎
+‎  /* sparkle icon bottom-right */
+‎  .sparkle-wrap {
+‎    display: flex; justify-content: flex-end; margin-top: -10px;
+‎  }
+‎  .sparkle { color: var(--text-muted); font-size: 22px; }
+‎
+‎  /* ── Divider line in insights grid ── */
+‎  .insight-divider {
+‎    width: 1px; background: var(--border); align-self: stretch;
+‎    margin: 0 2px;
+‎  }
+‎
+‎  @media (max-width: 400px) {
+‎    .tab-group { margin-top: -44px; }
+‎    .metric-value { font-size: 24px; }
+‎    .insights-grid { gap: 6px; }
+‎  }
+‎</style>
+‎</head>
+‎<body>
+‎<div class="phone-frame">
+‎
+‎  <!-- Header -->
+‎  <div class="header">
+‎    <div class="header-left">
+‎      <div class="header-icon">
+‎        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+‎          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+‎          <polyline points="16 7 22 7 22 13"/>
+‎        </svg>
+‎      </div>
+‎      <div class="header-title">
+‎        <h1>Trading Performance</h1>
+‎        <p>Track your performance and improve every day.</p>
+‎      </div>
+‎    </div>
+‎    <div class="date-pill">
+‎      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+‎        <rect x="3" y="4" width="18" height="18" rx="2"/>
+‎        <line x1="3" y1="9" x2="21" y2="9"/>
+‎        <line x1="8" y1="2" x2="8" y2="6"/>
+‎        <line x1="16" y1="2" x2="16" y2="6"/>
+‎      </svg>
+‎      This Month
+‎      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+‎        <polyline points="6 9 12 15 18 9"/>
+‎      </svg>
+‎    </div>
+‎  </div>
+‎
+‎  <!-- Net P&L -->
+‎  <div class="pnl-section">
+‎    <div class="pnl-label">
+‎      Net P&L (This Month)
+‎      <div class="info-icon">i</div>
+‎    </div>
+‎    <div class="pnl-percent">+12.84%</div>
+‎    <div class="pnl-dollar">+$1,284.75</div>
+‎  </div>
+‎
+‎  <!-- Tab Toggle (floats right, overlaps chart area) -->
+‎  <div class="tab-group">
+‎    <button class="tab-btn active">Daily</button>
+‎    <button class="tab-btn">Weekly</button>
+‎    <button class="tab-btn">Monthly</button>
+‎  </div>
+‎
+‎  <!-- Chart Card -->
+‎  <div class="chart-card">
+‎    <div class="chart-legend">
+‎      <div class="legend-dot"></div>
+‎      Cumulative Return (%)
+‎    </div>
+‎    <div class="chart-wrap">
+‎      <!-- Y labels -->
+‎      <div class="y-labels" style="left:0;width:36px;">
+‎        <span class="y-label">15%</span>
+‎        <span class="y-label">10%</span>
+‎        <span class="y-label">5%</span>
+‎        <span class="y-label">0%</span>
+‎        <span class="y-label">-5%</span>
+‎        <span class="y-label">-10%</span>
+‎      </div>
+‎      <!-- SVG Chart -->
+‎      <svg class="chart-svg" style="margin-left:38px;width:calc(100% - 38px)" viewBox="0 0 370 150" preserveAspectRatio="none">
+‎        <defs>
+‎          <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+‎            <stop offset="0%"   stop-color="#2ecc71" stop-opacity="0.35"/>
+‎            <stop offset="100%" stop-color="#2ecc71" stop-opacity="0.02"/>
+‎          </linearGradient>
+‎          <!-- Clip to only show fill above/at baseline -->
+‎          <clipPath id="aboveZero">
+‎            <rect x="0" y="0" width="370" height="150"/>
+‎          </clipPath>
+‎        </defs>
+‎
+‎        <!-- Horizontal grid lines -->
+‎        <line x1="0" y1="0"   x2="370" y2="0"   stroke="#252932" stroke-width="0.5"/>
+‎        <line x1="0" y1="25"  x2="370" y2="25"  stroke="#252932" stroke-width="0.5"/>
+‎        <line x1="0" y1="50"  x2="370" y2="50"  stroke="#252932" stroke-width="0.5"/>
+‎        <!-- Zero line -->
+‎        <line x1="0" y1="75"  x2="370" y2="75"  stroke="#353c4a" stroke-width="1"/>
+‎        <line x1="0" y1="100" x2="370" y2="100" stroke="#252932" stroke-width="0.5"/>
+‎        <line x1="0" y1="125" x2="370" y2="125" stroke="#252932" stroke-width="0.5"/>
+‎        <line x1="0" y1="150" x2="370" y2="150" stroke="#252932" stroke-width="0.5"/>
+‎
+‎        <!--
+‎          Y mapping: 15%=0, 10%=25, 5%=50, 0%=75, -5%=100, -10%=125/150
+‎          The chart: starts flat ~1%, dips to ~4% around May5, recovers slightly, 
+‎          drops to -4.5% by May13, recovers to ~12%+ by May31
+‎        -->
+‎        <polyline
+‎          fill="url(#chartGrad)"
+‎          stroke="none"
+‎          points="
+‎            0,70
+‎            15,68  20,64  25,61  30,57  40,56  50,59
+‎            60,62  70,64  80,68  90,70
+‎            100,76  110,85  115,90  120,96  125,100  130,98
+‎            140,92  150,86  155,82  160,78
+‎            170,74  180,68  190,62  200,60
+‎            210,57  220,54  230,52  235,50
+‎            240,47  245,44  250,43
+‎            260,40  265,37  270,35
+‎            280,30  290,26  300,22  310,18  320,14
+‎            330,10  340,8  345,5
+‎            350,10  360,5  370,3
+‎            370,150  0,150
+‎          "
+‎        />
+‎        <!-- Negative area fill (below zero) -->
+‎        <polyline
+‎          fill="rgba(46,204,113,0.07)"
+‎          stroke="none"
+‎          points="
+‎            0,70  15,68  20,64  25,61  30,57  40,56  50,59
+‎            60,62  70,64  80,68  90,70
+‎            100,76  110,85  115,90  120,96  125,100  130,98
+‎            140,92  150,86  155,82  160,78
+‎            170,74  180,68  190,62  200,60
+‎            0,75
+‎          "
+‎        />
+‎        <!-- Line -->
+‎        <polyline
+‎          fill="none"
+‎          stroke="#2ecc71"
+‎          stroke-width="1.8"
+‎          stroke-linejoin="round"
+‎          stroke-linecap="round"
+‎          points="
+‎            0,70
+‎            15,68  20,64  25,61  30,57  40,56  50,59
+‎            60,62  70,64  80,68  90,70
+‎            100,76  110,85  115,90  120,96  125,100  130,98
+‎            140,92  150,86  155,82  160,78
+‎            170,74  180,68  190,62  200,60
+‎            210,57  220,54  230,52  235,50
+‎            240,47  245,44  250,43
+‎            260,40  265,37  270,35
+‎            280,30  290,26  300,22  310,18  320,14
+‎            330,10  340,8  345,5
+‎            350,10  360,5  370,3
+‎          "
+‎        />
+‎        <!-- End dot -->
+‎        <circle cx="370" cy="3" r="5" fill="#2ecc71" stroke="#0e0f11" stroke-width="2"/>
+‎        <circle cx="370" cy="3" r="9" fill="rgba(46,204,113,0.2)"/>
+‎      </svg>
+‎    </div>
+‎
+‎    <!-- X labels -->
+‎    <div class="x-labels" style="padding-left:38px">
+‎      <span class="x-label">May 1</span>
+‎      <span class="x-label">May 5</span>
+‎      <span class="x-label">May 9</span>
+‎      <span class="x-label">May 13</span>
+‎      <span class="x-label">May 17</span>
+‎      <span class="x-label">May 21</span>
+‎      <span class="x-label">May 25</span>
+‎      <span class="x-label">May 29</span>
+‎      <span class="x-label">May 31</span>
+‎    </div>
+‎  </div>
+‎
+‎  <!-- Metric Cards -->
+‎  <div class="metrics-grid">
+‎
+‎    <!-- Profit Factor -->
+‎    <div class="metric-card">
+‎      <div class="metric-top">
+‎        <div class="metric-icon-wrap">
+‎          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+‎            <rect x="2" y="3" width="20" height="18" rx="2"/>
+‎            <line x1="8" y1="10" x2="8" y2="17"/>
+‎            <line x1="12" y1="7" x2="12" y2="17"/>
+‎            <line x1="16" y1="13" x2="16" y2="17"/>
+‎          </svg>
+‎        </div>
+‎        <span class="metric-chevron">›</span>
+‎      </div>
+‎      <div class="metric-label">
+‎        Profit Factor
+‎        <div class="info-icon">i</div>
+‎      </div>
+‎      <div class="metric-value">1.87</div>
+‎      <div class="metric-status green">Excellent</div>
+‎      <div class="metric-hint">&gt; 1.5 is considered good</div>
+‎    </div>
+‎
+‎    <!-- Average R:R -->
+‎    <div class="metric-card">
+‎      <div class="metric-top">
+‎        <div class="metric-icon-wrap">
+‎          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+‎            <circle cx="12" cy="12" r="9"/>
+‎            <circle cx="12" cy="12" r="3"/>
+‎            <line x1="12" y1="3" x2="12" y2="6"/>
+‎            <line x1="12" y1="18" x2="12" y2="21"/>
+‎            <line x1="3" y1="12" x2="6" y2="12"/>
+‎            <line x1="18" y1="12" x2="21" y2="12"/>
+‎          </svg>
+‎        </div>
+‎        <span class="metric-chevron">›</span>
+‎      </div>
+‎      <div class="metric-label">
+‎        Average R:R
+‎        <div class="info-icon">i</div>
+‎      </div>
+‎      <div class="metric-value">2.40R</div>
+‎      <div class="metric-status green">Above Target</div>
+‎      <div class="metric-hint">Target: 2.00R+</div>
+‎    </div>
+‎
+‎    <!-- Consistency -->
+‎    <div class="metric-card">
+‎      <div class="metric-top">
+‎        <div class="metric-icon-wrap">
+‎          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+‎            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+‎          </svg>
+‎        </div>
+‎        <span class="metric-chevron">›</span>
+‎      </div>
+‎      <div class="metric-label">
+‎        Consistency
+‎        <div class="info-icon">i</div>
+‎      </div>
+‎      <div class="metric-value">84%</div>
+‎      <div class="metric-status green">Good</div>
+‎      <div class="metric-hint">Based on risk, returns &amp; discipline</div>
+‎    </div>
+‎
+‎    <!-- Average Return -->
+‎    <div class="metric-card">
+‎      <div class="metric-top">
+‎        <div class="metric-icon-wrap">
+‎          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+‎            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+‎            <polyline points="17 6 23 6 23 12"/>
+‎          </svg>
+‎        </div>
+‎        <span class="metric-chevron">›</span>
+‎      </div>
+‎      <div class="metric-label">
+‎        Average Return
+‎        <div class="info-icon">i</div>
+‎      </div>
+‎      <div class="metric-value">+0.42%</div>
+‎      <div class="metric-status green">Per Trade</div>
+‎      <div class="metric-hint">Average profit per completed trade</div>
+‎    </div>
+‎
+‎  </div>
+‎
+‎  <!-- Performance Insights -->
+‎  <div class="insights-card">
+‎    <div class="insights-header">
+‎      <div class="insights-title-row">
+‎        <div class="insights-star-wrap">
+‎          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+‎            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+‎          </svg>
+‎        </div>
+‎        <div>
+‎          <div class="insights-title">Performance Insights</div>
+‎          <div class="insights-sub">Key insights to help you improve</div>
+‎        </div>
+‎      </div>
+‎      <div class="view-details-btn">
+‎        View Details
+‎        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+‎          <polyline points="9 18 15 12 9 6"/>
+‎        </svg>
+‎      </div>
+‎    </div>
+‎
+‎    <div class="insights-grid">
+‎      <!-- Insight 1 -->
+‎      <div class="insight-item">
+‎        <div class="insight-dot green">
+‎          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+‎            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+‎            <polyline points="17 6 23 6 23 12"/>
+‎          </svg>
+‎        </div>
+‎        <div class="insight-text">
+‎          Your profitability is <span class="highlight-green">above average</span>
+‎        </div>
+‎        <div class="insight-sub-text">Keep maintaining your edge.</div>
+‎      </div>
+‎
+‎      <!-- Divider -->
+‎      <div style="display:flex;gap:8px;">
+‎        <div class="insight-divider"></div>
+‎    
