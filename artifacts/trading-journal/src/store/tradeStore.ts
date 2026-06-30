@@ -4,13 +4,17 @@ import { saveToStorage, loadFromStorage, clearStorage } from '../storage/tradeSt
 import { fetchServerTrades, syncTrade, deleteServerTrade, bulkSyncTrades } from '../api/tradeApi';
 import { getSavedToken } from './authStore';
 
-const GOAL_KEY    = 'groeax_monthly_goal';
-const BALANCE_KEY = 'groeax_starting_balance';
+const GOAL_KEY         = 'groeax_monthly_goal';
+const BALANCE_KEY      = 'groeax_starting_balance';
+const GOAL_PCT_KEY     = 'groeax_monthly_goal_pct';
+const TRADING_DAYS_KEY = 'groeax_trading_days';
 
 interface TradeStore {
   trades: Trade[];
   isHydrated: boolean;
   monthlyGoal: number;
+  monthlyGoalPct: number;
+  tradingDaysPerMonth: number;
   startingBalance: number;
   addTrade: (trade: Trade) => void;
   updateTrade: (id: string, trade: Partial<Trade>) => void;
@@ -19,6 +23,8 @@ interface TradeStore {
   clearAll: () => void;
   hydrate: () => Promise<void>;
   setMonthlyGoal: (goal: number) => void;
+  setMonthlyGoalPct: (pct: number) => void;
+  setTradingDaysPerMonth: (days: number) => void;
   setStartingBalance: (balance: number) => void;
 }
 
@@ -30,6 +36,22 @@ function loadGoal(): number {
   return 0;
 }
 
+function loadGoalPct(): number {
+  try {
+    const raw = localStorage.getItem(GOAL_PCT_KEY);
+    if (raw) return parseFloat(raw);
+  } catch {}
+  return 0;
+}
+
+function loadTradingDays(): number {
+  try {
+    const raw = localStorage.getItem(TRADING_DAYS_KEY);
+    if (raw) return parseInt(raw, 10);
+  } catch {}
+  return 22;
+}
+
 function loadStartingBalance(): number {
   try {
     const raw = localStorage.getItem(BALANCE_KEY);
@@ -38,17 +60,24 @@ function loadStartingBalance(): number {
   return 0;
 }
 
+function loadAll() {
+  return {
+    monthlyGoal: loadGoal(),
+    monthlyGoalPct: loadGoalPct(),
+    tradingDaysPerMonth: loadTradingDays(),
+    startingBalance: loadStartingBalance(),
+  };
+}
+
 export const useTradeStore = create<TradeStore>((set, get) => ({
   trades: [],
   isHydrated: false,
-  monthlyGoal: loadGoal(),
-  startingBalance: loadStartingBalance(),
+  ...loadAll(),
 
   addTrade: (trade) => {
     const next = [...get().trades, trade];
     set({ trades: next });
     saveToStorage(next);
-    // Sync to server in background (fire and forget)
     const token = getSavedToken();
     if (token) syncTrade(token, trade).catch(console.error);
   },
@@ -57,7 +86,6 @@ export const useTradeStore = create<TradeStore>((set, get) => ({
     const next = get().trades.map((t) => (t.id === id ? { ...t, ...updates } : t));
     set({ trades: next });
     saveToStorage(next);
-    // Sync updated trade to server
     const token = getSavedToken();
     if (token) {
       const updated = next.find((t) => t.id === id);
@@ -73,7 +101,6 @@ export const useTradeStore = create<TradeStore>((set, get) => ({
     });
     set({ trades: next });
     saveToStorage(next);
-    // Sync all updated trades to server
     const token = getSavedToken();
     if (token) {
       const updatedIds = new Set(updates.map(u => u.id));
@@ -86,7 +113,6 @@ export const useTradeStore = create<TradeStore>((set, get) => ({
     const next = get().trades.filter((t) => t.id !== id);
     set({ trades: next });
     saveToStorage(next);
-    // Delete from server
     const token = getSavedToken();
     if (token) deleteServerTrade(token, id).catch(console.error);
   },
@@ -103,23 +129,17 @@ export const useTradeStore = create<TradeStore>((set, get) => ({
 
     if (token) {
       try {
-        // Load any locally saved trades first for instant display
         const localTrades = await loadFromStorage();
-
-        // Fetch server trades (the source of truth when logged in)
         const serverTrades = await fetchServerTrades(token);
 
         if (serverTrades.length > 0) {
-          // Server has data — use it as the source of truth
-          set({ trades: serverTrades, isHydrated: true, monthlyGoal: loadGoal(), startingBalance: loadStartingBalance() });
-          // Also save to local for offline use
+          set({ trades: serverTrades, isHydrated: true, ...loadAll() });
           saveToStorage(serverTrades);
         } else if (localTrades.length > 0) {
-          // Server is empty but we have local trades — push them up (first login on new account)
-          set({ trades: localTrades, isHydrated: true, monthlyGoal: loadGoal(), startingBalance: loadStartingBalance() });
+          set({ trades: localTrades, isHydrated: true, ...loadAll() });
           bulkSyncTrades(token, localTrades).catch(console.error);
         } else {
-          set({ trades: [], isHydrated: true, monthlyGoal: loadGoal(), startingBalance: loadStartingBalance() });
+          set({ trades: [], isHydrated: true, ...loadAll() });
         }
         return;
       } catch (err) {
@@ -127,14 +147,23 @@ export const useTradeStore = create<TradeStore>((set, get) => ({
       }
     }
 
-    // Not logged in or server unreachable — use local storage
     const trades = await loadFromStorage();
-    set({ trades, isHydrated: true, monthlyGoal: loadGoal(), startingBalance: loadStartingBalance() });
+    set({ trades, isHydrated: true, ...loadAll() });
   },
 
   setMonthlyGoal: (goal) => {
     set({ monthlyGoal: goal });
     try { localStorage.setItem(GOAL_KEY, String(goal)); } catch {}
+  },
+
+  setMonthlyGoalPct: (pct) => {
+    set({ monthlyGoalPct: pct });
+    try { localStorage.setItem(GOAL_PCT_KEY, String(pct)); } catch {}
+  },
+
+  setTradingDaysPerMonth: (days) => {
+    set({ tradingDaysPerMonth: days });
+    try { localStorage.setItem(TRADING_DAYS_KEY, String(days)); } catch {}
   },
 
   setStartingBalance: (balance) => {
