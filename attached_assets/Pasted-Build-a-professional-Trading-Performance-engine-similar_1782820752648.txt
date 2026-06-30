@@ -1,0 +1,259 @@
+Build a professional Trading Performance engine similar to TradeZella.
+
+DO NOT use dummy values or hardcoded numbers.
+
+Every metric must be calculated dynamically from the user's completed trades.
+
+=========================
+TOP SUMMARY
+=========================
+
+Show three tabs:
+
+• Daily
+• Weekly
+• Monthly
+
+Each tab must calculate independently.
+
+Daily Return =
+Today's Net Profit ÷ Start of Day Balance ×100
+
+Weekly Return =
+Current Week Net Profit ÷ Week Starting Balance ×100
+
+Monthly Return =
+Current Month Net Profit ÷ Month Starting Balance ×100
+
+Display both:
+
++$ Amount
++% Return
+
+Example
+
++$42.30
++2.14%
+
+Changing tabs must instantly update every card and graph.
+
+=========================
+NET P&L
+=========================
+
+Display
+
+Net Profit/Loss
+
+Dollar
+
+Percentage
+
+Win Rate
+
+Completed Trades
+
+=========================
+PROFIT FACTOR
+=========================
+
+Formula
+
+Gross Profit ÷ Gross Loss
+
+Example
+
+Gross Profit = 250
+
+Gross Loss = 100
+
+PF = 2.50
+
+If Gross Loss = 0
+
+Display
+
+N/A
+
+or
+
+∞
+
+Never display fake values.
+
+=========================
+AVERAGE R:R
+=========================
+
+Each trade
+
+Reward / Risk
+
+Average RR
+
+Sum(RR)
+
+÷
+
+Completed Trades
+
+Example
+
+2R
+3R
+1.5R
+
+Average
+
+2.17R
+
+=========================
+CONSISTENCY SCORE
+=========================
+
+Do NOT use random percentages.
+
+Calculate using:
+
+Trade Execution Consistency
+
+Risk Consistency
+
+Position Size Consistency
+
+Discipline
+
+Following Trading Plan
+
+Penalty for Revenge Trading
+
+Penalty for Over-risk
+
+Penalty for Rule Violations
+
+Final Score
+
+0–100
+
+90-100 Elite
+
+75-89 Good
+
+60-74 Average
+
+Below 60 Needs Improvement
+
+If fewer than 10 completed trades
+
+Display
+
+Not Enough Data
+
+=========================
+AVERAGE RETURN
+=========================
+
+Average Return %
+
+=
+
+Sum of Return %
+
+÷
+
+Completed Trades
+
+Also show
+
+Average Dollar Profit
+
+Example
+
++$18.40
+
+0.74%
+
+=========================
+GRAPH
+=========================
+
+Show cumulative Equity Curve.
+
+Daily
+
+Weekly
+
+Monthly
+
+must each have separate graph data.
+
+=========================
+INSIGHTS
+=========================
+
+Generate automatically
+
+High Win Rate
+
+Low RR
+
+Large Drawdown
+
+Excellent PF
+
+Over Trading
+
+High Risk
+
+Poor Discipline
+
+Best Trading Session
+
+Best Pair
+
+Worst Pair
+
+Best Week
+
+Worst Week
+
+=========================
+REAL TIME
+=========================
+
+Every time
+
+Trade Added
+
+Trade Edited
+
+Trade Deleted
+
+Recalculate instantly:
+
+Daily Return
+
+Weekly Return
+
+Monthly Return
+
+Net P&L
+
+Profit Factor
+
+Average RR
+
+Consistency
+
+Average Return
+
+Win Rate
+
+Expectancy
+
+Equity Curve
+
+Insights
+
+No hardcoded values anywhere.
+Everything must be calculated from real trade history similar to professional trading journals like TradeZella.

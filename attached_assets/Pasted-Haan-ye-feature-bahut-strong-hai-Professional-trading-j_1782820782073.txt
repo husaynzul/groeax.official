@@ -1,0 +1,235 @@
+Haan, **ye feature bahut strong hai**. Professional trading journals mein goal tracking hoti hai, lekin tum ise aur practical bana sakte ho.
+
+Main is tarah design karunga:
+
+---
+
+# Monthly Goal
+
+User pehli baar target set kare.
+
+Example:
+
+* Monthly Return Target: **3%**
+* Ya optional (skip)
+
+---
+
+# Automatic Calculation
+
+Agar target **3% per month** hai, app automatically calculate kare:
+
+### Daily Target (Compound)
+
+Formula:
+
+[
+\text{Daily}=(1+0.03)^{1/30}-1
+]
+
+Result:
+
+**≈ 0.0986% per day**
+
+---
+
+### Weekly Target
+
+Formula:
+
+[
+(1+0.03)^{7/30}-1
+]
+
+Result:
+
+**≈ 0.69% per week**
+
+---
+
+## Dashboard
+
+```
+Monthly Goal
+
+3.00%
+
+Today's Target
+
+0.10%
+
+Current
+
+0.18%
+
+✔ Ahead of Target
+
+---------------------
+
+Weekly Target
+
+0.69%
+
+Current
+
+0.84%
+
+✔ Ahead
+
+---------------------
+
+Monthly Target
+
+3.00%
+
+Current
+
+1.72%
+
+57% Complete
+```
+
+---
+
+## Progress Bar
+
+```
+Monthly Goal
+
+3%
+
+████████░░░░░
+
+57%
+```
+
+---
+
+## Remaining Target
+
+```
+Remaining
+
+1.28%
+
+Need
+
+0.07%
+
+per remaining trading day
+```
+
+Ye bahut powerful feature hai.
+
+Agar month mein 20 trading days bache hain:
+
+```
+Remaining Goal
+
+1.28%
+
+Need
+
+0.064%
+
+per trading day
+```
+
+Automatically update hoga.
+
+---
+
+# Agar user target change kare
+
+Example:
+
+```
+Current Goal
+
+3%
+
+Edit
+
+5%
+
+Save
+```
+
+Sab calculations live update ho jayengi.
+
+---
+
+# Claude Prompt
+
+```text
+Add a Goal Tracking system to GROEAX.
+
+Users can optionally set:
+
+• Monthly Return Target (%)
+
+Example
+
+3%
+
+If no target is set
+
+Hide all target widgets.
+
+If a target is set
+
+Automatically calculate
+
+• Daily Target %
+• Weekly Target %
+• Monthly Target %
+
+Use compound formulas.
+
+Daily Target
+
+=(1+MonthlyTarget)^(1/30)-1
+
+Weekly Target
+
+=(1+MonthlyTarget)^(7/30)-1
+
+Display
+
+Today's Target
+
+Today's Actual
+
+Weekly Target
+
+Weekly Actual
+
+Monthly Target
+
+Monthly Actual
+
+Remaining Target
+
+Required Return Per Remaining Trading Day
+
+Show progress bars.
+
+Show status:
+
+Ahead of Target
+
+On Track
+
+Behind Target
+
+Recalculate automatically after every completed trade.
+
+Everything must update in real time.
+```
+
+**Ek aur suggestion:** sirf **calendar days (30)** use mat karo. Professional trading ke liye **Trading Days** ka option do (default **22 trading days/month**). Agar user weekend par trade nahi karta, to daily target uske liye zyada realistic hoga. Isliye Settings mein option rakho:
+
+* **Calendar Days (30)**
+* **Trading Days (22)**
+
+Isse GROEAX aur bhi professional lagega.
