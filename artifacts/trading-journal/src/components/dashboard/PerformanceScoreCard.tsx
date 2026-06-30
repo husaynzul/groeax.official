@@ -142,14 +142,13 @@ function calcConsistencyScore(trades: Trade[]): { score: number; label: string; 
   return { score: total, label, color, notEnoughData: false };
 }
 
-function calcAvgReturnPct(trades: Trade[], startingBalance: number): number {
-  if (trades.length === 0 || startingBalance <= 0) return 0;
+function calcAvgReturnPct(trades: Trade[], startingBalance: number): { pct: number; dollar: number } {
   const completed = trades.filter(t => t.outcome === "WIN" || t.outcome === "LOSS" || t.outcome === "BE");
-  if (completed.length === 0) return 0;
-  return completed.reduce((sum, t) => {
-    const pnl = t.outcome === "WIN" ? t.netProfit : t.outcome === "LOSS" ? -t.netLoss : 0;
-    return sum + (pnl / startingBalance) * 100;
-  }, 0) / completed.length;
+  if (completed.length === 0) return { pct: 0, dollar: 0 };
+  const netPnL = completed.reduce((s, t) => s + (t.outcome === "WIN" ? t.netProfit : t.outcome === "LOSS" ? -t.netLoss : 0), 0);
+  const dollar = netPnL / completed.length;
+  const pct = startingBalance > 0 ? (netPnL / startingBalance / completed.length) * 100 : 0;
+  return { pct, dollar };
 }
 
 function buildInsights(trades: Trade[], startingBalance: number) {
@@ -332,12 +331,11 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
   const profitFactor = useMemo(() => calcProfitFactor(filteredTrades), [filteredTrades]);
   const avgRR = useMemo(() => calcAvgRR(filteredTrades), [filteredTrades]);
   const consistency = useMemo(() => calcConsistencyScore(filteredTrades), [filteredTrades]);
-  const avgReturnPct = useMemo(() => calcAvgReturnPct(filteredTrades, periodBaseBalance), [filteredTrades, periodBaseBalance]);
+  const avgReturn = useMemo(() => calcAvgReturnPct(filteredTrades, periodBaseBalance), [filteredTrades, periodBaseBalance]);
 
   const completedTrades = filteredTrades.filter(t => t.outcome === "WIN" || t.outcome === "LOSS" || t.outcome === "BE");
   const winsCount = completedTrades.filter(t => t.outcome === "WIN").length;
   const winRate = completedTrades.length > 0 ? (winsCount / completedTrades.length) * 100 : 0;
-  const avgDollarProfit = completedTrades.length > 0 ? periodNetDollar / completedTrades.length : 0;
 
   const grossProfit = completedTrades.filter(t => t.outcome === "WIN").reduce((s, t) => s + t.netProfit, 0);
   const grossLoss = completedTrades.filter(t => t.outcome === "LOSS").reduce((s, t) => s + t.netLoss, 0);
@@ -360,8 +358,8 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
     ? { t: "Not Enough Data", c: "text-[#555e72]" }
     : { t: consistency.label, c: consistency.color };
 
-  const avgRetR = avgReturnPct > 0 ? { t: "Profitable", c: "text-[#2ecc71]" }
-    : avgReturnPct < 0 ? { t: "Losing", c: "text-red-400" }
+  const avgRetR = avgReturn.dollar > 0 ? { t: "Profitable", c: "text-[#2ecc71]" }
+    : avgReturn.dollar < 0 ? { t: "Losing", c: "text-red-400" }
     : { t: "Neutral", c: "text-[#555e72]" };
 
   const insights = useMemo(() => buildInsights(filteredTrades, periodBaseBalance), [filteredTrades, periodBaseBalance]);
@@ -509,10 +507,10 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
             />
             <MetricBlock
               icon={Activity} label="Avg Return / Trade"
-              value={`${avgReturnPct >= 0 ? "+" : ""}${avgReturnPct.toFixed(3)}%`}
-              display={`${avgDollarProfit >= 0 ? "+" : ""}${fmtMoney(avgDollarProfit)} avg`}
+              value={`${avgReturn.dollar >= 0 ? "+" : ""}${fmtMoney(avgReturn.dollar)}`}
+              display={`${avgReturn.pct >= 0 ? "+" : ""}${Math.abs(avgReturn.pct) >= 1000 ? avgReturn.pct.toFixed(0) : avgReturn.pct.toFixed(2)}% avg return`}
               ratingColor={avgRetR.c}
-              hint="Average % return per completed trade"
+              hint={avgRetR.t}
               accentColor="#10b981"
             />
           </div>

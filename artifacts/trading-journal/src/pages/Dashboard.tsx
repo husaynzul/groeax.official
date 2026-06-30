@@ -171,20 +171,20 @@ function GoalTrackingCard({
     setEditing(false);
   }
 
-  const { dailyTargetPct, weeklyTargetPct, todayActualPct, weekActualPct, monthActualPct, baseBalance } = useMemo(() => {
+  const calc = useMemo(() => {
     const monthlyFrac = monthlyGoalPct / 100;
     const td = tradingDaysPerMonth;
-    const weekTradingDays = Math.round(td / (22 / 5));
+    const weekTradingDays = Math.round(td * (5 / 22));
 
-    const dailyTarget = Math.pow(1 + monthlyFrac, 1 / td) - 1;
-    const weeklyTarget = Math.pow(1 + monthlyFrac, weekTradingDays / td) - 1;
+    // Compound targets
+    const dailyTargetFrac  = Math.pow(1 + monthlyFrac, 1 / td) - 1;
+    const weeklyTargetFrac = Math.pow(1 + monthlyFrac, weekTradingDays / td) - 1;
 
-    const now = new Date();
+    const now      = new Date();
     const todayStr = format(now, "yyyy-MM-dd");
-    const dow = now.getDay();
-    const mondayDate = new Date(now);
-    mondayDate.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
-    const mondayStr = format(mondayDate, "yyyy-MM-dd");
+    const dow      = now.getDay();
+    const monday   = new Date(now); monday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
+    const monStr   = format(monday, "yyyy-MM-dd");
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
     let prevMonthPnL = 0, prevWeekPnL = 0, prevDayPnL = 0;
@@ -194,46 +194,57 @@ function GoalTrackingCard({
       if (!t.date) continue;
       const pnl = t.outcome === "WIN" ? t.netProfit : t.outcome === "LOSS" ? -t.netLoss : 0;
       const td2 = new Date(t.date + "T12:00:00");
-      if (td2 < monthStart) prevMonthPnL += pnl;
-      else monthPnL += pnl;
-      if (t.date < mondayStr) prevWeekPnL += pnl;
-      else if (t.date >= mondayStr) weekPnL += pnl;
-      if (t.date < todayStr) prevDayPnL += pnl;
-      else if (t.date === todayStr) todayPnL += pnl;
+      if (td2 < monthStart) prevMonthPnL += pnl; else monthPnL += pnl;
+      if (t.date < monStr) prevWeekPnL += pnl; else weekPnL += pnl;
+      if (t.date < todayStr) prevDayPnL += pnl; else if (t.date === todayStr) todayPnL += pnl;
     }
 
-    const base = Math.max(startingBalance, 1);
-    const monthBase = Math.max(base + prevMonthPnL, 1);
-    const weekBase = Math.max(base + prevWeekPnL, 1);
-    const dayBase = Math.max(base + prevDayPnL, 1);
+    const base      = Math.max(startingBalance, 0.01);
+    const monthBase = Math.max(base + prevMonthPnL, 0.01);
+    const weekBase  = Math.max(base + prevWeekPnL, 0.01);
+    const dayBase   = Math.max(base + prevDayPnL, 0.01);
+
+    const targetAmountMonth = base * monthlyFrac;
+    const targetAmountDay   = dayBase * dailyTargetFrac;
+    const targetAmountWeek  = weekBase * weeklyTargetFrac;
+
+    const dailyTargetPct  = dailyTargetFrac  * 100;
+    const weeklyTargetPct = weeklyTargetFrac * 100;
+    const todayActualPct  = (todayPnL / dayBase) * 100;
+    const weekActualPct   = (weekPnL  / weekBase)  * 100;
+    const monthActualPct  = (monthPnL / monthBase) * 100;
+
+    // Progress = actual profit vs target amount (can exceed 100%)
+    const rawProgress = targetAmountMonth !== 0 ? (monthPnL / targetAmountMonth) * 100 : 0;
+    const cappedProgress = Math.min(rawProgress, 100);
+
+    const daysInMonth       = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const remainingCalDays  = daysInMonth - now.getDate();
+    const remainingTD       = Math.round(remainingCalDays * (td / 30));
+    const remainingGoalPct  = Math.max(monthlyGoalPct - monthActualPct, 0);
+    const requiredPerDay    = remainingTD > 0 ? remainingGoalPct / remainingTD : 0;
 
     return {
-      dailyTargetPct: dailyTarget * 100,
-      weeklyTargetPct: weeklyTarget * 100,
-      todayActualPct: (todayPnL / dayBase) * 100,
-      weekActualPct: (weekPnL / weekBase) * 100,
-      monthActualPct: (monthPnL / monthBase) * 100,
-      baseBalance: base,
+      base, monthBase, weekBase, dayBase,
+      dailyTargetPct, weeklyTargetPct,
+      todayActualPct, weekActualPct, monthActualPct,
+      targetAmountMonth, targetAmountDay, targetAmountWeek,
+      monthPnL, weekPnL, todayPnL,
+      rawProgress, cappedProgress,
+      remainingTD, remainingGoalPct, requiredPerDay,
     };
   }, [monthlyGoalPct, tradingDaysPerMonth, startingBalance, trades]);
 
   function statusFor(actual: number, target: number) {
     if (actual >= target * 1.05) return { label: "✔ Ahead of Target", color: "text-emerald-400" };
-    if (actual >= target * 0.85) return { label: "● On Track", color: "text-yellow-400" };
+    if (actual >= target * 0.85) return { label: "● On Track",        color: "text-yellow-400" };
     return { label: "✖ Behind Target", color: "text-red-400" };
   }
 
-  const monthProgress = monthlyGoalPct > 0 ? Math.min((monthActualPct / monthlyGoalPct) * 100, 100) : 0;
-  const ringColor = monthProgress >= 100 ? "#10b981" : monthProgress >= 75 ? "#22c55e" : monthProgress >= 40 ? "#f59e0b" : "#ef4444";
-
-  const remainingPct = Math.max(monthlyGoalPct - monthActualPct, 0);
-
-  const now = new Date();
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const remainingCalDays = daysInMonth - now.getDate();
-  const dayFraction = tradingDaysPerMonth / 30;
-  const remainingTradingDays = Math.round(remainingCalDays * dayFraction);
-  const requiredPerDay = remainingTradingDays > 0 ? remainingPct / remainingTradingDays : 0;
+  const ringColor = calc.cappedProgress >= 100 ? "#10b981"
+    : calc.cappedProgress >= 75 ? "#22c55e"
+    : calc.cappedProgress >= 40 ? "#f59e0b"
+    : "#ef4444";
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
@@ -264,9 +275,10 @@ function GoalTrackingCard({
       {editing && (
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">%</span>
-          <input type="number" min="0.1" max="100" step="0.1" value={draft} onChange={(e) => setDraft(e.target.value)}
+          <input type="number" min="0.1" max="200" step="0.1" value={draft}
+            onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
-            autoFocus placeholder="e.g. 3"
+            autoFocus placeholder="e.g. 5"
             className="flex-1 bg-secondary border border-input rounded-lg px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
           <button onClick={commit} className="p-1.5 rounded bg-primary/20 text-primary hover:bg-primary/30 transition-colors"><Check className="w-3.5 h-3.5" /></button>
           <button onClick={() => setEditing(false)} className="p-1.5 rounded hover:bg-white/5 text-muted-foreground transition-colors"><X className="w-3.5 h-3.5" /></button>
@@ -275,90 +287,122 @@ function GoalTrackingCard({
 
       {monthlyGoalPct > 0 ? (
         <>
-          {/* Header: donut + goal pct */}
+          {/* Donut + key numbers */}
           <div className="flex items-center gap-4">
             <div className="relative shrink-0">
-              <ResponsiveContainer width={90} height={90}>
+              <ResponsiveContainer width={88} height={88}>
                 <PieChart>
-                  <Pie data={[{ value: Math.max(monthProgress, 0) }, { value: Math.max(100 - monthProgress, 0) }]}
-                    cx="50%" cy="50%" innerRadius={28} outerRadius={40} startAngle={90} endAngle={-270}
+                  <Pie data={[{ value: Math.max(calc.cappedProgress, 0) }, { value: Math.max(100 - calc.cappedProgress, 0) }]}
+                    cx="50%" cy="50%" innerRadius={27} outerRadius={40} startAngle={90} endAngle={-270}
                     dataKey="value" strokeWidth={0} isAnimationActive animationDuration={900}>
                     <Cell fill={ringColor} />
                     <Cell fill="rgba(255,255,255,0.05)" />
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span className="text-xs font-bold" style={{ color: ringColor }}>{monthProgress.toFixed(0)}%</span>
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none flex-col">
+                <span className="text-[10px] font-bold leading-tight" style={{ color: ringColor }}>
+                  {calc.rawProgress >= 1000 ? `${(calc.rawProgress/1000).toFixed(1)}K` : calc.rawProgress.toFixed(0)}%
+                </span>
               </div>
             </div>
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Monthly Target</span>
-                <span className="text-sm font-bold text-foreground">{monthlyGoalPct.toFixed(2)}%</span>
+            <div className="flex-1 space-y-1.5 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] text-muted-foreground">Starting Balance</span>
+                <span className="text-[11px] font-semibold text-foreground">{fmtMoney(calc.base)}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Current</span>
-                <span className={`text-sm font-bold ${monthActualPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>{monthActualPct >= 0 ? "+" : ""}{monthActualPct.toFixed(2)}%</span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] text-muted-foreground">Monthly Target</span>
+                <span className="text-[11px] font-bold text-foreground">{monthlyGoalPct.toFixed(2)}%</span>
               </div>
-              <p className={`text-[10px] font-semibold ${statusFor(monthActualPct, monthlyGoalPct).color}`}>
-                {statusFor(monthActualPct, monthlyGoalPct).label}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] text-muted-foreground">Target Amount</span>
+                <span className="text-[11px] font-semibold text-violet-400">{fmtMoney(calc.targetAmountMonth)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] text-muted-foreground">Current Profit</span>
+                <span className={`text-[11px] font-bold ${calc.monthPnL >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                  {calc.monthPnL >= 0 ? "+" : ""}{fmtMoney(calc.monthPnL)}
+                </span>
+              </div>
+              <p className={`text-[10px] font-semibold ${statusFor(calc.monthActualPct, monthlyGoalPct).color}`}>
+                {statusFor(calc.monthActualPct, monthlyGoalPct).label}
               </p>
             </div>
           </div>
 
-          {/* Progress bar */}
+          {/* Progress bar — shows raw progress vs target amount */}
           <div className="space-y-1">
             <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${monthProgress}%`, backgroundColor: ringColor }} />
+              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${calc.cappedProgress}%`, backgroundColor: ringColor }} />
             </div>
             <div className="flex justify-between text-[9px] text-muted-foreground">
-              <span>0%</span><span>{monthlyGoalPct.toFixed(1)}% target</span>
+              <span>$0</span>
+              <span>Progress: {calc.rawProgress >= 100 ? calc.rawProgress.toFixed(0) : calc.rawProgress.toFixed(1)}% of target</span>
+              <span>{fmtMoney(calc.targetAmountMonth)}</span>
             </div>
           </div>
 
-          {/* Daily & Weekly rows */}
+          {/* Daily & Weekly with dollar amounts */}
           <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/40">
-            {/* Daily */}
-            <div className="space-y-0.5">
-              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Daily Target</p>
-              <p className="text-xs font-bold text-foreground">{dailyTargetPct.toFixed(4)}%</p>
-              <p className="text-[9px] text-muted-foreground">Today</p>
-              <p className={`text-xs font-bold ${todayActualPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>{todayActualPct >= 0 ? "+" : ""}{todayActualPct.toFixed(3)}%</p>
-              <p className={`text-[9px] font-medium ${statusFor(todayActualPct, dailyTargetPct).color}`}>{statusFor(todayActualPct, dailyTargetPct).label}</p>
+            <div className="bg-secondary/20 rounded-lg p-2 space-y-1">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">Daily Target</p>
+              <p className="text-xs font-bold text-foreground">{calc.dailyTargetPct.toFixed(4)}%</p>
+              <p className="text-[9px] text-violet-400 font-medium">{fmtMoney(calc.targetAmountDay)}/day</p>
+              <div className="border-t border-border/30 pt-1 mt-1">
+                <p className="text-[9px] text-muted-foreground">Today Actual</p>
+                <p className={`text-xs font-bold ${calc.todayActualPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                  {calc.todayActualPct >= 0 ? "+" : ""}{calc.todayActualPct.toFixed(3)}%
+                </p>
+                <p className={`text-[9px] font-medium ${calc.todayActualPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                  {calc.todayPnL >= 0 ? "+" : ""}{fmtMoney(calc.todayPnL)}
+                </p>
+                <p className={`text-[9px] font-semibold ${statusFor(calc.todayActualPct, calc.dailyTargetPct).color}`}>
+                  {statusFor(calc.todayActualPct, calc.dailyTargetPct).label}
+                </p>
+              </div>
             </div>
-            {/* Weekly */}
-            <div className="space-y-0.5">
-              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Weekly Target</p>
-              <p className="text-xs font-bold text-foreground">{weeklyTargetPct.toFixed(3)}%</p>
-              <p className="text-[9px] text-muted-foreground">This Week</p>
-              <p className={`text-xs font-bold ${weekActualPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>{weekActualPct >= 0 ? "+" : ""}{weekActualPct.toFixed(3)}%</p>
-              <p className={`text-[9px] font-medium ${statusFor(weekActualPct, weeklyTargetPct).color}`}>{statusFor(weekActualPct, weeklyTargetPct).label}</p>
+            <div className="bg-secondary/20 rounded-lg p-2 space-y-1">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">Weekly Target</p>
+              <p className="text-xs font-bold text-foreground">{calc.weeklyTargetPct.toFixed(3)}%</p>
+              <p className="text-[9px] text-violet-400 font-medium">{fmtMoney(calc.targetAmountWeek)}/week</p>
+              <div className="border-t border-border/30 pt-1 mt-1">
+                <p className="text-[9px] text-muted-foreground">This Week Actual</p>
+                <p className={`text-xs font-bold ${calc.weekActualPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                  {calc.weekActualPct >= 0 ? "+" : ""}{calc.weekActualPct.toFixed(3)}%
+                </p>
+                <p className={`text-[9px] font-medium ${calc.weekPnL >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                  {calc.weekPnL >= 0 ? "+" : ""}{fmtMoney(calc.weekPnL)}
+                </p>
+                <p className={`text-[9px] font-semibold ${statusFor(calc.weekActualPct, calc.weeklyTargetPct).color}`}>
+                  {statusFor(calc.weekActualPct, calc.weeklyTargetPct).label}
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Remaining */}
-          {remainingPct > 0 && (
-            <div className="bg-secondary/30 rounded-lg px-3 py-2 border border-border/40">
+          {/* Remaining / achieved */}
+          {calc.monthPnL >= calc.targetAmountMonth ? (
+            <p className="text-xs font-semibold text-emerald-400 text-center">🎯 Monthly goal reached! {fmtMoney(calc.monthPnL - calc.targetAmountMonth)} above target</p>
+          ) : (
+            <div className="bg-secondary/20 rounded-lg px-3 py-2 border border-border/40 space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground">Remaining Goal</span>
-                <span className="text-xs font-bold text-orange-400">{remainingPct.toFixed(2)}%</span>
+                <span className="text-[10px] text-muted-foreground">Remaining to target</span>
+                <span className="text-xs font-bold text-orange-400">{fmtMoney(Math.max(calc.targetAmountMonth - calc.monthPnL, 0))}</span>
               </div>
-              {remainingTradingDays > 0 && (
-                <div className="flex items-center justify-between mt-1">
-                  <span className="text-[10px] text-muted-foreground">Need per trading day</span>
-                  <span className="text-xs font-semibold text-foreground">{requiredPerDay.toFixed(4)}%</span>
+              {calc.remainingTD > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-muted-foreground">Required/day ({calc.remainingTD} days left)</span>
+                  <span className="text-[10px] font-semibold text-foreground">{calc.requiredPerDay.toFixed(4)}%</span>
                 </div>
               )}
-              <p className="text-[9px] text-muted-foreground mt-1">{remainingTradingDays} trading days remaining</p>
             </div>
           )}
-          {monthActualPct >= monthlyGoalPct && <p className="text-xs font-semibold text-emerald-400 text-center">🎯 Monthly goal reached!</p>}
         </>
       ) : (
         <div className="flex flex-col items-center justify-center py-4 gap-2">
           <p className="text-sm text-muted-foreground text-center">Set a monthly return % target</p>
-          <p className="text-[11px] text-muted-foreground/70 text-center">Daily & weekly targets calculated automatically</p>
+          <p className="text-[11px] text-muted-foreground/70 text-center">Daily & weekly compound targets auto-calculated</p>
           {!editing && <button onClick={() => setEditing(true)} className="text-xs text-primary hover:text-primary/80 transition-colors font-medium">+ Set % goal</button>}
         </div>
       )}
@@ -538,6 +582,124 @@ export default function Dashboard() {
       </div>
 
       <TradingSessions />
+
+      {/* Advanced Statistics — Professional Metrics */}
+      {analytics.totalTrades >= 2 && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+          className="glass-card border-t-2 border-t-pink-500/60 bg-pink-500/[0.02] p-4 hover:border-white/15 transition-colors">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="w-3.5 h-3.5 text-pink-400" />
+            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Advanced Statistics</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {/* Expectancy */}
+            <div className="bg-secondary/30 rounded-xl p-3 border border-border/40">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Expectancy</p>
+              <p className={`text-base font-bold ${analytics.expectancy >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                {analytics.expectancy >= 0 ? "+" : ""}{fmtMoney(analytics.expectancy)}
+              </p>
+              <p className="text-[9px] text-muted-foreground mt-1">(WR × AvgW) − (LR × AvgL)</p>
+            </div>
+            {/* Profit Factor */}
+            <div className="bg-secondary/30 rounded-xl p-3 border border-border/40">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Profit Factor</p>
+              <p className={`text-base font-bold ${analytics.profitFactor >= 1.5 ? "text-emerald-400" : analytics.profitFactor >= 1 ? "text-yellow-400" : "text-red-400"}`}>
+                {analytics.profitFactor === 999 ? "∞" : analytics.profitFactor.toFixed(2)}
+              </p>
+              <p className="text-[9px] text-muted-foreground mt-1">Gross Profit ÷ Gross Loss</p>
+            </div>
+            {/* Recovery Factor */}
+            <div className="bg-secondary/30 rounded-xl p-3 border border-border/40">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Recovery Factor</p>
+              <p className={`text-base font-bold ${analytics.recoveryFactor > 0 ? "text-emerald-400" : "text-red-400"}`}>
+                {analytics.recoveryFactor === 999 ? "∞" : analytics.recoveryFactor.toFixed(2)}
+              </p>
+              <p className="text-[9px] text-muted-foreground mt-1">Net P&L ÷ Max Drawdown</p>
+            </div>
+            {/* Avg R:R */}
+            <div className="bg-secondary/30 rounded-xl p-3 border border-border/40">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Avg R:R</p>
+              <p className={`text-base font-bold ${analytics.avgRR >= 1.5 ? "text-emerald-400" : analytics.avgRR >= 1 ? "text-yellow-400" : "text-red-400"}`}>
+                {analytics.avgRR > 0 ? `${analytics.avgRR.toFixed(2)}R` : "—"}
+              </p>
+              <p className="text-[9px] text-muted-foreground mt-1">Sum(RR) ÷ Completed Trades</p>
+            </div>
+            {/* Sharpe Ratio */}
+            <div className="bg-secondary/30 rounded-xl p-3 border border-border/40">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Sharpe Ratio</p>
+              <p className={`text-base font-bold ${analytics.sharpeRatio > 1 ? "text-emerald-400" : analytics.sharpeRatio > 0 ? "text-yellow-400" : "text-red-400"}`}>
+                {startingBalance > 0 ? analytics.sharpeRatio.toFixed(2) : "—"}
+              </p>
+              <p className="text-[9px] text-muted-foreground mt-1">Annualised daily returns</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+            <div className="bg-secondary/20 rounded-xl p-3 border border-border/40 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                <Trophy className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Max Consec. Wins</p>
+                <p className="text-lg font-bold text-emerald-400">{analytics.maxConsecWins}</p>
+              </div>
+            </div>
+            <div className="bg-secondary/20 rounded-xl p-3 border border-border/40 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
+                <TrendingDown className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Max Consec. Losses</p>
+                <p className="text-lg font-bold text-red-400">{analytics.maxConsecLosses}</p>
+              </div>
+            </div>
+            <div className="bg-secondary/20 rounded-xl p-3 border border-border/40 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+                <BarChart2 className="w-5 h-5 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Avg Win</p>
+                <p className="text-base font-bold text-blue-400">{fmtMoney(analytics.avgWin)}</p>
+              </div>
+            </div>
+            <div className="bg-secondary/20 rounded-xl p-3 border border-border/40 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
+                <AlertCircle className="w-5 h-5 text-orange-400" />
+              </div>
+              <div>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Avg Loss</p>
+                <p className="text-base font-bold text-orange-400">{fmtMoney(analytics.avgLoss)}</p>
+              </div>
+            </div>
+          </div>
+          {startingBalance > 0 && (
+            <div className="mt-3 pt-3 border-t border-border/40 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+              <div>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Return %</p>
+                <p className={`text-sm font-bold ${analytics.netBalance >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                  {analytics.netBalance >= 0 ? "+" : ""}{((analytics.netBalance / startingBalance) * 100).toFixed(2)}%
+                </p>
+              </div>
+              <div>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Sortino Ratio</p>
+                <p className={`text-sm font-bold ${analytics.sortinoRatio > 1 ? "text-emerald-400" : analytics.sortinoRatio > 0 ? "text-yellow-400" : "text-red-400"}`}>
+                  {analytics.sortinoRatio.toFixed(2)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Max Drawdown</p>
+                <p className="text-sm font-bold text-orange-400">{analytics.drawdownStats.drawdownPercent.toFixed(2)}%</p>
+              </div>
+              <div>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Win/Loss Ratio</p>
+                <p className={`text-sm font-bold ${analytics.avgLoss > 0 ? (analytics.avgWin / analytics.avgLoss >= 1 ? "text-emerald-400" : "text-yellow-400") : "text-muted-foreground"}`}>
+                  {analytics.avgLoss > 0 ? (analytics.avgWin / analytics.avgLoss).toFixed(2) : "—"}
+                </p>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
+
       <CalendarHeatmap tradesByDate={analytics.tradesByDate} />
       <StreakCard trades={trades} />
       <EquityCurveCard equityCurve={analytics.equityCurve} startingBalance={startingBalance} currentBalance={currentBalance} maxDrawdownPct={analytics.drawdownStats.drawdownPercent} netPnL={analytics.netBalance} />

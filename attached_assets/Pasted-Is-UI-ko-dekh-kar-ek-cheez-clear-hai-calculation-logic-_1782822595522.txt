@@ -1,0 +1,290 @@
+Is UI ko dekh kar ek cheez clear hai: **calculation logic abhi professional trading journal jaisa nahi hai.**
+
+Example:
+
+* Starting Balance = **$10**
+* Current Balance = **$3,324**
+* Net Profit = **$3,314**
+
+Ye values mathematically sahi hain.
+
+Lekin kuch metrics galat calculate ho rahe hain.
+
+### 1. Profit Factor
+
+Agar:
+
+* Gross Profit = $3314
+* Gross Loss = $0
+
+To Profit Factor technically **∞ (Infinity)** hoga.
+
+Display:
+
+> **∞**
+>
+> Perfect
+
+Na ke random number.
+
+---
+
+### 2. Avg Return / Trade
+
+Current UI:
+
+> +16570%
+
+Ye confusing hai.
+
+Better:
+
+```
+Avg Profit / Trade
+$1,657.00
+
+Avg Return
+16570%
+```
+
+Ya user setting:
+
+☑ Dollar
+
+☑ Percentage
+
+---
+
+### 3. Daily / Weekly / Monthly
+
+Ye **actual gain** show kare.
+
+Example
+
+Daily
+
+```
++$3,314
++33140%
+```
+
+Weekly
+
+```
++$3,314
++33140%
+```
+
+Monthly
+
+```
++$3,314
++33140%
+```
+
+Agar next week aur trade aaye to weekly automatically change ho.
+
+---
+
+### 4. Monthly Goal
+
+Target = 5%
+
+To system automatically calculate kare.
+
+```
+Starting Balance
+$10
+
+Monthly Target
+5%
+
+Target Amount
+$0.50
+
+Current Profit
+$3314
+
+Progress
+662800%
+
+Ahead of Target
+```
+
+---
+
+### 5. Daily Target
+
+Instead of random value
+
+```
+0.2220%
+```
+
+Show
+
+```
+Monthly Target
+5%
+
+Trading Days
+22
+
+Daily Target
+0.2273%
+
+Dollar Target
+$0.0227/day
+```
+
+---
+
+### 6. Weekly Target
+
+```
+Monthly Target
+5%
+
+Weeks
+4.5
+
+Weekly Target
+1.11%
+
+Dollar
+$0.11
+```
+
+---
+
+### 7. Consistency Score
+
+2 trades se consistency calculate nahi hoti.
+
+TradeZella bhi enough trades ke baad calculate karta hai.
+
+Display:
+
+```
+Consistency Score
+
+--
+
+Need minimum
+10 trades
+```
+
+Uske baad:
+
+* Risk consistency
+* RR consistency
+* Position sizing
+* Win/Loss sequence
+* Rule following
+
+Sab combine karke score.
+
+---
+
+### 8. Average RR
+
+Ye manually nahi.
+
+Formula:
+
+```
+Reward ÷ Risk
+
+Trade1
+2R
+
+Trade2
+1.4R
+
+Average
+
+1.7R
+```
+
+---
+
+### 9. Dashboard Formula
+
+Har metric backend se calculate ho.
+
+```
+Net PnL
+Current Balance - Starting Balance
+
+Return %
+(Net Profit / Starting Balance) ×100
+
+Win Rate
+Wins / Total Trades ×100
+
+Profit Factor
+Gross Profit / Gross Loss
+
+Average Win
+Total Winning Profit / Winning Trades
+
+Average Loss
+Total Losing Loss / Losing Trades
+
+Average RR
+Sum(RR)/Trades
+
+Average Return
+Total Return% / Trades
+
+Expectancy
+(Win Rate × Avg Win)
+-
+(Loss Rate × Avg Loss)
+
+Consistency Score
+Risk + RR + Position Size + Discipline
+
+Max Drawdown
+Largest Equity Drop
+
+Recovery Factor
+Net Profit / Max Drawdown
+
+Sharpe Ratio
+
+Sortino Ratio
+
+Calmar Ratio
+```
+
+## Recommendation
+
+Agar tum **Groeax ko TradeZella level** banana chahte ho, to sirf 4 metrics nahi rakhne chahiye.
+
+Professional dashboard mein ye hone chahiye:
+
+* Net P&L
+* Return %
+* Win Rate
+* Profit Factor
+* Average R:R
+* Expectancy
+* Average Win
+* Average Loss
+* Average Return/Trade
+* Max Drawdown
+* Recovery Factor
+* Consecutive Wins
+* Consecutive Losses
+* Consistency Score
+* Monthly Goal Progress
+* Daily Target
+* Weekly Target
+* Equity Curve
+* Balance Curve
+* Drawdown Curve
+* Calendar Heatmap
+* Performance Insights (AI)
+
+Ye structure Groeax ko beginner journal se nikal kar **professional institutional-level trading journal** bana dega.

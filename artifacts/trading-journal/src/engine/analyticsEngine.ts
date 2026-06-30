@@ -37,15 +37,19 @@ export interface Analytics {
   tradesByDate: Record<string, Trade[]>;
   avgWin: number;
   avgLoss: number;
+  avgRR: number;
+  expectancy: number;
+  recoveryFactor: number;
+  profitFactor: number;
+  maxConsecWins: number;
+  maxConsecLosses: number;
+  sharpeRatio: number;
+  sortinoRatio: number;
   strategyStats: StrategyStats[];
   weeklyPnL: { week: string; pnl: number }[];
   monthlyPnL: { month: string; pnl: number }[];
 }
 
-/**
- * Extract a timezone-safe YYYY-MM-DD key from any date string.
- * Uses noon local time to avoid day boundaries.
- */
 function safeDateKey(raw: string): string | null {
   if (!raw) return null;
   const datePart = raw.includes('T') ? raw.split('T')[0] : raw;
@@ -61,6 +65,8 @@ export function computeAnalytics(trades: Trade[], startingBalance = 0): Analytic
     biggestLoss: 0, equityCurve: [], dailyPnL: [], drawdownCurve: [],
     drawdownStats: emptyDrawdown,
     rrScatter: [], tradesByDate: {}, avgWin: 0, avgLoss: 0,
+    avgRR: 0, expectancy: 0, recoveryFactor: 0, profitFactor: 0,
+    maxConsecWins: 0, maxConsecLosses: 0, sharpeRatio: 0, sortinoRatio: 0,
     strategyStats: [], weeklyPnL: [], monthlyPnL: [],
   };
   if (!trades || trades.length === 0) return empty;
@@ -79,6 +85,12 @@ export function computeAnalytics(trades: Trade[], startingBalance = 0): Analytic
   const monthlyMap: Record<string, number> = {};
   const stratMap: Record<string, { wins: number; losses: number; count: number; profit: number; loss: number; rrSum: number }> = {};
 
+  // Consecutive win/loss tracking
+  let maxConsecWins = 0, maxConsecLosses = 0, consecWins = 0, consecLosses = 0;
+
+  // Average RR
+  const rrValues: number[] = [];
+
   sorted.forEach(trade => {
     const pnl = trade.outcome === 'WIN' ? trade.netProfit
                : trade.outcome === 'LOSS' ? -trade.netLoss : 0;
@@ -86,16 +98,29 @@ export function computeAnalytics(trades: Trade[], startingBalance = 0): Analytic
     if (trade.outcome === 'WIN') {
       totalProfit += trade.netProfit;
       wins++;
+      consecWins++;
+      consecLosses = 0;
+      maxConsecWins = Math.max(maxConsecWins, consecWins);
       if (!bestTrade || trade.netProfit > biggestProfit) {
         bestTrade = trade;
         biggestProfit = trade.netProfit;
       }
     } else if (trade.outcome === 'LOSS') {
       totalLoss += trade.netLoss;
+      consecLosses++;
+      consecWins = 0;
+      maxConsecLosses = Math.max(maxConsecLosses, consecLosses);
       if (!worstTrade || trade.netLoss > biggestLoss) {
         worstTrade = trade;
         biggestLoss = trade.netLoss;
       }
+    } else {
+      consecWins = 0;
+      consecLosses = 0;
+    }
+
+    if ((trade.rr ?? 0) > 0 && (trade.outcome === 'WIN' || trade.outcome === 'LOSS')) {
+      rrValues.push(trade.rr);
     }
 
     const dateKey = safeDateKey(trade.date)!;
@@ -125,31 +150,33 @@ export function computeAnalytics(trades: Trade[], startingBalance = 0): Analytic
   });
 
   const netBalance = totalProfit - totalLoss;
-  const winRate = sorted.length > 0 ? (wins / sorted.length) * 100 : 0;
+  const total = sorted.length;
+  const winRate = total > 0 ? (wins / total) * 100 : 0;
   const losses = sorted.filter(t => t.outcome === 'LOSS').length;
   const avgWin = wins > 0 ? totalProfit / wins : 0;
   const avgLoss = losses > 0 ? totalLoss / losses : 0;
+
+  // Avg RR
+  const avgRR = rrValues.length > 0 ? rrValues.reduce((s, r) => s + r, 0) / rrValues.length : 0;
+
+  // Profit Factor
+  const profitFactor = totalLoss > 0 ? totalProfit / totalLoss : totalProfit > 0 ? 999 : 0;
+
+  // Expectancy = (WinRate × AvgWin) - (LossRate × AvgLoss)
+  const winRateFrac = winRate / 100;
+  const lossRateFrac = 1 - winRateFrac;
+  const expectancy = (winRateFrac * avgWin) - (lossRateFrac * avgLoss);
 
   const dailyPnL = Object.keys(dailyPnLMap).sort().map(date => ({ date, pnl: parseFloat(dailyPnLMap[date].toFixed(2)) }));
   const weeklyPnL = Object.keys(weeklyMap).sort().map(week => ({ week, pnl: weeklyMap[week] }));
   const monthlyPnL = Object.keys(monthlyMap).sort().map(month => ({ month, pnl: monthlyMap[month] }));
 
-  // ── Per-trade equity & peak tracking ────────────────────────────────────────
-  // Iterate over individual trades (already sorted by date) so intra-day peaks
-  // are captured correctly.  Daily aggregation loses them because multiple trades
-  // on the same day get summed before the peak check.
-  //
-  // Example fix:
-  //   Start=$10  Trade1=-$0.06→$9.94  Trade2=+$0.13→$10.07 (peak!)  Trade3=-$0.57→$9.50
-  //   Correct peak=$10.07, drawdown=(10.07-9.50)/10.07=5.66%
-  //   Old (daily) peak=$10.00 because net-day=-$0.50 < starting balance
+  // Per-trade equity & peak tracking
   let currentEquity    = startingBalance;
-  let runningPeak      = startingBalance;   // high-water mark, updates every trade
-  let maxDrawdownAmt   = 0;                 // largest (Peak_t − E_t) seen so far
-  let maxDrawdownPeak  = startingBalance;   // running peak at the moment MaxDD occurred
+  let runningPeak      = startingBalance;
+  let maxDrawdownAmt   = 0;
+  let maxDrawdownPeak  = startingBalance;
 
-  // Build per-trade equity / drawdown points, then collapse to one point per day
-  // (keep the LAST equity value of each day for the chart).
   const equityByDay: Record<string, number>    = {};
   const drawdownByDay: Record<string, number>  = {};
 
@@ -158,19 +185,12 @@ export function computeAnalytics(trades: Trade[], startingBalance = 0): Analytic
                : trade.outcome === 'LOSS' ? -trade.netLoss : 0;
 
     currentEquity = parseFloat((currentEquity + pnl).toFixed(10));
-
-    // Step 2: rolling peak — only moves up, never resets
     if (currentEquity > runningPeak) runningPeak = currentEquity;
-
-    // Step 3: drawdown at this point
     const dd = Math.max(runningPeak - currentEquity, 0);
-
-    // Step 4: keep track of the worst (maximum) drawdown seen across all trades
     if (dd > maxDrawdownAmt) {
       maxDrawdownAmt  = dd;
-      maxDrawdownPeak = runningPeak;   // peak before the worst drop
+      maxDrawdownPeak = runningPeak;
     }
-
     const dateKey = safeDateKey(trade.date)!;
     equityByDay[dateKey]   = parseFloat(currentEquity.toFixed(2));
     drawdownByDay[dateKey] = parseFloat(dd.toFixed(2));
@@ -182,18 +202,36 @@ export function computeAnalytics(trades: Trade[], startingBalance = 0): Analytic
   const drawdownCurve = Object.keys(drawdownByDay).sort()
     .map(date => ({ date, drawdown: drawdownByDay[date] }));
 
-  // MaxDD% = (maxDrawdownAmt / peak_at_that_moment) × 100
   const finalDrawdownAmount  = parseFloat(maxDrawdownAmt.toFixed(2));
   const finalDrawdownPercent = maxDrawdownPeak > 0
     ? parseFloat(((maxDrawdownAmt / maxDrawdownPeak) * 100).toFixed(2))
     : 0;
 
   const drawdownStats: DrawdownStats = {
-    peak:            parseFloat(maxDrawdownPeak.toFixed(2)),   // peak before the worst drop
+    peak:            parseFloat(maxDrawdownPeak.toFixed(2)),
     currentEquity:   parseFloat(currentEquity.toFixed(2)),
     drawdownAmount:  finalDrawdownAmount,
     drawdownPercent: finalDrawdownPercent,
   };
+
+  // Recovery Factor = Net Profit / Max Drawdown Amount
+  const recoveryFactor = finalDrawdownAmount > 0
+    ? parseFloat((netBalance / finalDrawdownAmount).toFixed(2))
+    : netBalance > 0 ? 999 : 0;
+
+  // Sharpe & Sortino (annualised, using daily returns vs 0 risk-free)
+  const dailyReturns = dailyPnL.map(d => startingBalance > 0 ? d.pnl / startingBalance : 0);
+  let sharpeRatio = 0, sortinoRatio = 0;
+  if (dailyReturns.length > 1) {
+    const meanRet = dailyReturns.reduce((s, r) => s + r, 0) / dailyReturns.length;
+    const variance = dailyReturns.reduce((s, r) => s + Math.pow(r - meanRet, 2), 0) / (dailyReturns.length - 1);
+    const stdDev   = Math.sqrt(variance);
+    const downsideVariance = dailyReturns.reduce((s, r) => s + Math.pow(Math.min(r, 0), 2), 0) / (dailyReturns.length - 1);
+    const downsideDev = Math.sqrt(downsideVariance);
+    const annFactor = Math.sqrt(252);
+    sharpeRatio  = stdDev > 0 ? parseFloat(((meanRet / stdDev) * annFactor).toFixed(2)) : 0;
+    sortinoRatio = downsideDev > 0 ? parseFloat(((meanRet / downsideDev) * annFactor).toFixed(2)) : 0;
+  }
 
   const rrScatter = sorted.map(t => ({
     rr: t.rr,
@@ -218,6 +256,10 @@ export function computeAnalytics(trades: Trade[], startingBalance = 0): Analytic
     bestTrade, worstTrade, biggestProfit, biggestLoss,
     equityCurve, dailyPnL, drawdownCurve, drawdownStats,
     rrScatter, tradesByDate,
-    avgWin, avgLoss, strategyStats, weeklyPnL, monthlyPnL,
+    avgWin, avgLoss, avgRR,
+    expectancy, recoveryFactor, profitFactor,
+    maxConsecWins, maxConsecLosses,
+    sharpeRatio, sortinoRatio,
+    strategyStats, weeklyPnL, monthlyPnL,
   };
 }
