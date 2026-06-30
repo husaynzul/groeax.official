@@ -14,7 +14,7 @@ import { motion } from "framer-motion";
 import {
   TrendingUp, TrendingDown, Target, BarChart2, Trophy, AlertCircle,
   Award, Flag, Pencil, Check, X, Wallet, DollarSign, Percent,
-  ChevronLeft, ChevronRight, Settings2,
+  ChevronLeft, ChevronRight, Settings2, Activity,
 } from "lucide-react";
 import { Trade } from "@/types";
 import {
