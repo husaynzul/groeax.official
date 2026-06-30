@@ -1,0 +1,265 @@
+Overall ye dashboard kaafi professional lag raha hai, lekin kuch calculations aur naming me issues hain jo TradeZella-level quality ke liye fix hone chahiye.
+
+## ✅ Correct Values
+
+**Starting Balance:** $10.00
+
+**Current Balance:** $10.41
+
+**Net P&L:** +$0.41
+
+**Account Growth:** +4.10% ✅
+
+**Monthly Target:** 5% = **$0.50** ✅
+
+**Progress:** 82% ✅
+
+**Remaining:** $0.09 ✅
+
+**Daily Target:** ≈0.227% ($0.0227/day) ⚠️
+
+> Tumhare dashboard me **0.1628%** aa raha hai, jo galat hai agar 22 trading days use ho rahe hain.
+
+**Weekly Target:** ≈1.11% ($0.11/week) ✅
+
+---
+
+# ❌ Things to Fix
+
+## 1. Peak Equity
+
+Abhi:
+
+```
+Peak Equity
+$10.00
+```
+
+Ye galat hai.
+
+Peak Equity hamesha account ki highest equity hoti hai.
+
+Is case me:
+
+```
+Peak Equity
+$10.41
+All-Time High
+```
+
+---
+
+## 2. Profit Factor
+
+Abhi:
+
+```
+∞
+Perfect
+```
+
+Ye technically sahi hai kyunki koi losing trade nahi hai.
+
+Lekin professional journals (TradeZella, Edgewonk etc.) usually ye show karte hain:
+
+```
+Profit Factor
+
+∞
+
+No losing trades yet
+```
+
+ya
+
+```
+Insufficient loss data
+```
+
+"Perfect" misleading ho sakta hai.
+
+---
+
+## 3. Average RR
+
+Abhi:
+
+```
+N/A
+```
+
+Ye tab tak sahi hai jab tak trade me Stop Loss aur Take Profit ya Risk amount save na ho.
+
+Agar Risk record hua hai:
+
+```
+Risk = $0.10
+Profit = $0.41
+
+RR = 4.10R
+```
+
+---
+
+## 4. Consistency Score
+
+```
+Need 10+ trades
+```
+
+Ye bilkul sahi approach hai.
+
+Professional journals bhi minimum sample size mangte hain.
+
+---
+
+## 5. Avg Return / Trade
+
+Abhi:
+
+```
++$0.41
+
++4.10%
+```
+
+Isko aur professional bana sakte ho:
+
+```
+Avg Return / Trade
+
++$0.41
+
+4.10%
+
+1 completed trade
+```
+
+---
+
+## 6. Monthly Goal
+
+Abhi:
+
+```
+82%
+✖ Behind Target
+```
+
+Ye galat hai.
+
+Tum already target ke **82%** complete kar chuke ho.
+
+Correct:
+
+```
+82%
+
+On Track
+```
+
+Ya
+
+```
+82%
+
+18% Remaining
+```
+
+"Ahead of Target" sirf tab dikhana chahiye jab current date ke hisab se expected progress se aage ho.
+
+Example:
+
+* Aaj month ka pehla din hai.
+* Expected progress ≈ 3–5%.
+* Actual = 82%.
+
+To:
+
+```
+Ahead of Schedule
+```
+
+---
+
+## 7. Daily Section
+
+Ye best format hoga:
+
+```
+Daily Target
+
+0.227%
+
+$0.0227
+
+Today's Return
+
++$0.41
+
++4.10%
+
+1810% of Daily Target
+
+Ahead of Schedule
+```
+
+---
+
+## 8. Weekly
+
+```
+Weekly Target
+
+1.11%
+
+$0.11
+
+This Week
+
++$0.41
+
+372% of Weekly Target
+
+Ahead of Schedule
+```
+
+---
+
+## 9. Monthly
+
+```
+Monthly Target
+
+5%
+
+$0.50
+
+Current
+
++$0.41
+
+82%
+
+Remaining
+
+$0.09
+```
+
+---
+
+# Overall Rating
+
+**UI:** 9.7/10
+
+**Calculations:** 8.8/10
+
+### Fix these:
+
+* Peak Equity update automatically to highest balance.
+* Daily target formula (0.227% for 22 trading days).
+* Replace "Perfect" for Profit Factor with a more informative state when there are no losses.
+* "Behind Target" should be based on **calendar progress**, not simply target completion.
+* If Stop Loss is entered, calculate real **Average R:R** automatically.
+
+In short, tumhara dashboard TradeZella-style professional level ke bahut kareeb hai. In 4–5 calculation fixes ke baad ye production-quality trading analytics dashboard lagega.

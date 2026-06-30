@@ -219,10 +219,15 @@ function GoalTrackingCard({
     const cappedProgress = Math.min(rawProgress, 100);
 
     const daysInMonth       = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const remainingCalDays  = daysInMonth - now.getDate();
+    const daysElapsed       = now.getDate();
+    const remainingCalDays  = daysInMonth - daysElapsed;
     const remainingTD       = Math.round(remainingCalDays * (td / 30));
     const remainingGoalPct  = Math.max(monthlyGoalPct - monthActualPct, 0);
     const requiredPerDay    = remainingTD > 0 ? remainingGoalPct / remainingTD : 0;
+
+    // Ratios: actual achieved vs period target (for daily/weekly)
+    const dailyAchievedRatio  = targetAmountDay  > 0 ? todayPnL / targetAmountDay  : (todayPnL  > 0 ? 2 : 0);
+    const weeklyAchievedRatio = targetAmountWeek > 0 ? weekPnL  / targetAmountWeek : (weekPnL   > 0 ? 2 : 0);
 
     return {
       base, monthBase, weekBase, dayBase,
@@ -232,13 +237,25 @@ function GoalTrackingCard({
       monthPnL, weekPnL, todayPnL,
       rawProgress, cappedProgress,
       remainingTD, remainingGoalPct, requiredPerDay,
+      daysElapsed, daysInMonth,
+      dailyAchievedRatio, weeklyAchievedRatio,
     };
   }, [monthlyGoalPct, tradingDaysPerMonth, startingBalance, trades]);
 
-  function statusFor(actual: number, target: number) {
-    if (actual >= target * 1.05) return { label: "✔ Ahead of Target", color: "text-emerald-400" };
-    if (actual >= target * 0.85) return { label: "● On Track",        color: "text-yellow-400" };
-    return { label: "✖ Behind Target", color: "text-red-400" };
+  // Monthly status: compare actual progress vs expected calendar progress
+  function calendarStatus(rawProgress: number, daysElapsed: number, daysInMonth: number) {
+    const expectedPct = (daysElapsed / daysInMonth) * 100;
+    if (expectedPct <= 0) return { label: "Month just started", color: "text-blue-400" };
+    if (rawProgress >= expectedPct * 1.1) return { label: "✔ Ahead of Schedule", color: "text-emerald-400" };
+    if (rawProgress >= expectedPct * 0.85) return { label: "● On Track", color: "text-yellow-400" };
+    return { label: "✖ Behind Schedule", color: "text-red-400" };
+  }
+
+  // Period status (daily/weekly): how much of the period target was achieved
+  function periodStatus(achievedRatio: number) {
+    if (achievedRatio >= 1.05) return { label: "✔ Ahead of Schedule", color: "text-emerald-400" };
+    if (achievedRatio >= 0.80) return { label: "● On Track", color: "text-yellow-400" };
+    return { label: "✖ Behind", color: "text-red-400" };
   }
 
   const ringColor = calc.cappedProgress >= 100 ? "#10b981"
@@ -325,8 +342,8 @@ function GoalTrackingCard({
                   {calc.monthPnL >= 0 ? "+" : ""}{fmtMoney(calc.monthPnL)}
                 </span>
               </div>
-              <p className={`text-[10px] font-semibold ${statusFor(calc.monthActualPct, monthlyGoalPct).color}`}>
-                {statusFor(calc.monthActualPct, monthlyGoalPct).label}
+              <p className={`text-[10px] font-semibold ${calendarStatus(calc.rawProgress, calc.daysElapsed, calc.daysInMonth).color}`}>
+                {calendarStatus(calc.rawProgress, calc.daysElapsed, calc.daysInMonth).label}
               </p>
             </div>
           </div>
@@ -347,18 +364,25 @@ function GoalTrackingCard({
           <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/40">
             <div className="bg-secondary/20 rounded-lg p-2 space-y-1">
               <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">Daily Target</p>
-              <p className="text-xs font-bold text-foreground">{calc.dailyTargetPct.toFixed(4)}%</p>
+              <p className="text-xs font-bold text-foreground">{calc.dailyTargetPct.toFixed(3)}%</p>
               <p className="text-[9px] text-violet-400 font-medium">{fmtMoney(calc.targetAmountDay)}/day</p>
               <div className="border-t border-border/30 pt-1 mt-1">
-                <p className="text-[9px] text-muted-foreground">Today Actual</p>
-                <p className={`text-xs font-bold ${calc.todayActualPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                  {calc.todayActualPct >= 0 ? "+" : ""}{calc.todayActualPct.toFixed(3)}%
-                </p>
-                <p className={`text-[9px] font-medium ${calc.todayActualPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                <p className="text-[9px] text-muted-foreground">Today's Return</p>
+                <p className={`text-xs font-bold ${calc.todayPnL >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                   {calc.todayPnL >= 0 ? "+" : ""}{fmtMoney(calc.todayPnL)}
                 </p>
-                <p className={`text-[9px] font-semibold ${statusFor(calc.todayActualPct, calc.dailyTargetPct).color}`}>
-                  {statusFor(calc.todayActualPct, calc.dailyTargetPct).label}
+                <p className={`text-[9px] font-medium ${calc.todayActualPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                  {calc.todayActualPct >= 0 ? "+" : ""}{calc.todayActualPct.toFixed(2)}%
+                </p>
+                {calc.todayPnL !== 0 && (
+                  <p className="text-[9px] text-muted-foreground font-medium">
+                    {calc.dailyAchievedRatio >= 10
+                      ? `${(calc.dailyAchievedRatio * 100).toFixed(0)}%`
+                      : `${(calc.dailyAchievedRatio * 100).toFixed(1)}%`} of daily target
+                  </p>
+                )}
+                <p className={`text-[9px] font-semibold ${periodStatus(calc.dailyAchievedRatio).color}`}>
+                  {calc.todayPnL === 0 ? "No trades today" : periodStatus(calc.dailyAchievedRatio).label}
                 </p>
               </div>
             </div>
@@ -367,15 +391,22 @@ function GoalTrackingCard({
               <p className="text-xs font-bold text-foreground">{calc.weeklyTargetPct.toFixed(3)}%</p>
               <p className="text-[9px] text-violet-400 font-medium">{fmtMoney(calc.targetAmountWeek)}/week</p>
               <div className="border-t border-border/30 pt-1 mt-1">
-                <p className="text-[9px] text-muted-foreground">This Week Actual</p>
-                <p className={`text-xs font-bold ${calc.weekActualPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                  {calc.weekActualPct >= 0 ? "+" : ""}{calc.weekActualPct.toFixed(3)}%
-                </p>
-                <p className={`text-[9px] font-medium ${calc.weekPnL >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                <p className="text-[9px] text-muted-foreground">This Week</p>
+                <p className={`text-xs font-bold ${calc.weekPnL >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                   {calc.weekPnL >= 0 ? "+" : ""}{fmtMoney(calc.weekPnL)}
                 </p>
-                <p className={`text-[9px] font-semibold ${statusFor(calc.weekActualPct, calc.weeklyTargetPct).color}`}>
-                  {statusFor(calc.weekActualPct, calc.weeklyTargetPct).label}
+                <p className={`text-[9px] font-medium ${calc.weekActualPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                  {calc.weekActualPct >= 0 ? "+" : ""}{calc.weekActualPct.toFixed(2)}%
+                </p>
+                {calc.weekPnL !== 0 && (
+                  <p className="text-[9px] text-muted-foreground font-medium">
+                    {calc.weeklyAchievedRatio >= 10
+                      ? `${(calc.weeklyAchievedRatio * 100).toFixed(0)}%`
+                      : `${(calc.weeklyAchievedRatio * 100).toFixed(1)}%`} of weekly target
+                  </p>
+                )}
+                <p className={`text-[9px] font-semibold ${periodStatus(calc.weeklyAchievedRatio).color}`}>
+                  {calc.weekPnL === 0 ? "No trades this week" : periodStatus(calc.weeklyAchievedRatio).label}
                 </p>
               </div>
             </div>

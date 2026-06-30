@@ -208,7 +208,7 @@ export function computeAnalytics(trades: Trade[], startingBalance = 0): Analytic
     : 0;
 
   const drawdownStats: DrawdownStats = {
-    peak:            parseFloat(maxDrawdownPeak.toFixed(2)),
+    peak:            parseFloat(runningPeak.toFixed(2)),
     currentEquity:   parseFloat(currentEquity.toFixed(2)),
     drawdownAmount:  finalDrawdownAmount,
     drawdownPercent: finalDrawdownPercent,

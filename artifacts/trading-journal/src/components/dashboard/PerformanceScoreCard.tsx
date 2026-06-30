@@ -341,7 +341,7 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
   const grossLoss = completedTrades.filter(t => t.outcome === "LOSS").reduce((s, t) => s + t.netLoss, 0);
 
   const pfR = profitFactor.isNA ? { t: "No Data", c: "text-[#555e72]" }
-    : profitFactor.isInfinite ? { t: "Perfect", c: "text-[#2ecc71]" }
+    : profitFactor.isInfinite ? { t: "No losing trades", c: "text-[#2ecc71]" }
     : profitFactor.value >= 2 ? { t: "Excellent", c: "text-[#2ecc71]" }
     : profitFactor.value >= 1.5 ? { t: "Good", c: "text-[#2ecc71]" }
     : profitFactor.value >= 1.2 ? { t: "Average", c: "text-[#f59e0b]" }
@@ -488,7 +488,7 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
               icon={BarChart2} label="Profit Factor"
               value={profitFactor.display}
               display={pfR.t} ratingColor={pfR.c}
-              hint={profitFactor.isNA ? "Not calculable yet" : `Gross P: $${grossProfit.toFixed(2)} ÷ L: $${grossLoss.toFixed(2)}`}
+              hint={profitFactor.isNA ? "Not calculable yet" : profitFactor.isInfinite ? "All trades profitable — no losses recorded" : `Gross P: $${grossProfit.toFixed(2)} ÷ L: $${grossLoss.toFixed(2)}`}
               accentColor="#3b82f6"
             />
             <MetricBlock
