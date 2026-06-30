@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cumulative Return Chart</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #0e0f11;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .chart-card {
+    width: 100%;
+    max-width: 700px;
+    background: #171a1f;
+    border: 1px solid #252932;
+    border-radius: 16px;
+    padding: 18px 16px 10px;
+  }
+
+  .chart-legend {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: #8b92a5; margin-bottom: 14px;
+  }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; background: #2ecc71; }
+
+  .chart-wrap { position: relative; height: 220px; }
+
+  .y-labels {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    display: flex; flex-direction: column; justify-content: space-between;
+    pointer-events: none; width: 38px;
+  }
+  .y-label { font-size: 11px; color: #555e72; }
+
+  .chart-svg-wrap { margin-left: 42px; height: 100%; }
+
+  .x-labels {
+    display: flex; justify-content: space-between;
+    padding: 8px 0 4px 42px;
+  }
+  .x-label { font-size: 11px; color: #555e72; }
+
+  /* Animate the line drawing in */
+  .chart-line {
+    stroke-dasharray: 1200;
+    stroke-dashoffset: 1200;
+    animation: drawLine 1.8s ease-out forwards;
+  }
+  @keyframes drawLine {
+    to { stroke-dashoffset: 0; }
+  }
+
+  .chart-fill {
+    opacity: 0;
+    animation: fadeIn 1.2s ease-out 0.6s forwards;
+  }
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+
+  .end-dot-pulse {
+    animation: pulse 2s ease-in-out infinite;
+    transform-origin: 370px 2px;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; r: 9; }
+    50% { opacity: 0.15; r: 13; }
+  }
+
+  .end-dot-core {
+    opacity: 0;
+    animation: popIn 0.4s ease-out 2.2s forwards;
+  }
+  @keyframes popIn {
+    to { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="chart-card">
+  <div class="chart-legend">
+    <div class="legend-dot"></div>
+    Cumulative Return (%)
+  </div>
+
+  <div class="chart-wrap">
+    <div class="y-labels">
+      <span class="y-label">15%</span>
+      <span class="y-label">10%</span>
+      <span class="y-label">5%</span>
+      <span class="y-label">0%</span>
+      <span class="y-label">-5%</span>
+      <span class="y-label">-10%</span>
+    </div>
+
+    <div class="chart-svg-wrap">
+      <svg width="100%" height="100%" viewBox="0 0 370 150" preserveAspectRatio="none" style="overflow: visible;">
+        <defs>
+          <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="#2ecc71" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="#2ecc71" stop-opacity="0.02"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Horizontal grid lines -->
+        <line x1="0" y1="0"   x2="370" y2="0"   stroke="#252932" stroke-width="0.5"/>
+        <line x1="0" y1="25"  x2="370" y2="25"  stroke="#252932" stroke-width="0.5"/>
+        <line x1="0" y1="50"  x2="370" y2="50"  stroke="#252932" stroke-width="0.5"/>
+        <line x1="0" y1="75"  x2="370" y2="75"  stroke="#353c4a" stroke-width="1"/>
+        <line x1="0" y1="100" x2="370" y2="100" stroke="#252932" stroke-width="0.5"/>
+        <line x1="0" y1="125" x2="370" y2="125" stroke="#252932" stroke-width="0.5"/>
+        <line x1="0" y1="150" x2="370" y2="150" stroke="#252932" stroke-width="0.5"/>
+
+        <!-- Smooth filled area (cubic bezier) -->
+        <path
+          class="chart-fill"
+          fill="url(#chartGrad)"
+          stroke="none"
+          d="M 0,70
+             C 12,69 18,65 25,61
+             C 35,55 45,55 55,60
+             C 65,64 72,66 80,69
+             C 88,72 95,74 100,77
+             C 108,82 112,90 118,97
+             C 122,100 127,99 132,95
+             C 138,90 145,84 155,80
+             C 163,77 170,74 178,68
+             C 186,62 193,60 200,59
+             C 208,57 218,54 228,51
+             C 235,49 240,46 248,43
+             C 255,41 262,38 270,34
+             C 280,29 290,25 300,21
+             C 310,17 318,13 328,9
+             C 335,7 342,6 348,8
+             C 353,9 357,7 362,4
+             C 366,2 369,2 370,2
+             L 370,150 L 0,150 Z"
+        />
+
+        <!-- Smooth line (cubic bezier) -->
+        <path
+          class="chart-line"
+          fill="none"
+          stroke="#2ecc71"
+          stroke-width="2.2"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+          d="M 0,70
+             C 12,69 18,65 25,61
+             C 35,55 45,55 55,60
+             C 65,64 72,66 80,69
+             C 88,72 95,74 100,77
+             C 108,82 112,90 118,97
+             C 122,100 127,99 132,95
+             C 138,90 145,84 155,80
+             C 163,77 170,74 178,68
+             C 186,62 193,60 200,59
+             C 208,57 218,54 228,51
+             C 235,49 240,46 248,43
+             C 255,41 262,38 270,34
+             C 280,29 290,25 300,21
+             C 310,17 318,13 328,9
+             C 335,7 342,6 348,8
+             C 353,9 357,7 362,4
+             C 366,2 369,2 370,2"
+        />
+
+        <!-- End point glow + dot -->
+        <circle class="end-dot-pulse" cx="370" cy="2" r="9" fill="rgba(46,204,113,0.25)"/>
+        <circle class="end-dot-core"  cx="370" cy="2" r="5" fill="#2ecc71" stroke="#0e0f11" stroke-width="2"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="x-labels">
+    <span class="x-label">May 1</span>
+    <span class="x-label">May 5</span>
+    <span class="x-label">May 9</span>
+    <span class="x-label">May 13</span>
+    <span class="x-label">May 17</span>
+    <span class="x-label">May 21</span>
+    <span class="x-label">May 25</span>
+    <span class="x-label">May 29</span>
+    <span class="x-label">May 31</span>
+  </div>
+</div>
+
+</body>
+</html>

@@ -22,38 +22,48 @@ type Period = "Daily" | "Weekly" | "Monthly";
 
 const fmt2 = (n: number) => n.toFixed(2);
 
-/* ── Filter trades by period ─────────────────────────────────────────── */
-function filterTrades(trades: Trade[], period: Period): Trade[] {
-  const now   = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-  if (period === "Daily") {
-    return trades.filter((t) => {
-      const d = new Date(t.date + "T12:00:00");
-      return d >= today;
-    });
-  }
-  if (period === "Weekly") {
-    const dow = today.getDay();
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
-    return trades.filter((t) => new Date(t.date + "T12:00:00") >= monday);
-  }
-  if (period === "Monthly") {
-    const som = new Date(now.getFullYear(), now.getMonth(), 1);
-    return trades.filter((t) => new Date(t.date + "T12:00:00") >= som);
-  }
-  return trades;
-}
-
 const PERIOD_LABEL: Record<Period, string> = {
   Daily:   "Today",
   Weekly:  "This Week",
   Monthly: "This Month",
 };
 
+/* ── Filter trades by period ─────────────────────────────────────────── */
+function filterTrades(trades: Trade[], period: Period): Trade[] {
+  const now   = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (period === "Daily")
+    return trades.filter((t) => new Date(t.date + "T12:00:00") >= today);
+  if (period === "Weekly") {
+    const dow    = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+    return trades.filter((t) => new Date(t.date + "T12:00:00") >= monday);
+  }
+  // Monthly
+  const som = new Date(now.getFullYear(), now.getMonth(), 1);
+  return trades.filter((t) => new Date(t.date + "T12:00:00") >= som);
+}
+
+/* ── Adaptive font size for large numbers ──────────────────────────────── */
+function numFontClass(str: string): string {
+  const len = str.length;
+  if (len <= 6)  return "text-[2.2rem]";
+  if (len <= 8)  return "text-[1.75rem]";
+  if (len <= 10) return "text-[1.4rem]";
+  return "text-xl";
+}
+
+/* ── Metric card value font ─────────────────────────────────────────────── */
+function metricFontClass(str: string): string {
+  const len = str.length;
+  if (len <= 5)  return "text-[1.75rem]";
+  if (len <= 7)  return "text-[1.4rem]";
+  return "text-xl";
+}
+
 /* ── Chart tooltip ───────────────────────────────────────────────────── */
-function CumulReturnTooltip({ active, payload, label }: {
+function ChartTip({ active, payload, label }: {
   active?: boolean; payload?: { value: number }[]; label?: string;
 }) {
   if (!active || !payload?.length) return null;
@@ -61,19 +71,17 @@ function CumulReturnTooltip({ active, payload, label }: {
   return (
     <div style={{ background: "#171a1f", border: "1px solid #252932", borderRadius: 8, padding: "10px 12px" }} className="shadow-xl text-xs">
       <p style={{ color: "#555e72", marginBottom: 4 }}>{label}</p>
-      <p style={{ fontWeight: 700, color: v >= 0 ? "#3ddc84" : "#ef4444" }}>
+      <p style={{ fontWeight: 700, color: v >= 0 ? "#2ecc71" : "#ef4444" }}>
         {v >= 0 ? "+" : ""}{fmt2(v)}%
       </p>
     </div>
   );
 }
 
-/* ── Last dot only ───────────────────────────────────────────────────── */
-function LastDot(props: {
-  cx?: number; cy?: number; index?: number; dataLength: number; color: string;
-}) {
-  const { cx = 0, cy = 0, index = 0, dataLength, color } = props;
-  if (index !== dataLength - 1) return null;
+/* ── End dot only ────────────────────────────────────────────────────── */
+function EndDot(p: { cx?: number; cy?: number; index?: number; total: number; color: string }) {
+  const { cx = 0, cy = 0, index = 0, total, color } = p;
+  if (index !== total - 1) return null;
   return (
     <>
       <circle cx={cx} cy={cy} r={9}  fill={color} fillOpacity={0.2} />
@@ -95,23 +103,18 @@ function MetricCard({
 }) {
   return (
     <div className="rounded-2xl border border-[#252932] bg-[#171a1f] p-4 cursor-pointer transition-colors hover:border-[#333a48] active:scale-[0.98]">
-      {/* icon + chevron */}
       <div className="flex items-start justify-between mb-2.5">
         <div className="w-9 h-9 rounded-xl bg-[#1c1f26] border border-[#252932] flex items-center justify-center shrink-0">
           <Icon className="w-[18px] h-[18px] text-[#8b92a5]" />
         </div>
         <span className="text-[#555e72] text-lg mt-0.5">›</span>
       </div>
-      {/* label */}
       <p className="text-[11px] text-[#8b92a5] font-medium mb-1.5 flex items-center gap-1">
         {label}
         <span className="w-3 h-3 rounded-full border border-[#555e72] inline-flex items-center justify-center text-[7px] text-[#555e72]">i</span>
       </p>
-      {/* value */}
-      <p className="text-[1.75rem] font-bold text-[#f0f2f5] tracking-[-0.03em] leading-tight">{value}</p>
-      {/* status */}
-      <p className={`text-[12px] font-semibold mt-0.5 ${ratingColor}`}>{rating}</p>
-      {/* hint */}
+      <p className={`font-bold text-[#f0f2f5] tracking-[-0.03em] leading-tight ${metricFontClass(value)}`}>{value}</p>
+      <p className={`text-[12px] font-semibold mt-1 ${ratingColor}`}>{rating}</p>
       <p className="text-[10px] text-[#555e72] mt-2 leading-snug">{hint}</p>
     </div>
   );
@@ -126,36 +129,45 @@ export default function PerformanceScoreCard({
   const [, setLocation] = useLocation();
   const [period, setPeriod] = useState<Period>("Monthly");
 
-  /* filter trades & recompute */
+  /* filtered data */
   const filteredTrades = useMemo(() => filterTrades(trades, period), [trades, period]);
   const a = useMemo(
     () => computeAnalytics(filteredTrades, startingBalance),
     [filteredTrades, startingBalance],
   );
 
-  /* derived metrics */
-  const pf = a.totalLoss > 0 ? a.totalProfit / a.totalLoss : a.totalProfit > 0 ? 4 : 0;
+  /* period net $ computed directly from trades (avoids any engine rounding) */
+  const periodNetDollar = useMemo(
+    () => filteredTrades.reduce((s, t) =>
+      s + (t.outcome === "WIN" ? t.netProfit : t.outcome === "LOSS" ? -t.netLoss : 0), 0),
+    [filteredTrades],
+  );
+
+  const netPnLPct = startingBalance > 0 ? (periodNetDollar / startingBalance) * 100 : 0;
+  const isPos     = periodNetDollar >= 0;
+  const lineColor = isPos ? "#2ecc71" : "#ef4444";
+
+  /* show $ when % would be too large to be meaningful */
+  const showPct   = startingBalance > 0 && Math.abs(netPnLPct) < 10000;
+  const mainValue = showPct
+    ? `${isPos ? "+" : ""}${fmt2(netPnLPct)}%`
+    : `${isPos ? "+" : ""}$${Math.abs(periodNetDollar).toFixed(2)}`;
+  const subValue  = showPct
+    ? `${periodNetDollar >= 0 ? "+" : ""}$${Math.abs(periodNetDollar).toFixed(2)}`
+    : null;
+
+  /* avg dollar per trade */
+  const avgPerTrade = a.totalTrades > 0 ? periodNetDollar / a.totalTrades : 0;
+  const avgPerTradeStr = `${avgPerTrade >= 0 ? "+" : ""}$${Math.abs(avgPerTrade).toFixed(2)}`;
+
+  /* other derived metrics */
+  const pf    = a.totalLoss > 0 ? a.totalProfit / a.totalLoss : a.totalProfit > 0 ? 4 : 0;
   const maxDD = a.drawdownStats.drawdownPercent;
 
   const avgRR = useMemo(() => {
     const valid = filteredTrades.filter((t) => (t.rr ?? 0) > 0);
-    return valid.length > 0
-      ? valid.reduce((s, t) => s + (t.rr ?? 0), 0) / valid.length
-      : 0;
+    return valid.length > 0 ? valid.reduce((s, t) => s + (t.rr ?? 0), 0) / valid.length : 0;
   }, [filteredTrades]);
-
-  const netPnLPct = useMemo(() => {
-    if (startingBalance > 0)
-      return ((startingBalance + a.netBalance - startingBalance) / startingBalance) * 100;
-    if (a.equityCurve.length > 0) {
-      const first = a.equityCurve[0].equity;
-      const last  = a.equityCurve[a.equityCurve.length - 1].equity;
-      return first > 0 ? ((last - first) / first) * 100 : 0;
-    }
-    return 0;
-  }, [a, startingBalance]);
-
-  const avgReturnPct = a.totalTrades > 0 ? netPnLPct / a.totalTrades : 0;
 
   const consistency = useMemo(() => {
     const wrScore   = a.winRate / 100;
@@ -165,6 +177,7 @@ export default function PerformanceScoreCard({
     return Math.round((wrScore * 0.40 + riskScore * 0.30 + freqScore * 0.30) * 100);
   }, [a.winRate, avgRR, a.totalTrades]);
 
+  /* cumulative return chart data */
   const cumulData = useMemo(() => {
     const base = startingBalance > 0 ? startingBalance : a.equityCurve[0]?.equity ?? 1;
     return a.equityCurve.map((pt) => ({
@@ -173,75 +186,59 @@ export default function PerformanceScoreCard({
     }));
   }, [a.equityCurve, startingBalance]);
 
-  const isPos = netPnLPct >= 0;
-  const lineColor = isPos ? "#2ecc71" : "#ef4444";
-
   /* ratings */
-  const pfRating = pf >= 2   ? { t: "Excellent",    c: "text-[#3ddc84]" }
-                 : pf >= 1.5 ? { t: "Good",          c: "text-[#3ddc84]" }
+  const pfRating = pf >= 2   ? { t: "Excellent",    c: "text-[#2ecc71]" }
+                 : pf >= 1.5 ? { t: "Good",          c: "text-[#2ecc71]" }
                  : pf >= 1.2 ? { t: "Average",       c: "text-[#f59e0b]" }
                  : pf >= 1   ? { t: "Below Average", c: "text-[#f59e0b]" }
                  :             { t: "Poor",           c: "text-red-400"   };
-  const rrRating = avgRR >= 2   ? { t: "Above Target", c: "text-[#3ddc84]" }
-                 : avgRR >= 1.5 ? { t: "On Target",    c: "text-[#3ddc84]" }
+  const rrRating = avgRR >= 2   ? { t: "Above Target", c: "text-[#2ecc71]" }
+                 : avgRR >= 1.5 ? { t: "On Target",    c: "text-[#2ecc71]" }
                  : avgRR >= 1   ? { t: "Near Target",  c: "text-[#f59e0b]" }
                  :               { t: "Below Target",  c: "text-red-400"   };
-  const conRating = consistency >= 80 ? { t: "Excellent", c: "text-[#3ddc84]" }
-                  : consistency >= 65 ? { t: "Good",      c: "text-[#3ddc84]" }
+  const conRating = consistency >= 80 ? { t: "Excellent", c: "text-[#2ecc71]" }
+                  : consistency >= 65 ? { t: "Good",      c: "text-[#2ecc71]" }
                   : consistency >= 45 ? { t: "Average",   c: "text-[#f59e0b]" }
                   :                    { t: "Weak",       c: "text-red-400"   };
-  const retRating = avgReturnPct >= 1   ? { t: "Excellent", c: "text-[#3ddc84]" }
-                  : avgReturnPct >= 0.3 ? { t: "Good",      c: "text-[#3ddc84]" }
-                  : avgReturnPct >= 0   ? { t: "Average",   c: "text-[#f59e0b]" }
-                  :                      { t: "Losing",     c: "text-red-400"   };
+  const retColor = avgPerTrade > 0 ? "text-[#2ecc71]" : avgPerTrade < 0 ? "text-red-400" : "text-[#f59e0b]";
+  const retRating = avgPerTrade > 0 ? "Profitable" : avgPerTrade < 0 ? "Losing" : "Neutral";
 
   /* insights */
   const insights = useMemo(() => {
-    const list: {
-      icon: React.ElementType;
-      type: "good" | "warn" | "info";
-      text: string;
-      sub: string;
-    }[] = [];
+    const list: { icon: React.ElementType; type: "good" | "warn" | "info"; text: string; sub: string }[] = [];
     if (pf >= 1.5)
-      list.push({ icon: CheckCircle,  type: "good", text: "Profitability above average",  sub: "Keep maintaining your edge." });
+      list.push({ icon: CheckCircle,  type: "good", text: "Profitability above average", sub: "Keep maintaining your edge." });
     else if (pf < 1)
-      list.push({ icon: AlertTriangle, type: "warn", text: "Work on your profit factor",   sub: "Focus on reducing losses." });
-
+      list.push({ icon: AlertTriangle,type: "warn", text: "Work on your profit factor",  sub: "Focus on reducing losses." });
     if (maxDD > 20)
-      list.push({ icon: AlertTriangle, type: "warn", text: "Work on reducing drawdowns",   sub: "Big losses impact your curve." });
+      list.push({ icon: AlertTriangle,type: "warn", text: "Work on reducing drawdowns",  sub: "Big losses impact your curve." });
     else if (maxDD <= 10 && a.totalTrades > 0)
-      list.push({ icon: CheckCircle,  type: "good", text: "Drawdown well controlled",      sub: "Risk management is solid." });
-
+      list.push({ icon: CheckCircle,  type: "good", text: "Drawdown well controlled",    sub: "Risk management is solid." });
     if (avgRR >= 2)
-      list.push({ icon: Focus,         type: "info", text: "Focus on high R:R setups",     sub: "You perform best above 2R." });
+      list.push({ icon: Focus,        type: "info", text: "Focus on high R:R setups",    sub: "You perform best above 2R." });
     else if (avgRR < 1.5 && a.totalTrades > 0)
-      list.push({ icon: AlertTriangle, type: "warn", text: "Improve R:R to at least 1.5",  sub: "Aim for 1.5:1 reward ratio." });
-
+      list.push({ icon: AlertTriangle,type: "warn", text: "Improve R:R to at least 1.5", sub: "Aim for 1.5:1 reward ratio." });
     if (a.winRate >= 60)
-      list.push({ icon: CheckCircle,  type: "good", text: "Win rate is strong",            sub: "Stay patient, avoid revenge." });
-
+      list.push({ icon: CheckCircle,  type: "good", text: "Win rate is strong",           sub: "Stay patient, avoid revenge." });
     return list.slice(0, 3);
   }, [pf, maxDD, avgRR, a.winRate, a.totalTrades]);
 
-  /* ── render ── */
+  /* ── RENDER ── */
   return (
     <div className="rounded-2xl border border-[#252932] bg-[#0e0f11] p-4 w-full">
 
       {/* ── Section header ── */}
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2.5">
-          <div className="w-[38px] h-[38px] rounded-xl bg-[#1c1f26] border border-[#252932] flex items-center justify-center shrink-0">
-            <TrendingUp className="w-5 h-5 text-[#8b92a5]" />
-          </div>
-          <div>
-            <p className="text-[17px] font-bold tracking-[-0.3px] text-[#f0f2f5] leading-tight">
-              Trading Performance
-            </p>
-            <p className="text-[11px] text-[#555e72] mt-0.5">
-              Track your performance and improve every day.
-            </p>
-          </div>
+      <div className="flex items-center gap-2.5 mb-5">
+        <div className="w-[38px] h-[38px] rounded-xl bg-[#1c1f26] border border-[#252932] flex items-center justify-center shrink-0">
+          <TrendingUp className="w-5 h-5 text-[#8b92a5]" />
+        </div>
+        <div>
+          <p className="text-[17px] font-bold tracking-[-0.3px] text-[#f0f2f5] leading-tight">
+            Trading Performance
+          </p>
+          <p className="text-[11px] text-[#555e72] mt-0.5">
+            Track your performance and improve every day.
+          </p>
         </div>
       </div>
 
@@ -251,30 +248,31 @@ export default function PerformanceScoreCard({
         </div>
       ) : (
         <>
-          {/* ── P&L + Tab Toggle (overlapping layout) ── */}
-          <div className="relative mb-4">
-            {/* P&L */}
-            <p className="text-[12px] text-[#8b92a5] font-medium mb-1 flex items-center gap-1.5">
-              Net P&L ({PERIOD_LABEL[period]})
-              <span className="w-3.5 h-3.5 rounded-full border border-[#555e72] inline-flex items-center justify-center text-[8px] text-[#555e72]">i</span>
-            </p>
-            <p className={`text-[2.4rem] font-extrabold leading-tight tracking-[-0.05em] ${isPos ? "text-[#3ddc84]" : "text-red-400"}`}>
-              {isPos ? "+" : ""}
-              {startingBalance > 0 ? `${fmt2(netPnLPct)}%` : `$${Math.abs(a.netBalance).toFixed(2)}`}
-            </p>
-            {a.totalTrades > 0 && (
-              <p className={`text-[14px] font-semibold mt-0.5 ${isPos ? "text-[#3ddc84]" : "text-red-400"}`}>
-                {a.netBalance >= 0 ? "+" : ""}${Math.abs(a.netBalance).toFixed(2)}
+          {/* ── P&L row + Tab Toggle (flex, no overlap) ── */}
+          <div className="flex items-start justify-between gap-2 mb-4">
+            {/* Left: P&L */}
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] text-[#8b92a5] font-medium mb-1 flex items-center gap-1.5">
+                Net P&L ({PERIOD_LABEL[period]})
+                <span className="w-3.5 h-3.5 rounded-full border border-[#555e72] inline-flex items-center justify-center text-[8px] text-[#555e72] shrink-0">i</span>
               </p>
-            )}
+              <p className={`font-extrabold leading-tight tracking-[-0.04em] ${numFontClass(mainValue)} ${isPos ? "text-[#2ecc71]" : "text-red-400"}`}>
+                {mainValue}
+              </p>
+              {subValue && (
+                <p className={`text-[14px] font-semibold mt-0.5 ${isPos ? "text-[#2ecc71]" : "text-red-400"}`}>
+                  {subValue}
+                </p>
+              )}
+            </div>
 
-            {/* Tab toggle — absolutely positioned top-right, overlaps P&L */}
-            <div className="absolute top-0 right-0 flex items-center bg-[#1c1f26] border border-[#252932] rounded-xl p-[3px] gap-0.5">
+            {/* Right: Daily / Weekly / Monthly tabs */}
+            <div className="flex items-center bg-[#1c1f26] border border-[#252932] rounded-xl p-[3px] gap-0.5 shrink-0 mt-0.5">
               {(["Daily", "Weekly", "Monthly"] as Period[]).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setPeriod(tab)}
-                  className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all ${
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-[12px] font-medium transition-all ${
                     period === tab
                       ? "bg-[#2ecc71] text-black font-semibold"
                       : "text-[#8b92a5] hover:text-[#f0f2f5]"
@@ -286,20 +284,20 @@ export default function PerformanceScoreCard({
             </div>
           </div>
 
-          {/* ── Chart card ── */}
-          {cumulData.length > 1 && (() => {
-            const vals   = cumulData.map((d) => d.return);
-            const rawMin = Math.min(...vals);
-            const rawMax = Math.max(...vals);
-            const yMin   = Math.floor((Math.min(rawMin, 0) - 2) / 5) * 5;
-            const yMax   = Math.ceil((Math.max(rawMax, 0) + 2) / 5) * 5;
-            return (
-              <div className="rounded-2xl border border-[#252932] bg-[#171a1f] px-3 pt-4 pb-2 mb-3">
-                {/* legend */}
-                <div className="flex items-center gap-1.5 text-[11px] text-[#8b92a5] mb-3">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: lineColor }} />
-                  Cumulative Return (%)
-                </div>
+          {/* ── Cumulative Return chart (always shown) ── */}
+          <div className="rounded-2xl border border-[#252932] bg-[#171a1f] px-3 pt-4 pb-2 mb-3">
+            <div className="flex items-center gap-1.5 text-[11px] text-[#8b92a5] mb-3">
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: lineColor }} />
+              Cumulative Return (%)
+            </div>
+
+            {cumulData.length >= 2 ? (() => {
+              const vals   = cumulData.map((d) => d.return);
+              const rawMin = Math.min(...vals);
+              const rawMax = Math.max(...vals);
+              const yMin   = Math.floor((Math.min(rawMin, 0) - 2) / 5) * 5;
+              const yMax   = Math.ceil((Math.max(rawMax, 0) + 2) / 5) * 5;
+              return (
                 <ResponsiveContainer width="100%" height={160}>
                   <AreaChart data={cumulData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
                     <defs>
@@ -308,12 +306,7 @@ export default function PerformanceScoreCard({
                         <stop offset="100%" stopColor={lineColor} stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid
-                      strokeDasharray="0"
-                      stroke="#252932"
-                      strokeWidth={0.5}
-                      vertical={false}
-                    />
+                    <CartesianGrid strokeDasharray="0" stroke="#252932" strokeWidth={0.5} vertical={false} />
                     <XAxis
                       dataKey="date"
                       tick={{ fontSize: 9, fill: "#555e72" }}
@@ -333,29 +326,40 @@ export default function PerformanceScoreCard({
                       axisLine={false} tickLine={false}
                       width={36}
                     />
-                    <Tooltip content={<CumulReturnTooltip />} />
+                    <Tooltip content={<ChartTip />} />
                     <Area
                       type="monotone"
                       dataKey="return"
                       stroke={lineColor}
                       strokeWidth={1.8}
                       fill="url(#perfGrad)"
-                      dot={(dotProps: { cx?: number; cy?: number; index?: number }) => (
-                        <LastDot
-                          key={dotProps.index}
-                          cx={dotProps.cx} cy={dotProps.cy} index={dotProps.index}
-                          dataLength={cumulData.length}
+                      dot={(dp: { cx?: number; cy?: number; index?: number }) => (
+                        <EndDot
+                          key={dp.index}
+                          cx={dp.cx} cy={dp.cy} index={dp.index}
+                          total={cumulData.length}
                           color={lineColor}
                         />
                       )}
                       activeDot={{ r: 7, fill: lineColor, stroke: "#fff", strokeWidth: 2 }}
-                      isAnimationActive animationDuration={1600} animationEasing="ease-out"
+                      isAnimationActive animationDuration={1400} animationEasing="ease-out"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
+              );
+            })() : (
+              /* empty state for chart */
+              <div className="h-[120px] flex flex-col items-center justify-center gap-2">
+                <div className="w-full h-px bg-[#252932]" />
+                <p className="text-[11px] text-[#555e72]">
+                  {a.totalTrades === 0
+                    ? `No trades ${PERIOD_LABEL[period].toLowerCase()}`
+                    : "Not enough data for chart"}
+                </p>
+                <div className="w-full h-px bg-[#252932]" />
               </div>
-            );
-          })()}
+            )}
+          </div>
 
           {/* ── 2×2 Metric Cards ── */}
           <div className="grid grid-cols-2 gap-2.5 mb-3">
@@ -386,14 +390,14 @@ export default function PerformanceScoreCard({
             <MetricCard
               icon={TrendingUp}
               label="Average Return"
-              value={`${avgReturnPct >= 0 ? "+" : ""}${fmt2(avgReturnPct)}%`}
-              rating={retRating.t}
-              ratingColor={retRating.c}
+              value={avgPerTradeStr}
+              rating={retRating}
+              ratingColor={retColor}
               hint="Average profit per completed trade"
             />
           </div>
 
-          {/* ── Insights card ── */}
+          {/* ── Performance Insights ── */}
           {insights.length > 0 && (
             <div className="rounded-2xl border border-[#252932] bg-[#171a1f] p-4">
               {/* header */}
@@ -416,7 +420,7 @@ export default function PerformanceScoreCard({
                 </button>
               </div>
 
-              {/* 3-column grid with dividers */}
+              {/* 3-column insights with dividers */}
               <div className="flex items-start">
                 {insights.map((ins, i) => {
                   const { icon: Ic, type, text, sub } = ins;
@@ -424,18 +428,13 @@ export default function PerformanceScoreCard({
                                 : type === "warn" ? "rgba(245,158,11,0.15)"
                                 :                   "rgba(96,165,250,0.15)";
                   const iconClr = type === "good" ? "#2ecc71"
-                                : type === "warn" ? "#f59e0b"
-                                :                   "#60a5fa";
+                                : type === "warn" ? "#f59e0b" : "#60a5fa";
                   return (
                     <div key={i} className="flex items-start flex-1 min-w-0">
-                      {i > 0 && (
-                        <div className="w-px self-stretch bg-[#252932] shrink-0 mx-2" />
-                      )}
+                      {i > 0 && <div className="w-px self-stretch bg-[#252932] shrink-0 mx-2" />}
                       <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-                        <div
-                          className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-                          style={{ background: dotBg }}
-                        >
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                          style={{ background: dotBg }}>
                           <Ic className="w-3.5 h-3.5" style={{ color: iconClr }} />
                         </div>
                         <p className="text-[11px] text-[#8b92a5] font-medium leading-snug">{text}</p>
