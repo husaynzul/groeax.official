@@ -526,7 +526,7 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
           )}
 
           {/* Equity curve */}
-          <div className="rounded-2xl border border-border/40 bg-secondary/80 overflow-hidden px-3 pt-4 pb-2 mb-3">
+          <div className="rounded-2xl border border-border/40 bg-secondary/80 px-3 pt-4 pb-2 mb-3">
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-3">
               <span className="w-2 h-2 rounded-full shrink-0" style={{ background: lineColor }} />
               Cumulative Equity Curve — {PERIOD_LABEL[period]}
@@ -561,7 +561,7 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
                 </ResponsiveContainer>
               );
             })() : (
-              <div className="h-[100px] flex flex-col items-center justify-center gap-2">
+              <div className="flex flex-col items-center justify-center py-8 gap-2">
                 <p className="text-[11px] text-muted-foreground text-center px-4">
                   {completedTrades.length === 0 ? `No trades ${PERIOD_LABEL[period].toLowerCase()}` : "Trade across multiple days to see the curve"}
                 </p>
@@ -570,7 +570,7 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
           </div>
 
           {/* 4 metric cards */}
-          <div className="grid grid-cols-2 gap-2.5 mb-3">
+          <div className="grid grid-cols-2 gap-2.5 mb-3 items-start">
             <MetricBlock
               icon={BarChart2} label="Profit Factor"
               value={profitFactor.display}
