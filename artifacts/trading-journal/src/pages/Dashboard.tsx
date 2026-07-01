@@ -973,8 +973,8 @@ export default function Dashboard() {
             <Activity className="w-3.5 h-3.5 text-pink-400" />
             <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Advanced Statistics</h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 items-start">
-            {/* Expectancy */}
+          {/* Row 1: 4 ratio metrics */}
+          <div className="grid grid-cols-2 gap-3 items-start">
             <div className="bg-secondary rounded-xl p-3 border border-border/50">
               <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Expectancy</p>
               <p className={`text-base font-bold ${analytics.expectancy >= 0 ? "text-emerald-400" : "text-red-400"}`}>
@@ -982,7 +982,6 @@ export default function Dashboard() {
               </p>
               <p className="text-[9px] text-muted-foreground mt-1">(WR × AvgW) − (LR × AvgL)</p>
             </div>
-            {/* Profit Factor */}
             <div className="bg-secondary rounded-xl p-3 border border-border/50">
               <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Profit Factor</p>
               <p className={`text-base font-bold ${analytics.profitFactor >= 1.5 ? "text-emerald-400" : analytics.profitFactor >= 1 ? "text-yellow-400" : "text-red-400"}`}>
@@ -990,7 +989,6 @@ export default function Dashboard() {
               </p>
               <p className="text-[9px] text-muted-foreground mt-1">Gross Profit ÷ Gross Loss</p>
             </div>
-            {/* Recovery Factor */}
             <div className="bg-secondary rounded-xl p-3 border border-border/50">
               <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Recovery Factor</p>
               <p className={`text-base font-bold ${analytics.recoveryFactor > 0 ? "text-emerald-400" : "text-red-400"}`}>
@@ -998,7 +996,6 @@ export default function Dashboard() {
               </p>
               <p className="text-[9px] text-muted-foreground mt-1">Net P&L ÷ Max Drawdown</p>
             </div>
-            {/* Avg R:R */}
             <div className="bg-secondary rounded-xl p-3 border border-border/50">
               <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Avg R:R</p>
               <p className={`text-base font-bold ${analytics.avgRR >= 1.5 ? "text-emerald-400" : analytics.avgRR >= 1 ? "text-yellow-400" : "text-red-400"}`}>
@@ -1006,55 +1003,49 @@ export default function Dashboard() {
               </p>
               <p className="text-[9px] text-muted-foreground mt-1">Sum(RR) ÷ Completed Trades</p>
             </div>
-            {/* Sharpe Ratio — col-span-2 on mobile so it fills the last row cleanly */}
-            <div className="bg-secondary rounded-xl p-3 border border-border/50 col-span-2 sm:col-span-1">
-              <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Sharpe Ratio</p>
-              <p className={`text-base font-bold ${analytics.sharpeRatio > 1 ? "text-emerald-400" : analytics.sharpeRatio > 0 ? "text-yellow-400" : "text-red-400"}`}>
-                {startingBalance > 0 ? analytics.sharpeRatio.toFixed(2) : "—"}
-              </p>
-              <p className="text-[9px] text-muted-foreground mt-1">Annualised daily returns</p>
-            </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3 items-start">
+          {/* Row 2: streak + avg cards */}
+          <div className="grid grid-cols-2 gap-3 mt-3 items-start">
             <div className="bg-secondary rounded-xl p-3 border border-border/50 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
-                <Trophy className="w-5 h-5 text-emerald-400" />
+              <div className="w-9 h-9 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
+                <Trophy className="w-4 h-4 text-emerald-400" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Max Consec. Wins</p>
                 <p className="text-lg font-bold text-emerald-400">{analytics.maxConsecWins}</p>
               </div>
             </div>
             <div className="bg-secondary rounded-xl p-3 border border-border/50 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center shrink-0">
-                <TrendingDown className="w-5 h-5 text-red-400" />
+              <div className="w-9 h-9 rounded-lg bg-red-500/20 flex items-center justify-center shrink-0">
+                <TrendingDown className="w-4 h-4 text-red-400" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Max Consec. Losses</p>
                 <p className="text-lg font-bold text-red-400">{analytics.maxConsecLosses}</p>
               </div>
             </div>
             <div className="bg-secondary rounded-xl p-3 border border-border/50 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0">
-                <BarChart2 className="w-5 h-5 text-blue-400" />
+              <div className="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0">
+                <BarChart2 className="w-4 h-4 text-blue-400" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Avg Win</p>
                 <p className="text-base font-bold text-blue-400">{fmtMoney(analytics.avgWin)}</p>
               </div>
             </div>
             <div className="bg-secondary rounded-xl p-3 border border-border/50 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center shrink-0">
-                <AlertCircle className="w-5 h-5 text-orange-400" />
+              <div className="w-9 h-9 rounded-lg bg-orange-500/20 flex items-center justify-center shrink-0">
+                <AlertCircle className="w-4 h-4 text-orange-400" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Avg Loss</p>
                 <p className="text-base font-bold text-orange-400">{fmtMoney(analytics.avgLoss)}</p>
               </div>
             </div>
           </div>
+          {/* Row 3: bottom ratio stats */}
           {startingBalance > 0 && (
-            <div className="mt-3 pt-3 border-t border-border/40 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center items-start">
+            <div className="mt-3 pt-3 border-t border-border/40 grid grid-cols-2 gap-3 text-center items-start">
               <div>
                 <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Return %</p>
                 <p className={`text-sm font-bold ${analytics.netBalance >= 0 ? "text-emerald-400" : "text-red-400"}`}>
@@ -1075,6 +1066,12 @@ export default function Dashboard() {
                 <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Win/Loss Ratio</p>
                 <p className={`text-sm font-bold ${analytics.avgLoss > 0 ? (analytics.avgWin / analytics.avgLoss >= 1 ? "text-emerald-400" : "text-yellow-400") : "text-muted-foreground"}`}>
                   {analytics.avgLoss > 0 ? (analytics.avgWin / analytics.avgLoss).toFixed(2) : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Sharpe Ratio</p>
+                <p className={`text-sm font-bold ${analytics.sharpeRatio > 1 ? "text-emerald-400" : analytics.sharpeRatio > 0 ? "text-yellow-400" : "text-red-400"}`}>
+                  {analytics.sharpeRatio.toFixed(2)}
                 </p>
               </div>
             </div>

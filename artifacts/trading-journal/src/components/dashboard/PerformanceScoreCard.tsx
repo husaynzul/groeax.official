@@ -386,46 +386,69 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
                 <Target className="w-3.5 h-3.5 text-muted-foreground" />
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Period Targets vs Actual</p>
               </div>
-              <div className="divide-y divide-border/30">
-                {allPeriodStats.map(({ period: p, pct, targetPct }) => {
-                  const fmtPct = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
-                  const progress = targetPct > 0 ? Math.min(100, Math.max(0, (pct / targetPct) * 100)) : 0;
+              {/* Header row */}
+              <div className="grid px-3 py-1.5 border-b border-border/30" style={{ gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr" }}>
+                <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Period</span>
+                <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider text-center">Target</span>
+                <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider text-center">Actual</span>
+                <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider text-center">Progress</span>
+                <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider text-right">Status</span>
+              </div>
+              <div className="divide-y divide-border/20">
+                {allPeriodStats.map(({ period: p, netDollar, pct, targetPct }) => {
+                  const progress = targetPct > 0 ? Math.min(150, Math.max(0, (pct / targetPct) * 100)) : 0;
+                  const progressCapped = Math.min(100, progress);
+                  const isAbove = pct >= targetPct && targetPct > 0;
+                  const isProgress = pct > 0 && pct < targetPct && targetPct > 0;
+                  const isBelow = pct < 0 && targetPct > 0;
                   const statusLabel = targetPct <= 0 ? "No Target"
-                    : pct >= targetPct ? "Above Target"
+                    : isAbove ? "Above Target"
                     : pct > 0 ? "In Progress"
                     : pct === 0 ? "Not Started"
                     : "Below Target";
-                  const statusColor = targetPct <= 0 ? "text-muted-foreground"
-                    : pct >= targetPct ? "text-emerald-400"
-                    : pct > 0 ? "text-yellow-400"
-                    : pct === 0 ? "text-muted-foreground"
-                    : "text-red-400";
+                  const barColor = isAbove ? "#2ecc71" : isProgress ? "#f59e0b" : isBelow ? "#ef4444" : "#374151";
+                  const statusBg = isAbove ? "border-emerald-500/60 text-emerald-400"
+                    : isProgress ? "border-amber-500/60 text-amber-400"
+                    : isBelow ? "border-red-500/60 text-red-400"
+                    : "border-border/40 text-muted-foreground";
                   const isActive = p === period;
+                  const targetDollar = startingBalance > 0 && targetPct > 0 ? startingBalance * targetPct / 100 : null;
                   return (
                     <button key={p} onClick={() => setPeriod(p)}
-                      className={`w-full grid grid-cols-4 gap-1 px-3 py-2 text-left transition-colors ${isActive ? "bg-card/60" : "hover:bg-card/30"}`}>
-                      <span className={`text-[11px] font-semibold ${isActive ? "text-foreground" : "text-muted-foreground"}`}>{PERIOD_SHORT[p]}</span>
-                      <span className="text-[11px] text-muted-foreground">{targetPct > 0 ? `${targetPct.toFixed(2)}%` : "—"}</span>
-                      <span className={`text-[11px] font-semibold ${pct > 0 ? "text-[#2ecc71]" : pct < 0 ? "text-red-400" : "text-muted-foreground"}`}>
-                        {fmtPct(pct)}
-                      </span>
-                      <div className="flex flex-col items-end gap-0.5">
-                        <span className={`text-[10px] font-semibold ${statusColor}`}>{statusLabel}</span>
+                      className={`w-full grid px-3 py-2.5 text-left transition-colors ${isActive ? "bg-card/60" : "hover:bg-card/30"}`}
+                      style={{ gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr" }}>
+                      {/* Period */}
+                      <span className={`text-[11px] font-bold self-center ${isActive ? "text-foreground" : "text-muted-foreground"}`}>{PERIOD_SHORT[p]}</span>
+                      {/* Target (Return) */}
+                      <div className="flex flex-col items-center justify-center">
+                        <span className="text-[11px] font-bold text-emerald-400">{targetPct > 0 ? `${targetPct.toFixed(2)}%` : "—"}</span>
+                        {targetDollar !== null && <span className="text-[9px] text-muted-foreground">(${targetDollar.toFixed(2)})</span>}
+                      </div>
+                      {/* Actual (Return) */}
+                      <div className="flex flex-col items-center justify-center">
+                        <span className={`text-[11px] font-bold ${pct > 0 ? "text-emerald-400" : pct < 0 ? "text-red-400" : "text-muted-foreground"}`}>
+                          {pct >= 0 ? "+" : ""}{pct.toFixed(2)}%
+                        </span>
+                        {startingBalance > 0 && <span className="text-[9px] text-muted-foreground">(${netDollar.toFixed(2)})</span>}
+                      </div>
+                      {/* Progress */}
+                      <div className="flex flex-col items-center justify-center gap-0.5 px-1">
+                        <span className="text-[10px] font-bold text-foreground">{targetPct > 0 ? `${Math.round(progress)}%` : "—"}</span>
                         {targetPct > 0 && (
                           <div className="w-full h-1 rounded-full bg-border/40 overflow-hidden">
-                            <div className="h-full rounded-full" style={{
-                              width: `${progress}%`,
-                              background: pct >= targetPct ? "#2ecc71" : pct > 0 ? "#f59e0b" : "#374151",
-                            }} />
+                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progressCapped}%`, background: barColor }} />
                           </div>
                         )}
+                      </div>
+                      {/* Status badge */}
+                      <div className="flex items-center justify-end">
+                        <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-md border ${statusBg} whitespace-nowrap`}>
+                          {statusLabel}
+                        </span>
                       </div>
                     </button>
                   );
                 })}
-              </div>
-              <div className="px-3 py-1.5 border-t border-border/40">
-                <p className="text-[9px] text-muted-foreground">Target | Actual | Status · Tap a row to switch period · Return % = Net P&L ÷ Period Opening Balance × 100</p>
               </div>
             </div>
           )}
