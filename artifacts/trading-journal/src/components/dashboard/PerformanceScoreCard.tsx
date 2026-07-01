@@ -620,7 +620,7 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
                   View Details <ChevronRight className="w-3 h-3 text-muted-foreground" />
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {insights.map((ins, i) => {
                   const { icon: Ic, type, text, sub } = ins;
                   const dotBg = type === "good" ? "rgba(46,204,113,0.15)" : type === "warn" ? "rgba(245,158,11,0.15)" : "rgba(96,165,250,0.15)";

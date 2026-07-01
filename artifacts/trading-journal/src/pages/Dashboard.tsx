@@ -23,8 +23,8 @@ import {
 } from "date-fns";
 
 const FADE_UP = {
-  hidden: { opacity: 0, y: 16 },
-  show: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.05, duration: 0.35 } }),
+  hidden: { opacity: 0 },
+  show: (i: number) => ({ opacity: 1, transition: { delay: i * 0.05, duration: 0.35 } }),
 };
 
 function DarkTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ dataKey: string; value: number }>; label?: string }) {
@@ -108,7 +108,7 @@ function BalanceCard({ startingBalance, currentBalance, totalProfit, totalLoss, 
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}
       className="glass-card border-t-2 border-t-cyan-500/70 p-4 flex flex-col gap-3 hover:border-white/15 transition-colors">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-cyan-400"><Wallet className="w-3.5 h-3.5" /><span className="text-xs uppercase tracking-wider text-muted-foreground">Balance</span></div>
@@ -264,7 +264,7 @@ function GoalTrackingCard({
     : "#ef4444";
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.18 }}
       className="glass-card border-t-2 border-t-violet-500/70 p-4 flex flex-col gap-3 hover:border-white/15 transition-colors">
 
       <div className="flex items-center justify-between">
@@ -306,17 +306,15 @@ function GoalTrackingCard({
         <>
           {/* Donut + key numbers */}
           <div className="flex items-center gap-4">
-            <div className="relative shrink-0">
-              <ResponsiveContainer width={88} height={88}>
-                <PieChart>
-                  <Pie data={[{ value: Math.max(calc.cappedProgress, 0) }, { value: Math.max(100 - calc.cappedProgress, 0) }]}
-                    cx="50%" cy="50%" innerRadius={27} outerRadius={40} startAngle={90} endAngle={-270}
-                    dataKey="value" strokeWidth={0} isAnimationActive animationDuration={900}>
-                    <Cell fill={ringColor} />
-                    <Cell fill="rgba(255,255,255,0.05)" />
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="relative shrink-0 w-[88px] h-[88px]">
+              <PieChart width={88} height={88}>
+                <Pie data={[{ value: Math.max(calc.cappedProgress, 0) }, { value: Math.max(100 - calc.cappedProgress, 0) }]}
+                  cx="50%" cy="50%" innerRadius={27} outerRadius={40} startAngle={90} endAngle={-270}
+                  dataKey="value" strokeWidth={0} isAnimationActive animationDuration={900}>
+                  <Cell fill={ringColor} />
+                  <Cell fill="rgba(255,255,255,0.05)" />
+                </Pie>
+              </PieChart>
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none flex-col">
                 <span className="text-[10px] font-bold leading-tight" style={{ color: ringColor }}>
                   {calc.rawProgress >= 1000 ? `${(calc.rawProgress/1000).toFixed(1)}K` : calc.rawProgress.toFixed(0)}%
@@ -453,7 +451,7 @@ function CalendarHeatmap({ tradesByDate }: { tradesByDate: Record<string, Trade[
   const selectedTrades = selectedDate ? (tradesByDate[selectedDate] ?? []) : [];
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.22 }}
       className="glass-card p-4 hover:border-white/15 transition-colors">
       <div className="flex items-center justify-between mb-4">
         <button onClick={() => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1))}
@@ -603,7 +601,7 @@ export default function Dashboard() {
 
       {/* Performance card + side cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="md:col-span-1 lg:col-span-2">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="md:col-span-1 lg:col-span-2">
           <PerformanceScoreCard analytics={analytics} trades={trades} startingBalance={startingBalance} currentBalance={currentBalance} monthlyGoalPct={monthlyGoalPct} tradingDaysPerMonth={tradingDaysPerMonth} />
         </motion.div>
         <div className="flex flex-col gap-4">
@@ -616,13 +614,13 @@ export default function Dashboard() {
 
       {/* Advanced Statistics — Professional Metrics */}
       {analytics.totalTrades >= 2 && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
           className="glass-card border-t-2 border-t-pink-500/60 p-4 hover:border-white/15 transition-colors">
           <div className="flex items-center gap-2 mb-4">
             <Activity className="w-3.5 h-3.5 text-pink-400" />
             <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Advanced Statistics</h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 items-start">
             {/* Expectancy */}
             <div className="bg-secondary rounded-xl p-3 border border-border/50">
               <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Expectancy</p>
@@ -664,7 +662,7 @@ export default function Dashboard() {
               <p className="text-[9px] text-muted-foreground mt-1">Annualised daily returns</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3 items-start">
             <div className="bg-secondary rounded-xl p-3 border border-border/50 flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
                 <Trophy className="w-5 h-5 text-emerald-400" />
@@ -703,7 +701,7 @@ export default function Dashboard() {
             </div>
           </div>
           {startingBalance > 0 && (
-            <div className="mt-3 pt-3 border-t border-border/40 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div className="mt-3 pt-3 border-t border-border/40 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center items-start">
               <div>
                 <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Return %</p>
                 <p className={`text-sm font-bold ${analytics.netBalance >= 0 ? "text-emerald-400" : "text-red-400"}`}>
@@ -736,7 +734,7 @@ export default function Dashboard() {
       <EquityCurveCard equityCurve={analytics.equityCurve} startingBalance={startingBalance} currentBalance={currentBalance} maxDrawdownPct={analytics.drawdownStats.drawdownPercent} netPnL={analytics.netBalance} />
 
       {/* Net Daily P&L */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}
         className="glass-card border-t-2 border-t-blue-500/60 p-4 hover:border-white/15 transition-colors">
         <div className="flex items-center gap-2 mb-4"><BarChart2 className="w-3.5 h-3.5 text-blue-400" /><h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Net Daily P&amp;L</h2></div>
         {analytics.dailyPnL.length > 0
@@ -746,7 +744,7 @@ export default function Dashboard() {
 
       {/* Weekly Performance Trend */}
       {weeklyTrend.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.38 }}
           className="glass-card border-t-2 border-t-emerald-500/60 p-4 hover:border-white/15 transition-colors">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2"><TrendingUp className="w-3.5 h-3.5 text-emerald-400" /><h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Weekly Performance Trend</h2></div>
@@ -794,7 +792,7 @@ export default function Dashboard() {
       )}
 
       {analytics.totalTrades > 0 && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
           className="glass-card border-t-2 border-t-amber-500/60 p-4 hover:border-white/15 transition-colors">
           <div className="flex items-center gap-2 mb-4"><Award className="w-3.5 h-3.5 text-amber-400" /><h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Recent Trades</h2></div>
           <div className="overflow-x-auto">

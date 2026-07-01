@@ -177,8 +177,8 @@ export default function EquityCurveCard({
   if (chartData.length === 0) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
         className="glass-card p-4 hover:border-white/15 transition-colors"
       >
@@ -188,7 +188,7 @@ export default function EquityCurveCard({
             Equity Curve
           </h2>
         </div>
-        <div className="h-[300px] flex items-center justify-center text-muted-foreground text-sm">
+        <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
           Add trades to see the equity curve
         </div>
       </motion.div>
@@ -197,8 +197,8 @@ export default function EquityCurveCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       transition={{ delay: 0.3 }}
       className="glass-card p-4 hover:border-white/15 transition-colors"
     >
