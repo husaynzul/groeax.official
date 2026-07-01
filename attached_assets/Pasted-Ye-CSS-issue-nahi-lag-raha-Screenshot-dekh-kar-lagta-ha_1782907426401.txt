@@ -1,0 +1,60 @@
+Ye CSS issue nahi lag raha. Screenshot dekh kar lagta hai React rendering/layout bug hai. Replit ko ye detailed prompt do:
+
+There is a critical rendering bug in the Advanced Statistics section.
+
+Problem:
+On Android mobile, a large black/glitched area randomly appears between statistic cards. Cards overlap and the layout breaks. This issue keeps happening after reloads.
+
+Do NOT apply temporary CSS fixes. Find the root cause.
+
+Perform a complete investigation of:
+
+1. React component rendering
+2. Conditional rendering
+3. Framer Motion / animations
+4. CSS Grid & Flexbox
+5. Position absolute/fixed/sticky
+6. z-index conflicts
+7. height/min-height/max-height
+8. overflow hidden/auto
+9. transform: translate()
+10. opacity/filter/backdrop-filter
+11. GPU acceleration issues
+12. Canvas/SVG/Chart rendering
+13. Lazy loading
+14. Virtualization
+15. React StrictMode double rendering
+16. Mobile viewport (100vh vs 100dvh)
+17. WebView rendering compatibility
+18. Repaint/Reflow issues
+
+Requirements:
+- Remove the black glitched area permanently.
+- Every statistics card must stay inside the grid.
+- Cards must never overlap.
+- Auto-height for all containers.
+- Remove all fixed heights causing empty spaces.
+- Ensure smooth scrolling.
+- No visual artifacts.
+- No rendering glitches.
+- Test on Android Chrome and Android WebView.
+- Test on 320, 360, 390, 412 and 430 px widths.
+
+Before finishing:
+Inspect every parent container and identify the exact DOM element causing the issue. Explain the root cause and fix it instead of masking it with CSS.
+
+The result must be production-ready with zero layout glitches.
+
+Ek aur cheez jo mujhe screenshot se suspicious lag rahi hai:
+
+AVG R:R = 560.66R, Profit Factor = 102.75, Sortino = 807.61, Return = 2942.58%
+
+Ye values bhi normal nahi lag rahi hain. Agar calculations overflow ya Infinity/NaN generate kar rahi hain, to woh bhi React layout ko break kar sakti hain.
+
+Isliye Replit ko ye bhi bolo:
+
+> Audit all Advanced Statistics calculations. Ensure no metric can return NaN, Infinity, extremely large values, or divide-by-zero results. Clamp invalid values and display N/A where appropriate.
+
+
+
+Ye dono issues (layout + calculations) saath mein check karna zaroori hai.
