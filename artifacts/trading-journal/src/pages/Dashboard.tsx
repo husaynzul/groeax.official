@@ -617,14 +617,14 @@ export default function Dashboard() {
       {/* Advanced Statistics — Professional Metrics */}
       {analytics.totalTrades >= 2 && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-          className="glass-card border-t-2 border-t-pink-500/60 bg-pink-500/[0.02] p-4 hover:border-white/15 transition-colors">
+          className="glass-card border-t-2 border-t-pink-500/60 bg-card/80 p-4 hover:border-white/15 transition-colors">
           <div className="flex items-center gap-2 mb-4">
             <Activity className="w-3.5 h-3.5 text-pink-400" />
             <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Advanced Statistics</h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {/* Expectancy */}
-            <div className="bg-secondary/30 rounded-xl p-3 border border-border/40">
+            <div className="bg-secondary/60 rounded-xl p-3 border border-border/50">
               <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Expectancy</p>
               <p className={`text-base font-bold ${analytics.expectancy >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                 {analytics.expectancy >= 0 ? "+" : ""}{fmtMoney(analytics.expectancy)}
@@ -632,7 +632,7 @@ export default function Dashboard() {
               <p className="text-[9px] text-muted-foreground mt-1">(WR × AvgW) − (LR × AvgL)</p>
             </div>
             {/* Profit Factor */}
-            <div className="bg-secondary/30 rounded-xl p-3 border border-border/40">
+            <div className="bg-secondary/60 rounded-xl p-3 border border-border/50">
               <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Profit Factor</p>
               <p className={`text-base font-bold ${analytics.profitFactor >= 1.5 ? "text-emerald-400" : analytics.profitFactor >= 1 ? "text-yellow-400" : "text-red-400"}`}>
                 {analytics.profitFactor === 999 ? "∞" : analytics.profitFactor.toFixed(2)}
@@ -640,7 +640,7 @@ export default function Dashboard() {
               <p className="text-[9px] text-muted-foreground mt-1">Gross Profit ÷ Gross Loss</p>
             </div>
             {/* Recovery Factor */}
-            <div className="bg-secondary/30 rounded-xl p-3 border border-border/40">
+            <div className="bg-secondary/60 rounded-xl p-3 border border-border/50">
               <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Recovery Factor</p>
               <p className={`text-base font-bold ${analytics.recoveryFactor > 0 ? "text-emerald-400" : "text-red-400"}`}>
                 {analytics.recoveryFactor === 999 ? "∞" : analytics.recoveryFactor.toFixed(2)}
@@ -648,7 +648,7 @@ export default function Dashboard() {
               <p className="text-[9px] text-muted-foreground mt-1">Net P&L ÷ Max Drawdown</p>
             </div>
             {/* Avg R:R */}
-            <div className="bg-secondary/30 rounded-xl p-3 border border-border/40">
+            <div className="bg-secondary/60 rounded-xl p-3 border border-border/50">
               <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Avg R:R</p>
               <p className={`text-base font-bold ${analytics.avgRR >= 1.5 ? "text-emerald-400" : analytics.avgRR >= 1 ? "text-yellow-400" : "text-red-400"}`}>
                 {analytics.avgRR > 0 ? `${analytics.avgRR.toFixed(2)}R` : "—"}
@@ -656,7 +656,7 @@ export default function Dashboard() {
               <p className="text-[9px] text-muted-foreground mt-1">Sum(RR) ÷ Completed Trades</p>
             </div>
             {/* Sharpe Ratio */}
-            <div className="bg-secondary/30 rounded-xl p-3 border border-border/40">
+            <div className="bg-secondary/60 rounded-xl p-3 border border-border/50">
               <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Sharpe Ratio</p>
               <p className={`text-base font-bold ${analytics.sharpeRatio > 1 ? "text-emerald-400" : analytics.sharpeRatio > 0 ? "text-yellow-400" : "text-red-400"}`}>
                 {startingBalance > 0 ? analytics.sharpeRatio.toFixed(2) : "—"}
@@ -665,8 +665,8 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-            <div className="bg-secondary/20 rounded-xl p-3 border border-border/40 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+            <div className="bg-secondary/60 rounded-xl p-3 border border-border/50 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
                 <Trophy className="w-5 h-5 text-emerald-400" />
               </div>
               <div>
@@ -674,8 +674,8 @@ export default function Dashboard() {
                 <p className="text-lg font-bold text-emerald-400">{analytics.maxConsecWins}</p>
               </div>
             </div>
-            <div className="bg-secondary/20 rounded-xl p-3 border border-border/40 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
+            <div className="bg-secondary/60 rounded-xl p-3 border border-border/50 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center shrink-0">
                 <TrendingDown className="w-5 h-5 text-red-400" />
               </div>
               <div>
@@ -683,8 +683,8 @@ export default function Dashboard() {
                 <p className="text-lg font-bold text-red-400">{analytics.maxConsecLosses}</p>
               </div>
             </div>
-            <div className="bg-secondary/20 rounded-xl p-3 border border-border/40 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+            <div className="bg-secondary/60 rounded-xl p-3 border border-border/50 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0">
                 <BarChart2 className="w-5 h-5 text-blue-400" />
               </div>
               <div>
@@ -692,8 +692,8 @@ export default function Dashboard() {
                 <p className="text-base font-bold text-blue-400">{fmtMoney(analytics.avgWin)}</p>
               </div>
             </div>
-            <div className="bg-secondary/20 rounded-xl p-3 border border-border/40 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
+            <div className="bg-secondary/60 rounded-xl p-3 border border-border/50 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center shrink-0">
                 <AlertCircle className="w-5 h-5 text-orange-400" />
               </div>
               <div>

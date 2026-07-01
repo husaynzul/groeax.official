@@ -84,10 +84,10 @@ function calcAvgRR(trades: Trade[]): number {
 }
 
 function calcConsistencyScore(trades: Trade[]): { score: number; label: string; color: string; notEnoughData: boolean } {
-  if (trades.length < 10) return { score: 0, label: "Not Enough Data", color: "text-[#555e72]", notEnoughData: true };
+  if (trades.length < 10) return { score: 0, label: "Not Enough Data", color: "text-muted-foreground", notEnoughData: true };
 
   const completed = trades.filter(t => t.outcome === "WIN" || t.outcome === "LOSS" || t.outcome === "BE");
-  if (completed.length < 10) return { score: 0, label: "Not Enough Data", color: "text-[#555e72]", notEnoughData: true };
+  if (completed.length < 10) return { score: 0, label: "Not Enough Data", color: "text-muted-foreground", notEnoughData: true };
 
   const wins = completed.filter(t => t.outcome === "WIN").length;
   const winRate = wins / completed.length;
@@ -273,16 +273,16 @@ function MetricBlock({
   display: string; ratingColor: string; hint: string; accentColor: string;
 }) {
   return (
-    <div className="rounded-2xl border bg-[#171a1f] p-4 cursor-pointer hover:border-[#333a48] transition-colors active:scale-[0.98]" style={{ borderColor: `${accentColor}40` }}>
+    <div className="rounded-2xl border bg-secondary/30 p-4 cursor-pointer hover:border-[#333a48] transition-colors active:scale-[0.98]" style={{ borderColor: `${accentColor}40` }}>
       <div className="flex items-start justify-between mb-2.5">
         <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${accentColor}18`, border: `1px solid ${accentColor}30` }}>
           <Icon className="w-[18px] h-[18px]" style={{ color: accentColor }} />
         </div>
       </div>
-      <p className="text-[11px] text-[#8b92a5] font-medium mb-1.5">{label}</p>
-      <p className="font-bold text-[#f0f2f5] tracking-tight leading-tight text-2xl">{value}</p>
+      <p className="text-[11px] text-muted-foreground font-medium mb-1.5">{label}</p>
+      <p className="font-bold text-foreground tracking-tight leading-tight text-2xl">{value}</p>
       <p className={`text-[12px] font-semibold mt-1 ${ratingColor}`}>{display}</p>
-      <p className="text-[10px] text-[#555e72] mt-2 leading-snug">{hint}</p>
+      <p className="text-[10px] text-muted-foreground mt-2 leading-snug">{hint}</p>
     </div>
   );
 }
@@ -340,7 +340,7 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
   const grossProfit = completedTrades.filter(t => t.outcome === "WIN").reduce((s, t) => s + t.netProfit, 0);
   const grossLoss = completedTrades.filter(t => t.outcome === "LOSS").reduce((s, t) => s + t.netLoss, 0);
 
-  const pfR = profitFactor.isNA ? { t: "No Data", c: "text-[#555e72]" }
+  const pfR = profitFactor.isNA ? { t: "No Data", c: "text-muted-foreground" }
     : profitFactor.isInfinite ? { t: "No losing trades", c: "text-[#2ecc71]" }
     : profitFactor.value >= 2 ? { t: "Excellent", c: "text-[#2ecc71]" }
     : profitFactor.value >= 1.5 ? { t: "Good", c: "text-[#2ecc71]" }
@@ -352,50 +352,50 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
     : avgRR >= 1.5 ? { t: "On Target", c: "text-[#2ecc71]" }
     : avgRR >= 1 ? { t: "Near Target", c: "text-[#f59e0b]" }
     : avgRR > 0 ? { t: "Below Target", c: "text-red-400" }
-    : { t: "No Data", c: "text-[#555e72]" };
+    : { t: "No Data", c: "text-muted-foreground" };
 
   const conR = consistency.notEnoughData
-    ? { t: "Not Enough Data", c: "text-[#555e72]" }
+    ? { t: "Not Enough Data", c: "text-muted-foreground" }
     : { t: consistency.label, c: consistency.color };
 
   const avgRetR = avgReturn.dollar > 0 ? { t: "Profitable", c: "text-[#2ecc71]" }
     : avgReturn.dollar < 0 ? { t: "Losing", c: "text-red-400" }
-    : { t: "Neutral", c: "text-[#555e72]" };
+    : { t: "Neutral", c: "text-muted-foreground" };
 
   const insights = useMemo(() => buildInsights(filteredTrades, periodBaseBalance), [filteredTrades, periodBaseBalance]);
 
   const PERIOD_LABEL: Record<Period, string> = { Daily: "Today", Weekly: "This Week", Monthly: "This Month" };
 
   return (
-    <div className="rounded-2xl border border-[#252932] bg-[#0e0f11] p-4 w-full">
+    <div className="glass-card border-t-2 border-t-emerald-500/60 bg-emerald-500/[0.02] p-4 w-full hover:border-white/15 transition-colors">
 
       <div className="flex items-center gap-2.5 mb-4">
-        <div className="w-[38px] h-[38px] rounded-xl bg-[#1c1f26] border border-[#252932] flex items-center justify-center shrink-0">
-          <TrendingUp className="w-5 h-5 text-[#8b92a5]" />
+        <div className="w-[38px] h-[38px] rounded-xl bg-secondary/40 border border-border/40 flex items-center justify-center shrink-0">
+          <TrendingUp className="w-5 h-5 text-muted-foreground" />
         </div>
         <div>
-          <p className="text-[17px] font-bold tracking-[-0.3px] text-[#f0f2f5] leading-tight">Trading Performance</p>
-          <p className="text-[11px] text-[#555e72] mt-0.5">Track your performance and improve every day.</p>
+          <p className="text-[17px] font-bold tracking-[-0.3px] text-foreground leading-tight">Trading Performance</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">Track your performance and improve every day.</p>
         </div>
       </div>
 
       {allAnalytics.totalTrades === 0 ? (
-        <div className="py-12 text-center text-[#555e72] text-sm">Add trades to see your performance score</div>
+        <div className="py-12 text-center text-muted-foreground text-sm">Add trades to see your performance score</div>
       ) : (
         <>
           {/* Period tabs */}
-          <div className="grid grid-cols-3 bg-[#1c1f26] border border-[#252932] rounded-2xl p-1 gap-1 mb-4">
+          <div className="grid grid-cols-3 bg-secondary/40 border border-border/40 rounded-2xl p-1 gap-1 mb-4">
             {allPeriodStats.map(({ period: p, netDollar, pct }) => {
               const active = p === period;
               const pos = netDollar >= 0;
               const hasDollar = netDollar !== 0;
-              const valColor = !hasDollar ? "text-[#555e72]" : pos ? "text-[#2ecc71]" : "text-red-400";
+              const valColor = !hasDollar ? "text-muted-foreground" : pos ? "text-[#2ecc71]" : "text-red-400";
               const dollarStr = hasDollar ? fmtCompact(netDollar) : "—";
               const pctStr = hasDollar ? `${pos ? "+" : ""}${Math.abs(pct) < 10 ? pct.toFixed(2) : pct.toFixed(1)}%` : "";
               return (
                 <button key={p} onClick={() => setPeriod(p)}
-                  className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl gap-0.5 transition-all ${active ? "bg-[#252932] shadow-inner" : "hover:bg-[#252932]/40"}`}>
-                  <span className={`text-[11px] font-semibold leading-tight ${active ? "text-[#f0f2f5]" : "text-[#555e72]"}`}>{p}</span>
+                  className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl gap-0.5 transition-all ${active ? "bg-secondary/50 shadow-inner" : "hover:bg-secondary/20"}`}>
+                  <span className={`text-[11px] font-semibold leading-tight ${active ? "text-foreground" : "text-muted-foreground"}`}>{p}</span>
                   <span className={`text-[13px] font-bold leading-tight ${valColor}`}>{dollarStr}</span>
                   {pctStr && <span className={`text-[10px] font-medium leading-tight ${valColor}`}>{pctStr}</span>}
                 </button>
@@ -404,8 +404,8 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
           </div>
 
           {/* P&L for period */}
-          <div className="mb-4 p-3 rounded-xl bg-[#171a1f] border border-[#252932]">
-            <p className="text-[11px] text-[#8b92a5] font-medium mb-2">Net P&L — {PERIOD_LABEL[period]}</p>
+          <div className="mb-4 p-3 rounded-xl bg-secondary/30 border border-border/40">
+            <p className="text-[11px] text-muted-foreground font-medium mb-2">Net P&L — {PERIOD_LABEL[period]}</p>
             <div className="flex items-end gap-3 flex-wrap">
               <div>
                 <p className={`font-extrabold leading-tight tracking-[-0.04em] text-3xl ${isPos ? "text-[#2ecc71]" : "text-red-400"}`}>
@@ -419,19 +419,19 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
               </div>
               <div className="flex gap-4 ml-auto text-right">
                 <div>
-                  <p className="text-[9px] text-[#555e72] uppercase tracking-wider">Win Rate</p>
+                  <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Win Rate</p>
                   <p className={`text-sm font-bold ${winRate >= 50 ? "text-[#2ecc71]" : "text-red-400"}`}>{winRate.toFixed(1)}%</p>
                 </div>
                 <div>
-                  <p className="text-[9px] text-[#555e72] uppercase tracking-wider">Trades</p>
-                  <p className="text-sm font-bold text-[#f0f2f5]">{completedTrades.length}</p>
+                  <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Trades</p>
+                  <p className="text-sm font-bold text-foreground">{completedTrades.length}</p>
                 </div>
                 <div>
-                  <p className="text-[9px] text-[#555e72] uppercase tracking-wider">Gross W</p>
+                  <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Gross W</p>
                   <p className="text-sm font-bold text-[#2ecc71]">+${grossProfit.toFixed(2)}</p>
                 </div>
                 <div>
-                  <p className="text-[9px] text-[#555e72] uppercase tracking-wider">Gross L</p>
+                  <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Gross L</p>
                   <p className="text-sm font-bold text-red-400">-${grossLoss.toFixed(2)}</p>
                 </div>
               </div>
@@ -439,8 +439,8 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
           </div>
 
           {/* Equity curve */}
-          <div className="rounded-2xl border border-[#252932] bg-[#171a1f] px-3 pt-4 pb-2 mb-3">
-            <div className="flex items-center gap-1.5 text-[11px] text-[#8b92a5] mb-3">
+          <div className="rounded-2xl border border-border/40 bg-secondary/30 px-3 pt-4 pb-2 mb-3">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-3">
               <span className="w-2 h-2 rounded-full shrink-0" style={{ background: lineColor }} />
               Cumulative Equity Curve — {PERIOD_LABEL[period]}
             </div>
@@ -458,7 +458,7 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
                         <stop offset="100%" stopColor={lineColor} stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="0" stroke="#252932" strokeWidth={0.5} vertical={false} />
+                    <CartesianGrid strokeDasharray="0" stroke="rgba(255,255,255,0.07)" strokeWidth={0.5} vertical={false} />
                     <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#555e72" }}
                       tickFormatter={(v: string) => { const d = new Date(v + "T12:00:00"); return isNaN(d.getTime()) ? v : `${d.toLocaleString("en", { month: "short" })} ${d.getDate()}`; }}
                       axisLine={false} tickLine={false} interval="preserveStartEnd" />
@@ -475,7 +475,7 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
               );
             })() : (
               <div className="h-[100px] flex flex-col items-center justify-center gap-2">
-                <p className="text-[11px] text-[#555e72] text-center px-4">
+                <p className="text-[11px] text-muted-foreground text-center px-4">
                   {completedTrades.length === 0 ? `No trades ${PERIOD_LABEL[period].toLowerCase()}` : "Trade across multiple days to see the curve"}
                 </p>
               </div>
@@ -517,20 +517,20 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
 
           {/* Insights */}
           {insights.length > 0 && (
-            <div className="rounded-2xl border border-[#252932] bg-[#171a1f] p-4">
+            <div className="rounded-2xl border border-border/40 bg-secondary/30 p-4">
               <div className="flex items-center justify-between mb-3.5">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-[#1c1f26] border border-[#252932] flex items-center justify-center shrink-0">
-                    <Star className="w-[18px] h-[18px] text-[#8b92a5]" />
+                  <div className="w-9 h-9 rounded-xl bg-secondary/40 border border-border/40 flex items-center justify-center shrink-0">
+                    <Star className="w-[18px] h-[18px] text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-[14px] font-semibold text-[#f0f2f5] leading-tight">Performance Insights</p>
-                    <p className="text-[11px] text-[#555e72] mt-px">Auto-generated from your trade data</p>
+                    <p className="text-[14px] font-semibold text-foreground leading-tight">Performance Insights</p>
+                    <p className="text-[11px] text-muted-foreground mt-px">Auto-generated from your trade data</p>
                   </div>
                 </div>
                 <button onClick={() => setLocation("/analytics")}
-                  className="flex items-center gap-1 bg-[#1c1f26] border border-[#252932] rounded-lg px-3 py-1.5 text-[12px] font-medium text-[#f0f2f5] hover:border-[#333a48] transition-colors">
-                  View Details <ChevronRight className="w-3 h-3 text-[#555e72]" />
+                  className="flex items-center gap-1 bg-secondary/40 border border-border/40 rounded-lg px-3 py-1.5 text-[12px] font-medium text-foreground hover:border-[#333a48] transition-colors">
+                  View Details <ChevronRight className="w-3 h-3 text-muted-foreground" />
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-2.5">
@@ -539,13 +539,13 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
                   const dotBg = type === "good" ? "rgba(46,204,113,0.15)" : type === "warn" ? "rgba(245,158,11,0.15)" : "rgba(96,165,250,0.15)";
                   const iconClr = type === "good" ? "#2ecc71" : type === "warn" ? "#f59e0b" : "#60a5fa";
                   return (
-                    <div key={i} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#1c1f26] border border-[#252932]">
+                    <div key={i} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-secondary/40 border border-border/40">
                       <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: dotBg }}>
                         <Ic className="w-3.5 h-3.5" style={{ color: iconClr }} />
                       </div>
                       <div>
-                        <p className="text-[11px] text-[#8b92a5] font-medium leading-snug">{text}</p>
-                        <p className="text-[10px] text-[#555e72] leading-snug mt-0.5">{sub}</p>
+                        <p className="text-[11px] text-muted-foreground font-medium leading-snug">{text}</p>
+                        <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">{sub}</p>
                       </div>
                     </div>
                   );
