@@ -14,7 +14,8 @@ import { motion } from "framer-motion";
 import {
   TrendingUp, TrendingDown, Target, BarChart2, Trophy, AlertCircle,
   Award, Flag, Pencil, Check, X, Wallet, DollarSign, Percent,
-  ChevronLeft, ChevronRight, Settings2, Activity,
+  ChevronLeft, ChevronRight, Settings2, Activity, ShieldAlert,
+  AlertTriangle, Heart, Zap, BookOpen, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { Trade } from "@/types";
 import {
@@ -515,6 +516,330 @@ function CalendarHeatmap({ tradesByDate }: { tradesByDate: Record<string, Trade[
   );
 }
 
+// ── Funding account templates ──────────────────────────────────────────────────
+const FUNDING_TEMPLATES: { name: string; profitTarget: number; dailyLoss: number; maxLoss: number; minDays: number; consistency: boolean }[] = [
+  { name: "FTMO",         profitTarget: 10, dailyLoss: 5,  maxLoss: 10, minDays: 4,  consistency: false },
+  { name: "FundingPips",  profitTarget: 8,  dailyLoss: 4,  maxLoss: 8,  minDays: 5,  consistency: false },
+  { name: "The5ers",      profitTarget: 6,  dailyLoss: 4,  maxLoss: 6,  minDays: 0,  consistency: false },
+  { name: "Alpha Capital",profitTarget: 10, dailyLoss: 5,  maxLoss: 10, minDays: 5,  consistency: false },
+  { name: "FundedNext",   profitTarget: 10, dailyLoss: 5,  maxLoss: 10, minDays: 5,  consistency: true  },
+];
+
+// ── Risk Monitor Card ─────────────────────────────────────────────────────────
+function RiskMonitorCard({
+  startingBalance, currentBalance, dailyLossLimit, maxLossLimit,
+  profitTargetPct, minTradingDays, consistencyRule, trades,
+  onSetDailyLoss, onSetMaxLoss, onSetProfitTarget, onSetMinDays, onSetConsistency,
+}: {
+  startingBalance: number; currentBalance: number; dailyLossLimit: number; maxLossLimit: number;
+  profitTargetPct: number; minTradingDays: number; consistencyRule: boolean; trades: Trade[];
+  onSetDailyLoss: (v: number) => void; onSetMaxLoss: (v: number) => void;
+  onSetProfitTarget: (v: number) => void; onSetMinDays: (v: number) => void;
+  onSetConsistency: (v: boolean) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [draftDailyLoss, setDraftDailyLoss] = useState(String(dailyLossLimit || ""));
+  const [draftMaxLoss, setDraftMaxLoss] = useState(String(maxLossLimit || ""));
+  const [draftProfitTarget, setDraftProfitTarget] = useState(String(profitTargetPct || ""));
+  const [draftMinDays, setDraftMinDays] = useState(String(minTradingDays || ""));
+
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const todayLoss = trades.filter(t => t.date === todayStr && t.outcome === "LOSS").reduce((s, t) => s + t.netLoss, 0);
+  const todayProfit = trades.filter(t => t.date === todayStr && t.outcome === "WIN").reduce((s, t) => s + t.netProfit, 0);
+
+  const peakBalance = useMemo(() => {
+    let peak = startingBalance;
+    let bal = startingBalance;
+    const sorted = [...trades].filter(t => t.date).sort((a, b) => a.date.localeCompare(b.date));
+    for (const t of sorted) {
+      if (t.outcome === "WIN") bal += t.netProfit;
+      else if (t.outcome === "LOSS") bal -= t.netLoss;
+      if (bal > peak) peak = bal;
+    }
+    return peak;
+  }, [trades, startingBalance]);
+
+  const totalDrawdown = Math.max(0, peakBalance - currentBalance);
+  const netPnL = currentBalance - startingBalance;
+  const profitTarget$ = startingBalance > 0 && profitTargetPct > 0 ? startingBalance * profitTargetPct / 100 : 0;
+  const dailyLossLimit$ = startingBalance > 0 && dailyLossLimit > 0 ? startingBalance * dailyLossLimit / 100 : 0;
+  const maxLossLimit$ = startingBalance > 0 && maxLossLimit > 0 ? startingBalance * maxLossLimit / 100 : 0;
+
+  const dailyLossUsedPct = dailyLossLimit$ > 0 ? Math.min(100, (todayLoss / dailyLossLimit$) * 100) : 0;
+  const maxLossUsedPct = maxLossLimit$ > 0 ? Math.min(100, (totalDrawdown / maxLossLimit$) * 100) : 0;
+  const profitProgressPct = profitTarget$ > 0 ? Math.min(100, (Math.max(0, netPnL) / profitTarget$) * 100) : 0;
+
+  const tradingDaysCount = useMemo(() => {
+    const days = new Set(trades.filter(t => t.date).map(t => t.date));
+    return days.size;
+  }, [trades]);
+
+  const dailyColor = dailyLossUsedPct >= 80 ? "bg-red-500" : dailyLossUsedPct >= 50 ? "bg-yellow-500" : "bg-emerald-500";
+  const maxLossColor = maxLossUsedPct >= 80 ? "bg-red-500" : maxLossUsedPct >= 50 ? "bg-yellow-500" : "bg-emerald-500";
+
+  const accountHealth = useMemo(() => {
+    let score = 100;
+    if (dailyLossUsedPct >= 80) score -= 30;
+    else if (dailyLossUsedPct >= 50) score -= 15;
+    if (maxLossUsedPct >= 80) score -= 40;
+    else if (maxLossUsedPct >= 50) score -= 20;
+    return Math.max(0, Math.min(100, score));
+  }, [dailyLossUsedPct, maxLossUsedPct]);
+
+  const healthColor = accountHealth >= 80 ? "text-emerald-400" : accountHealth >= 60 ? "text-yellow-400" : "text-red-400";
+  const isBreached = dailyLossUsedPct >= 100 || maxLossUsedPct >= 100;
+
+  function applyTemplate(t: typeof FUNDING_TEMPLATES[0]) {
+    if (!startingBalance) return;
+    onSetProfitTarget(t.profitTarget);
+    onSetDailyLoss(t.dailyLoss);
+    onSetMaxLoss(t.maxLoss);
+    onSetMinDays(t.minDays);
+    onSetConsistency(t.consistency);
+    setDraftProfitTarget(String(t.profitTarget));
+    setDraftDailyLoss(String(t.dailyLoss));
+    setDraftMaxLoss(String(t.maxLoss));
+    setDraftMinDays(String(t.minDays));
+    setShowTemplates(false);
+  }
+
+  function saveSettings() {
+    const dl = parseFloat(draftDailyLoss);
+    const ml = parseFloat(draftMaxLoss);
+    const pt = parseFloat(draftProfitTarget);
+    const md = parseInt(draftMinDays);
+    if (!isNaN(dl) && dl >= 0) onSetDailyLoss(dl);
+    if (!isNaN(ml) && ml >= 0) onSetMaxLoss(ml);
+    if (!isNaN(pt) && pt >= 0) onSetProfitTarget(pt);
+    if (!isNaN(md) && md >= 0) onSetMinDays(md);
+    setEditing(false);
+  }
+
+  const isConfigured = dailyLossLimit > 0 || maxLossLimit > 0 || profitTargetPct > 0;
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
+      className="glass-card border-t-2 border-t-red-500/60 p-4 hover:border-white/15 transition-colors">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Risk Monitor</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setShowTemplates(!showTemplates); setEditing(false); }}
+            className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg border border-border/50 text-muted-foreground hover:text-foreground hover:border-border transition-colors">
+            <BookOpen className="w-3 h-3" /> Templates
+          </button>
+          <button onClick={() => { setEditing(!editing); setShowTemplates(false); }}
+            className="p-1.5 rounded hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors">
+            <Settings2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Template picker */}
+      {showTemplates && (
+        <div className="mb-4 p-3 rounded-xl bg-secondary border border-border/40">
+          <p className="text-[11px] text-muted-foreground mb-2 font-medium">Select a funded account template:</p>
+          {startingBalance <= 0 && <p className="text-[11px] text-yellow-400 mb-2">⚠ Set your starting balance first to use templates.</p>}
+          <div className="flex flex-wrap gap-2">
+            {FUNDING_TEMPLATES.map(t => (
+              <button key={t.name} onClick={() => applyTemplate(t)} disabled={startingBalance <= 0}
+                className="text-[11px] px-3 py-1.5 rounded-lg border border-border/50 bg-secondary/60 hover:border-primary/50 hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                {t.name}
+              </button>
+            ))}
+            <button onClick={() => { setShowTemplates(false); setEditing(true); }}
+              className="text-[11px] px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+              Custom
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Settings editor */}
+      {editing && (
+        <div className="mb-4 p-3 rounded-xl bg-secondary border border-border/40 space-y-3">
+          <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">Risk Rules (% of account)</p>
+          <div className="grid grid-cols-2 gap-2.5">
+            <div>
+              <label className="text-[10px] text-muted-foreground block mb-1">Profit Target %</label>
+              <input type="number" min="0" step="0.1" value={draftProfitTarget} onChange={e => setDraftProfitTarget(e.target.value)}
+                className="w-full bg-card border border-input rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring" placeholder="e.g. 10" />
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground block mb-1">Min Trading Days</label>
+              <input type="number" min="0" step="1" value={draftMinDays} onChange={e => setDraftMinDays(e.target.value)}
+                className="w-full bg-card border border-input rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring" placeholder="e.g. 5" />
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground block mb-1">Daily Loss Limit %</label>
+              <input type="number" min="0" step="0.1" value={draftDailyLoss} onChange={e => setDraftDailyLoss(e.target.value)}
+                className="w-full bg-card border border-input rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring" placeholder="e.g. 5" />
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground block mb-1">Max Loss Limit %</label>
+              <input type="number" min="0" step="0.1" value={draftMaxLoss} onChange={e => setDraftMaxLoss(e.target.value)}
+                className="w-full bg-card border border-input rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring" placeholder="e.g. 10" />
+            </div>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={consistencyRule} onChange={e => onSetConsistency(e.target.checked)}
+              className="w-3.5 h-3.5 rounded accent-primary" />
+            <span className="text-[11px] text-muted-foreground">Consistency Rule enabled</span>
+          </label>
+          <div className="flex gap-2">
+            <button onClick={saveSettings} className="flex-1 py-1.5 rounded-lg bg-primary/20 text-primary text-[12px] font-medium hover:bg-primary/30 transition-colors">Save</button>
+            <button onClick={() => setEditing(false)} className="px-3 py-1.5 rounded-lg bg-secondary/60 text-muted-foreground text-[12px] hover:bg-secondary transition-colors">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {!isConfigured && !editing && !showTemplates ? (
+        <div className="flex flex-col items-center justify-center py-5 gap-2 text-center">
+          <ShieldAlert className="w-8 h-8 text-muted-foreground/40" />
+          <p className="text-sm text-muted-foreground">Set your funded account rules to monitor risk</p>
+          <div className="flex gap-2 flex-wrap justify-center">
+            <button onClick={() => setShowTemplates(true)} className="text-xs text-primary hover:text-primary/80 transition-colors font-medium">+ Load Template</button>
+            <span className="text-muted-foreground text-xs">or</span>
+            <button onClick={() => setEditing(true)} className="text-xs text-primary hover:text-primary/80 transition-colors font-medium">+ Custom Rules</button>
+          </div>
+        </div>
+      ) : isConfigured && !editing && !showTemplates ? (
+        <div className="space-y-3">
+          {/* Breach warning */}
+          {isBreached && (
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-red-500/15 border border-red-500/30">
+              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+              <p className="text-[12px] text-red-400 font-semibold">Rule breach detected — stop trading immediately</p>
+            </div>
+          )}
+
+          {/* Profit target progress */}
+          {profitTargetPct > 0 && startingBalance > 0 && (
+            <div className="p-3 rounded-xl bg-secondary border border-border/40">
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="text-[11px] text-muted-foreground font-medium">Profit Target</span>
+                <span className="text-[11px] font-bold text-emerald-400">{profitProgressPct.toFixed(0)}% of {profitTargetPct}%</span>
+              </div>
+              <div className="h-2 bg-border/40 rounded-full overflow-hidden mb-1">
+                <div className="h-full rounded-full bg-emerald-500 transition-all duration-700" style={{ width: `${profitProgressPct}%` }} />
+              </div>
+              <div className="flex justify-between text-[10px] text-muted-foreground">
+                <span>Current: {netPnL >= 0 ? "+" : ""}{fmtMoney(netPnL)}</span>
+                <span>Target: {fmtMoney(profitTarget$)}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Daily loss limit */}
+          {dailyLossLimit > 0 && startingBalance > 0 && (
+            <div className="p-3 rounded-xl bg-secondary border border-border/40">
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="text-[11px] text-muted-foreground font-medium">Daily Loss Limit</span>
+                <span className={`text-[11px] font-bold ${dailyLossUsedPct >= 80 ? "text-red-400" : dailyLossUsedPct >= 50 ? "text-yellow-400" : "text-emerald-400"}`}>{dailyLossUsedPct.toFixed(0)}% Used</span>
+              </div>
+              <div className="h-2 bg-border/40 rounded-full overflow-hidden mb-1">
+                <div className={`h-full rounded-full transition-all duration-700 ${dailyColor}`} style={{ width: `${dailyLossUsedPct}%` }} />
+              </div>
+              <div className="flex justify-between text-[10px] text-muted-foreground">
+                <span>Used: {fmtMoney(todayLoss)}</span>
+                <span>Remaining: {fmtMoney(Math.max(0, dailyLossLimit$ - todayLoss))}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Max drawdown limit */}
+          {maxLossLimit > 0 && startingBalance > 0 && (
+            <div className="p-3 rounded-xl bg-secondary border border-border/40">
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="text-[11px] text-muted-foreground font-medium">Max Drawdown Limit</span>
+                <span className={`text-[11px] font-bold ${maxLossUsedPct >= 80 ? "text-red-400" : maxLossUsedPct >= 50 ? "text-yellow-400" : "text-emerald-400"}`}>{maxLossUsedPct.toFixed(0)}% Used</span>
+              </div>
+              <div className="h-2 bg-border/40 rounded-full overflow-hidden mb-1">
+                <div className={`h-full rounded-full transition-all duration-700 ${maxLossColor}`} style={{ width: `${maxLossUsedPct}%` }} />
+              </div>
+              <div className="flex justify-between text-[10px] text-muted-foreground">
+                <span>Drawdown: {fmtMoney(totalDrawdown)}</span>
+                <span>Remaining: {fmtMoney(Math.max(0, maxLossLimit$ - totalDrawdown))}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Stats row */}
+          <div className="grid grid-cols-2 gap-2 items-start">
+            <div className="p-2.5 rounded-xl bg-secondary border border-border/40 text-center">
+              <p className={`text-lg font-bold ${healthColor}`}>{accountHealth}%</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Account Health</p>
+            </div>
+            <div className="p-2.5 rounded-xl bg-secondary border border-border/40 text-center">
+              <p className="text-lg font-bold text-foreground">{todayProfit > 0 ? "+" : ""}{fmtMoney(todayProfit - todayLoss)}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Today's Net P&L</p>
+            </div>
+            {minTradingDays > 0 && (
+              <div className="p-2.5 rounded-xl bg-secondary border border-border/40 text-center">
+                <p className="text-lg font-bold text-foreground">{tradingDaysCount}<span className="text-sm text-muted-foreground">/{minTradingDays}</span></p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Trading Days</p>
+              </div>
+            )}
+            <div className={`p-2.5 rounded-xl border text-center ${isBreached ? "bg-red-500/10 border-red-500/30" : "bg-secondary border-border/40"}`}>
+              <p className={`text-base font-bold ${isBreached ? "text-red-400" : accountHealth >= 80 ? "text-emerald-400" : "text-yellow-400"}`}>
+                {isBreached ? "⚠ Breached" : accountHealth >= 80 ? "✓ Healthy" : "! At Risk"}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Account Status</p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </motion.div>
+  );
+}
+
+// ── Funded Account Rules Card ─────────────────────────────────────────────────
+function FundingRulesCard({
+  startingBalance, profitTargetPct, dailyLossLimit, maxLossLimit,
+  minTradingDays, consistencyRule,
+}: {
+  startingBalance: number; profitTargetPct: number; dailyLossLimit: number;
+  maxLossLimit: number; minTradingDays: number; consistencyRule: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  if (profitTargetPct <= 0 && dailyLossLimit <= 0 && maxLossLimit <= 0) return null;
+
+  const rules = [
+    { label: "Starting Balance", value: startingBalance > 0 ? fmtMoney(startingBalance) : "Not set" },
+    profitTargetPct > 0 && { label: "Profit Target", value: `${profitTargetPct}%${startingBalance > 0 ? ` (${fmtMoney(startingBalance * profitTargetPct / 100)})` : ""}` },
+    dailyLossLimit > 0 && { label: "Daily Loss Limit", value: `${dailyLossLimit}%${startingBalance > 0 ? ` (${fmtMoney(startingBalance * dailyLossLimit / 100)})` : ""}` },
+    maxLossLimit > 0 && { label: "Max Drawdown", value: `${maxLossLimit}%${startingBalance > 0 ? ` (${fmtMoney(startingBalance * maxLossLimit / 100)})` : ""}` },
+    minTradingDays > 0 && { label: "Min Trading Days", value: `${minTradingDays} days` },
+    { label: "Consistency Rule", value: consistencyRule ? "Enabled" : "Disabled" },
+  ].filter(Boolean) as { label: string; value: string }[];
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}
+      className="glass-card border-t-2 border-t-violet-500/60 p-4 hover:border-white/15 transition-colors">
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <BookOpen className="w-3.5 h-3.5 text-violet-400" />
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Funded Account Rules</h2>
+        </div>
+        {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+      </button>
+      {open && (
+        <div className="mt-3 space-y-0 rounded-xl overflow-hidden border border-border/40">
+          {rules.map((r, i) => (
+            <div key={i} className={`flex items-center justify-between px-3 py-2.5 text-sm ${i % 2 === 0 ? "bg-secondary/60" : "bg-secondary/30"}`}>
+              <span className="text-muted-foreground text-[12px]">{r.label}</span>
+              <span className="text-foreground font-semibold text-[12px]">{r.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const trades = useTradeStore((s) => s.trades);
@@ -526,6 +851,16 @@ export default function Dashboard() {
   const setTradingDaysPerMonth = useTradeStore((s) => s.setTradingDaysPerMonth);
   const startingBalance = useTradeStore((s) => s.startingBalance);
   const setStartingBalance = useTradeStore((s) => s.setStartingBalance);
+  const dailyLossLimit = useTradeStore((s) => s.dailyLossLimit);
+  const maxLossLimit = useTradeStore((s) => s.maxLossLimit);
+  const profitTargetPct = useTradeStore((s) => s.profitTargetPct);
+  const minTradingDays = useTradeStore((s) => s.minTradingDays);
+  const consistencyRule = useTradeStore((s) => s.consistencyRule);
+  const setDailyLossLimit = useTradeStore((s) => s.setDailyLossLimit);
+  const setMaxLossLimit = useTradeStore((s) => s.setMaxLossLimit);
+  const setProfitTargetPct = useTradeStore((s) => s.setProfitTargetPct);
+  const setMinTradingDays = useTradeStore((s) => s.setMinTradingDays);
+  const setConsistencyRule = useTradeStore((s) => s.setConsistencyRule);
 
   const analytics = useMemo(() => computeAnalytics(trades, startingBalance), [trades, startingBalance]);
   const currentBalance = startingBalance + analytics.totalProfit - analytics.totalLoss;
@@ -608,6 +943,24 @@ export default function Dashboard() {
           <BalanceCard startingBalance={startingBalance} currentBalance={currentBalance} totalProfit={analytics.totalProfit} totalLoss={analytics.totalLoss} drawdownStats={analytics.drawdownStats} onSetBalance={setStartingBalance} />
           <GoalTrackingCard monthlyGoalPct={monthlyGoalPct} tradingDaysPerMonth={tradingDaysPerMonth} startingBalance={startingBalance} trades={trades} onSetGoalPct={setMonthlyGoalPct} onSetTradingDays={setTradingDaysPerMonth} />
         </div>
+      </div>
+
+      {/* Risk Monitor + Funding Rules */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <RiskMonitorCard
+          startingBalance={startingBalance} currentBalance={currentBalance}
+          dailyLossLimit={dailyLossLimit} maxLossLimit={maxLossLimit}
+          profitTargetPct={profitTargetPct} minTradingDays={minTradingDays}
+          consistencyRule={consistencyRule} trades={trades}
+          onSetDailyLoss={setDailyLossLimit} onSetMaxLoss={setMaxLossLimit}
+          onSetProfitTarget={setProfitTargetPct} onSetMinDays={setMinTradingDays}
+          onSetConsistency={setConsistencyRule}
+        />
+        <FundingRulesCard
+          startingBalance={startingBalance} profitTargetPct={profitTargetPct}
+          dailyLossLimit={dailyLossLimit} maxLossLimit={maxLossLimit}
+          minTradingDays={minTradingDays} consistencyRule={consistencyRule}
+        />
       </div>
 
       <TradingSessions />

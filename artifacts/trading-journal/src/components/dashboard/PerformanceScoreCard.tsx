@@ -3,11 +3,8 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import {
-  TrendingUp, Target, Shield, BarChart2,
-  CheckCircle, AlertTriangle, Zap, ChevronRight, Star,
-  Trophy, TrendingDown, Activity, Clock,
+  TrendingUp, Target, Shield, BarChart2, Activity,
 } from "lucide-react";
-import { useLocation } from "wouter";
 import type { Analytics } from "@/engine/analyticsEngine";
 import { Trade } from "@/types";
 
@@ -166,96 +163,6 @@ function calcAvgReturnPct(trades: Trade[], startingBalance: number): { pct: numb
   return { pct, dollar };
 }
 
-function buildInsights(trades: Trade[], startingBalance: number) {
-  const insights: { icon: React.ElementType; type: "good" | "warn" | "info"; text: string; sub: string }[] = [];
-  if (trades.length === 0) return insights;
-
-  const completed = trades.filter(t => t.outcome === "WIN" || t.outcome === "LOSS" || t.outcome === "BE");
-  const wins = completed.filter(t => t.outcome === "WIN").length;
-  const winRate = completed.length > 0 ? (wins / completed.length) * 100 : 0;
-
-  const grossProfit = completed.filter(t => t.outcome === "WIN").reduce((s, t) => s + t.netProfit, 0);
-  const grossLoss = completed.filter(t => t.outcome === "LOSS").reduce((s, t) => s + t.netLoss, 0);
-  const pf = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 4 : 0;
-  const avgRR = calcAvgRR(completed);
-
-  const sorted = [...completed].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  let consecLosses = 0, maxConsecLosses = 0;
-  for (const t of sorted) {
-    if (t.outcome === "LOSS") { consecLosses++; maxConsecLosses = Math.max(maxConsecLosses, consecLosses); }
-    else consecLosses = 0;
-  }
-
-  const pairMap: Record<string, { profit: number; loss: number; wins: number; total: number }> = {};
-  for (const t of completed) {
-    if (!pairMap[t.pair]) pairMap[t.pair] = { profit: 0, loss: 0, wins: 0, total: 0 };
-    pairMap[t.pair].total++;
-    if (t.outcome === "WIN") { pairMap[t.pair].wins++; pairMap[t.pair].profit += t.netProfit; }
-    if (t.outcome === "LOSS") pairMap[t.pair].loss += t.netLoss;
-  }
-
-  const sessionMap: Record<string, { wins: number; total: number }> = {};
-  for (const t of completed) {
-    const sess = t.session ?? "UNKNOWN";
-    if (!sessionMap[sess]) sessionMap[sess] = { wins: 0, total: 0 };
-    sessionMap[sess].total++;
-    if (t.outcome === "WIN") sessionMap[sess].wins++;
-  }
-
-  const pairs = Object.entries(pairMap).filter(([, v]) => v.total >= 2);
-  if (pairs.length > 0) {
-    const bestPair = pairs.reduce((a, b) => (b[1].profit - b[1].loss) > (a[1].profit - a[1].loss) ? b : a);
-    const worstPair = pairs.reduce((a, b) => (b[1].profit - b[1].loss) < (a[1].profit - a[1].loss) ? b : a);
-    const bestNet = bestPair[1].profit - bestPair[1].loss;
-    const worstNet = worstPair[1].profit - worstPair[1].loss;
-    if (bestNet > 0)
-      insights.push({ icon: Trophy, type: "good", text: `Best pair: ${bestPair[0]}`, sub: `Net +$${bestNet.toFixed(2)} — ${Math.round(bestPair[1].wins/bestPair[1].total*100)}% win rate` });
-    if (worstNet < 0 && worstPair[0] !== bestPair[0])
-      insights.push({ icon: TrendingDown, type: "warn", text: `Avoid ${worstPair[0]}`, sub: `Net -$${Math.abs(worstNet).toFixed(2)} — reduce exposure` });
-  }
-
-  const sessions = Object.entries(sessionMap).filter(([k, v]) => k !== "UNKNOWN" && v.total >= 2);
-  if (sessions.length > 0) {
-    const bestSess = sessions.reduce((a, b) => (b[1].wins/b[1].total) > (a[1].wins/a[1].total) ? b : a);
-    const sessLabels: Record<string, string> = { LONDON: "London", NEW_YORK: "New York", ASIA: "Asia", TOKYO: "Tokyo" };
-    insights.push({ icon: Clock, type: "info", text: `Best session: ${sessLabels[bestSess[0]] ?? bestSess[0]}`, sub: `${Math.round(bestSess[1].wins/bestSess[1].total*100)}% win rate in this session` });
-  }
-
-  if (winRate >= 65) insights.push({ icon: CheckCircle, type: "good", text: "High Win Rate", sub: `${winRate.toFixed(0)}% — stay disciplined & patient` });
-  else if (winRate < 40 && completed.length >= 5) insights.push({ icon: AlertTriangle, type: "warn", text: "Win Rate Needs Work", sub: `${winRate.toFixed(0)}% — focus on quality setups` });
-
-  if (avgRR < 1 && completed.length >= 5) insights.push({ icon: AlertTriangle, type: "warn", text: "Low R:R Ratio", sub: `${avgRR.toFixed(2)}R — target 1.5R+ per trade` });
-  else if (avgRR >= 2) insights.push({ icon: Zap, type: "good", text: "Excellent R:R", sub: `${avgRR.toFixed(2)}R average — great risk management` });
-
-  if (pf >= 2) insights.push({ icon: Star, type: "good", text: "Excellent Profit Factor", sub: `PF ${pf.toFixed(2)} — strategy has a strong edge` });
-  else if (pf < 1 && completed.length >= 5) insights.push({ icon: AlertTriangle, type: "warn", text: "Negative Expectancy", sub: `PF ${pf.toFixed(2)} — losses exceed profits` });
-
-  if (maxConsecLosses >= 4) insights.push({ icon: AlertTriangle, type: "warn", text: "Revenge Trading Risk", sub: `${maxConsecLosses} consecutive losses — take a break after 3` });
-
-  const avgLot = completed.map(t => t.lotSize).filter(l => l > 0).reduce((s, l, _, a) => s + l / a.length, 0);
-  const overRiskCount = completed.filter(t => t.lotSize > avgLot * 2).length;
-  if (overRiskCount > 0 && completed.length >= 5)
-    insights.push({ icon: AlertTriangle, type: "warn", text: "High Risk on Some Trades", sub: `${overRiskCount} trades with 2x normal size` });
-
-  const weekMap: Record<string, number> = {};
-  for (const t of completed) {
-    const d = new Date(t.date + "T12:00:00");
-    const jan1 = new Date(d.getFullYear(), 0, 1);
-    const wk = Math.ceil(((d.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7);
-    const key = `${d.getFullYear()}-W${String(wk).padStart(2, "0")}`;
-    const pnl = t.outcome === "WIN" ? t.netProfit : t.outcome === "LOSS" ? -t.netLoss : 0;
-    weekMap[key] = (weekMap[key] ?? 0) + pnl;
-  }
-  const weeks = Object.entries(weekMap);
-  if (weeks.length >= 2) {
-    const best = weeks.reduce((a, b) => b[1] > a[1] ? b : a);
-    const worst = weeks.reduce((a, b) => b[1] < a[1] ? b : a);
-    if (best[1] > 0) insights.push({ icon: Trophy, type: "good", text: `Best Week: ${best[0]}`, sub: `+$${best[1].toFixed(2)} — replicate this week's approach` });
-    if (worst[1] < 0) insights.push({ icon: TrendingDown, type: "warn", text: `Worst Week: ${worst[0]}`, sub: `-$${Math.abs(worst[1]).toFixed(2)} — review what went wrong` });
-  }
-
-  return insights.slice(0, 4);
-}
 
 function PnLTip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
   if (!active || !payload?.length) return null;
@@ -303,7 +210,6 @@ function MetricBlock({
 }
 
 export default function PerformanceScoreCard({ analytics: allAnalytics, trades, startingBalance, monthlyGoalPct, tradingDaysPerMonth }: Props) {
-  const [, setLocation] = useLocation();
   const [period, setPeriod] = useState<Period>("Monthly");
 
   const allPeriodStats = useMemo(() =>
@@ -377,7 +283,6 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
     : avgReturn.dollar < 0 ? { t: "Losing", c: "text-red-400" }
     : { t: "Neutral", c: "text-muted-foreground" };
 
-  const insights = useMemo(() => buildInsights(filteredTrades, periodBaseBalance), [filteredTrades, periodBaseBalance]);
 
   const PERIOD_LABEL: Record<Period, string> = { Daily: "Today", Weekly: "This Week", Monthly: "This Month", Yearly: "This Year" };
   const PERIOD_SHORT: Record<Period, string> = { Daily: "Daily", Weekly: "Weekly", Monthly: "Monthly", Yearly: "Yearly" };
@@ -602,44 +507,6 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
             />
           </div>
 
-          {/* Insights */}
-          {insights.length > 0 && (
-            <div className="rounded-2xl border border-border/40 bg-secondary/80 p-4">
-              <div className="flex items-center justify-between mb-3.5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-secondary/60 border border-border/40 flex items-center justify-center shrink-0">
-                    <Star className="w-[18px] h-[18px] text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-[14px] font-semibold text-foreground leading-tight">Performance Insights</p>
-                    <p className="text-[11px] text-muted-foreground mt-px">Auto-generated from your trade data</p>
-                  </div>
-                </div>
-                <button onClick={() => setLocation("/analytics")}
-                  className="flex items-center gap-1 bg-secondary/60 border border-border/40 rounded-lg px-3 py-1.5 text-[12px] font-medium text-foreground hover:border-[#333a48] transition-colors">
-                  View Details <ChevronRight className="w-3 h-3 text-muted-foreground" />
-                </button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {insights.map((ins, i) => {
-                  const { icon: Ic, type, text, sub } = ins;
-                  const dotBg = type === "good" ? "rgba(46,204,113,0.15)" : type === "warn" ? "rgba(245,158,11,0.15)" : "rgba(96,165,250,0.15)";
-                  const iconClr = type === "good" ? "#2ecc71" : type === "warn" ? "#f59e0b" : "#60a5fa";
-                  return (
-                    <div key={i} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-secondary/70 border border-border/50">
-                      <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: dotBg }}>
-                        <Ic className="w-3.5 h-3.5" style={{ color: iconClr }} />
-                      </div>
-                      <div>
-                        <p className="text-[11px] text-muted-foreground font-medium leading-snug">{text}</p>
-                        <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">{sub}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </>
       )}
     </div>
