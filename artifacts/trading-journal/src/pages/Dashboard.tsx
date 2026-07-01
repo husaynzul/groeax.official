@@ -109,7 +109,7 @@ function BalanceCard({ startingBalance, currentBalance, totalProfit, totalLoss, 
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-      className="glass-card border-t-2 border-t-cyan-500/70 bg-cyan-500/[0.03] p-4 flex flex-col gap-3 hover:border-white/15 transition-colors">
+      className="glass-card border-t-2 border-t-cyan-500/70 p-4 flex flex-col gap-3 hover:border-white/15 transition-colors">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-cyan-400"><Wallet className="w-3.5 h-3.5" /><span className="text-xs uppercase tracking-wider text-muted-foreground">Balance</span></div>
         <button onClick={() => { setDraft(String(startingBalance || "")); setEditing(true); }} className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded hover:bg-white/5">
@@ -265,7 +265,7 @@ function GoalTrackingCard({
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
-      className="glass-card border-t-2 border-t-violet-500/70 bg-violet-500/[0.03] p-4 flex flex-col gap-3 hover:border-white/15 transition-colors">
+      className="glass-card border-t-2 border-t-violet-500/70 p-4 flex flex-col gap-3 hover:border-white/15 transition-colors">
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-violet-400"><Flag className="w-3.5 h-3.5" /><span className="text-xs uppercase tracking-wider text-muted-foreground">Monthly Goal</span></div>
@@ -617,14 +617,14 @@ export default function Dashboard() {
       {/* Advanced Statistics — Professional Metrics */}
       {analytics.totalTrades >= 2 && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-          className="glass-card border-t-2 border-t-pink-500/60 bg-card/80 p-4 hover:border-white/15 transition-colors">
+          className="glass-card border-t-2 border-t-pink-500/60 p-4 hover:border-white/15 transition-colors">
           <div className="flex items-center gap-2 mb-4">
             <Activity className="w-3.5 h-3.5 text-pink-400" />
             <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Advanced Statistics</h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {/* Expectancy */}
-            <div className="bg-secondary/60 rounded-xl p-3 border border-border/50">
+            <div className="bg-secondary rounded-xl p-3 border border-border/50">
               <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Expectancy</p>
               <p className={`text-base font-bold ${analytics.expectancy >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                 {analytics.expectancy >= 0 ? "+" : ""}{fmtMoney(analytics.expectancy)}
@@ -632,7 +632,7 @@ export default function Dashboard() {
               <p className="text-[9px] text-muted-foreground mt-1">(WR × AvgW) − (LR × AvgL)</p>
             </div>
             {/* Profit Factor */}
-            <div className="bg-secondary/60 rounded-xl p-3 border border-border/50">
+            <div className="bg-secondary rounded-xl p-3 border border-border/50">
               <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Profit Factor</p>
               <p className={`text-base font-bold ${analytics.profitFactor >= 1.5 ? "text-emerald-400" : analytics.profitFactor >= 1 ? "text-yellow-400" : "text-red-400"}`}>
                 {analytics.profitFactor === 999 ? "∞" : analytics.profitFactor.toFixed(2)}
@@ -640,7 +640,7 @@ export default function Dashboard() {
               <p className="text-[9px] text-muted-foreground mt-1">Gross Profit ÷ Gross Loss</p>
             </div>
             {/* Recovery Factor */}
-            <div className="bg-secondary/60 rounded-xl p-3 border border-border/50">
+            <div className="bg-secondary rounded-xl p-3 border border-border/50">
               <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Recovery Factor</p>
               <p className={`text-base font-bold ${analytics.recoveryFactor > 0 ? "text-emerald-400" : "text-red-400"}`}>
                 {analytics.recoveryFactor === 999 ? "∞" : analytics.recoveryFactor.toFixed(2)}
@@ -648,15 +648,15 @@ export default function Dashboard() {
               <p className="text-[9px] text-muted-foreground mt-1">Net P&L ÷ Max Drawdown</p>
             </div>
             {/* Avg R:R */}
-            <div className="bg-secondary/60 rounded-xl p-3 border border-border/50">
+            <div className="bg-secondary rounded-xl p-3 border border-border/50">
               <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Avg R:R</p>
               <p className={`text-base font-bold ${analytics.avgRR >= 1.5 ? "text-emerald-400" : analytics.avgRR >= 1 ? "text-yellow-400" : "text-red-400"}`}>
                 {analytics.avgRR > 0 ? `${analytics.avgRR.toFixed(2)}R` : "—"}
               </p>
               <p className="text-[9px] text-muted-foreground mt-1">Sum(RR) ÷ Completed Trades</p>
             </div>
-            {/* Sharpe Ratio */}
-            <div className="bg-secondary/60 rounded-xl p-3 border border-border/50">
+            {/* Sharpe Ratio — col-span-2 on mobile so it fills the last row cleanly */}
+            <div className="bg-secondary rounded-xl p-3 border border-border/50 col-span-2 sm:col-span-1">
               <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">Sharpe Ratio</p>
               <p className={`text-base font-bold ${analytics.sharpeRatio > 1 ? "text-emerald-400" : analytics.sharpeRatio > 0 ? "text-yellow-400" : "text-red-400"}`}>
                 {startingBalance > 0 ? analytics.sharpeRatio.toFixed(2) : "—"}
@@ -665,7 +665,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-            <div className="bg-secondary/60 rounded-xl p-3 border border-border/50 flex items-center gap-3">
+            <div className="bg-secondary rounded-xl p-3 border border-border/50 flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
                 <Trophy className="w-5 h-5 text-emerald-400" />
               </div>
@@ -674,7 +674,7 @@ export default function Dashboard() {
                 <p className="text-lg font-bold text-emerald-400">{analytics.maxConsecWins}</p>
               </div>
             </div>
-            <div className="bg-secondary/60 rounded-xl p-3 border border-border/50 flex items-center gap-3">
+            <div className="bg-secondary rounded-xl p-3 border border-border/50 flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center shrink-0">
                 <TrendingDown className="w-5 h-5 text-red-400" />
               </div>
@@ -683,7 +683,7 @@ export default function Dashboard() {
                 <p className="text-lg font-bold text-red-400">{analytics.maxConsecLosses}</p>
               </div>
             </div>
-            <div className="bg-secondary/60 rounded-xl p-3 border border-border/50 flex items-center gap-3">
+            <div className="bg-secondary rounded-xl p-3 border border-border/50 flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0">
                 <BarChart2 className="w-5 h-5 text-blue-400" />
               </div>
@@ -692,7 +692,7 @@ export default function Dashboard() {
                 <p className="text-base font-bold text-blue-400">{fmtMoney(analytics.avgWin)}</p>
               </div>
             </div>
-            <div className="bg-secondary/60 rounded-xl p-3 border border-border/50 flex items-center gap-3">
+            <div className="bg-secondary rounded-xl p-3 border border-border/50 flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center shrink-0">
                 <AlertCircle className="w-5 h-5 text-orange-400" />
               </div>
@@ -737,7 +737,7 @@ export default function Dashboard() {
 
       {/* Net Daily P&L */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-        className="glass-card border-t-2 border-t-blue-500/60 bg-blue-500/[0.02] p-4 hover:border-white/15 transition-colors">
+        className="glass-card border-t-2 border-t-blue-500/60 p-4 hover:border-white/15 transition-colors">
         <div className="flex items-center gap-2 mb-4"><BarChart2 className="w-3.5 h-3.5 text-blue-400" /><h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Net Daily P&amp;L</h2></div>
         {analytics.dailyPnL.length > 0
           ? <ResponsiveContainer width="100%" height={200}><BarChart data={analytics.dailyPnL} margin={{ top: 8, right: 8, bottom: 4, left: 0 }} barCategoryGap="30%"><CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.05)" vertical={false} /><XAxis dataKey="date" tick={{ fontSize: 9, fill: "#64748b" }} tickFormatter={(v) => fmtTradeDate(v, "MMM d")} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 9, fill: "#64748b" }} tickFormatter={(v) => `$${Number(v).toFixed(0)}`} axisLine={false} tickLine={false} width={48} /><ReferenceLine y={0} stroke="rgba(255,255,255,0.35)" strokeWidth={2} /><Tooltip content={<DarkTooltip />} /><Bar dataKey="pnl" radius={[3, 3, 0, 0]} isAnimationActive animationDuration={800} maxBarSize={36}>{analytics.dailyPnL.map((entry, i) => <Cell key={i} fill={entry.pnl >= 0 ? "#22c55e" : "#ef4444"} fillOpacity={1} />)}</Bar></BarChart></ResponsiveContainer>
@@ -747,7 +747,7 @@ export default function Dashboard() {
       {/* Weekly Performance Trend */}
       {weeklyTrend.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}
-          className="glass-card border-t-2 border-t-emerald-500/60 bg-emerald-500/[0.02] p-4 hover:border-white/15 transition-colors">
+          className="glass-card border-t-2 border-t-emerald-500/60 p-4 hover:border-white/15 transition-colors">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2"><TrendingUp className="w-3.5 h-3.5 text-emerald-400" /><h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Weekly Performance Trend</h2></div>
           </div>
@@ -795,7 +795,7 @@ export default function Dashboard() {
 
       {analytics.totalTrades > 0 && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-          className="glass-card border-t-2 border-t-amber-500/60 bg-amber-500/[0.02] p-4 hover:border-white/15 transition-colors">
+          className="glass-card border-t-2 border-t-amber-500/60 p-4 hover:border-white/15 transition-colors">
           <div className="flex items-center gap-2 mb-4"><Award className="w-3.5 h-3.5 text-amber-400" /><h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Recent Trades</h2></div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

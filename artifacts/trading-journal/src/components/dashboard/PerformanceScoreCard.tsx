@@ -273,7 +273,7 @@ function MetricBlock({
   display: string; ratingColor: string; hint: string; accentColor: string;
 }) {
   return (
-    <div className="rounded-2xl border bg-secondary/30 p-4 cursor-pointer hover:border-[#333a48] transition-colors active:scale-[0.98]" style={{ borderColor: `${accentColor}40` }}>
+    <div className="rounded-2xl border bg-secondary/80 p-4 cursor-pointer hover:border-[#333a48] transition-colors active:scale-[0.98]" style={{ borderColor: `${accentColor}40` }}>
       <div className="flex items-start justify-between mb-2.5">
         <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${accentColor}18`, border: `1px solid ${accentColor}30` }}>
           <Icon className="w-[18px] h-[18px]" style={{ color: accentColor }} />
@@ -367,7 +367,7 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
   const PERIOD_LABEL: Record<Period, string> = { Daily: "Today", Weekly: "This Week", Monthly: "This Month" };
 
   return (
-    <div className="glass-card border-t-2 border-t-emerald-500/60 bg-emerald-500/[0.02] p-4 w-full hover:border-white/15 transition-colors">
+    <div className="glass-card border-t-2 border-t-emerald-500/60 p-4 w-full hover:border-white/15 transition-colors">
 
       <div className="flex items-center gap-2.5 mb-4">
         <div className="w-[38px] h-[38px] rounded-xl bg-secondary/40 border border-border/40 flex items-center justify-center shrink-0">
@@ -439,7 +439,7 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
           </div>
 
           {/* Equity curve */}
-          <div className="rounded-2xl border border-border/40 bg-secondary/30 px-3 pt-4 pb-2 mb-3">
+          <div className="rounded-2xl border border-border/40 bg-secondary/80 overflow-hidden px-3 pt-4 pb-2 mb-3">
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-3">
               <span className="w-2 h-2 rounded-full shrink-0" style={{ background: lineColor }} />
               Cumulative Equity Curve — {PERIOD_LABEL[period]}
@@ -517,10 +517,10 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
 
           {/* Insights */}
           {insights.length > 0 && (
-            <div className="rounded-2xl border border-border/40 bg-secondary/30 p-4">
+            <div className="rounded-2xl border border-border/40 bg-secondary/80 p-4">
               <div className="flex items-center justify-between mb-3.5">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-secondary/40 border border-border/40 flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-secondary/60 border border-border/40 flex items-center justify-center shrink-0">
                     <Star className="w-[18px] h-[18px] text-muted-foreground" />
                   </div>
                   <div>
@@ -529,7 +529,7 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
                   </div>
                 </div>
                 <button onClick={() => setLocation("/analytics")}
-                  className="flex items-center gap-1 bg-secondary/40 border border-border/40 rounded-lg px-3 py-1.5 text-[12px] font-medium text-foreground hover:border-[#333a48] transition-colors">
+                  className="flex items-center gap-1 bg-secondary/60 border border-border/40 rounded-lg px-3 py-1.5 text-[12px] font-medium text-foreground hover:border-[#333a48] transition-colors">
                   View Details <ChevronRight className="w-3 h-3 text-muted-foreground" />
                 </button>
               </div>
@@ -539,7 +539,7 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
                   const dotBg = type === "good" ? "rgba(46,204,113,0.15)" : type === "warn" ? "rgba(245,158,11,0.15)" : "rgba(96,165,250,0.15)";
                   const iconClr = type === "good" ? "#2ecc71" : type === "warn" ? "#f59e0b" : "#60a5fa";
                   return (
-                    <div key={i} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-secondary/40 border border-border/40">
+                    <div key={i} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-secondary/70 border border-border/50">
                       <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: dotBg }}>
                         <Ic className="w-3.5 h-3.5" style={{ color: iconClr }} />
                       </div>
