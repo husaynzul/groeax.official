@@ -309,9 +309,8 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
   const allPeriodStats = useMemo(() =>
     (["Daily", "Weekly", "Monthly", "Yearly"] as Period[]).map((p) => {
       const ft = filterByPeriod(trades, p);
-      const baseBalance = getPeriodBaseBalance(trades, p, startingBalance);
       const netDollar = ft.reduce((s, t) => s + (t.outcome === "WIN" ? t.netProfit : t.outcome === "LOSS" ? -t.netLoss : 0), 0);
-      const pct = baseBalance > 0 ? (netDollar / baseBalance) * 100 : 0;
+      const pct = startingBalance > 0 ? (netDollar / startingBalance) * 100 : 0;
       const targetPct = getPeriodTargetPct(p, monthlyGoalPct, tradingDaysPerMonth);
       return { period: p, netDollar, pct, targetPct };
     }), [trades, startingBalance, monthlyGoalPct, tradingDaysPerMonth]);
@@ -323,7 +322,7 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
     filteredTrades.reduce((s, t) => s + (t.outcome === "WIN" ? t.netProfit : t.outcome === "LOSS" ? -t.netLoss : 0), 0),
     [filteredTrades]);
 
-  const periodReturnPct = periodBaseBalance > 0 ? (periodNetDollar / periodBaseBalance) * 100 : 0;
+  const periodReturnPct = startingBalance > 0 ? (periodNetDollar / startingBalance) * 100 : 0;
   const isPos = periodNetDollar >= 0;
   const lineColor = isPos ? "#2ecc71" : "#ef4444";
 
@@ -431,12 +430,9 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
                 <p className={`font-extrabold leading-tight tracking-[-0.04em] text-3xl ${isPos ? "text-[#2ecc71]" : "text-red-400"}`}>
                   {fmtCompact(periodNetDollar)}
                 </p>
-                {periodBaseBalance > 1 && (
+                {startingBalance > 0 && (
                   <p className={`text-[13px] font-semibold mt-0.5 ${isPos ? "text-[#2ecc71]" : "text-red-400"}`}>
-                    {isPos ? "+" : ""}{periodReturnPct.toFixed(2)}% return
-                    {currentPeriodStat?.targetPct > 0 && (
-                      <span className="text-muted-foreground font-normal"> / {currentPeriodStat.targetPct.toFixed(2)}% target</span>
-                    )}
+                    {isPos ? "+" : ""}{periodReturnPct.toFixed(2)}% Return
                   </p>
                 )}
               </div>
