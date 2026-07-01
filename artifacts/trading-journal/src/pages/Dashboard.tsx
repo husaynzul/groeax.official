@@ -604,7 +604,7 @@ export default function Dashboard() {
       {/* Performance card + side cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="md:col-span-1 lg:col-span-2">
-          <PerformanceScoreCard analytics={analytics} trades={trades} startingBalance={startingBalance} currentBalance={currentBalance} />
+          <PerformanceScoreCard analytics={analytics} trades={trades} startingBalance={startingBalance} currentBalance={currentBalance} monthlyGoalPct={monthlyGoalPct} tradingDaysPerMonth={tradingDaysPerMonth} />
         </motion.div>
         <div className="flex flex-col gap-4">
           <BalanceCard startingBalance={startingBalance} currentBalance={currentBalance} totalProfit={analytics.totalProfit} totalLoss={analytics.totalLoss} drawdownStats={analytics.drawdownStats} onSetBalance={setStartingBalance} />

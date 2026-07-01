@@ -16,9 +16,11 @@ interface Props {
   trades: Trade[];
   startingBalance: number;
   currentBalance: number;
+  monthlyGoalPct: number;
+  tradingDaysPerMonth: number;
 }
 
-type Period = "Daily" | "Weekly" | "Monthly";
+type Period = "Daily" | "Weekly" | "Monthly" | "Yearly";
 
 const fmt2 = (n: number) => n.toFixed(2);
 
@@ -34,38 +36,51 @@ function fmtCompact(n: number): string {
   return `${s}$${abs.toFixed(2)}`;
 }
 
-function filterByPeriod(trades: Trade[], period: Period): Trade[] {
+function getPeriodWindow(period: Period): { start: Date; tomorrow: Date } {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  if (period === "Daily") return trades.filter((t) => new Date(t.date + "T12:00:00") >= today);
-  if (period === "Weekly") {
+  const tomorrow = new Date(today.getTime() + 86_400_000);
+  let start: Date;
+  if (period === "Daily") {
+    start = today;
+  } else if (period === "Weekly") {
     const dow = today.getDay();
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
-    return trades.filter((t) => new Date(t.date + "T12:00:00") >= monday);
+    start = new Date(today);
+    start.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+  } else if (period === "Monthly") {
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else {
+    start = new Date(now.getFullYear(), 0, 1);
   }
-  const som = new Date(now.getFullYear(), now.getMonth(), 1);
-  return trades.filter((t) => new Date(t.date + "T12:00:00") >= som);
+  return { start, tomorrow };
+}
+
+function filterByPeriod(trades: Trade[], period: Period): Trade[] {
+  const { start, tomorrow } = getPeriodWindow(period);
+  return trades.filter((t) => {
+    const d = new Date(t.date + "T12:00:00");
+    return d >= start && d < tomorrow;
+  });
 }
 
 function getPeriodBaseBalance(allTrades: Trade[], period: Period, startingBalance: number): number {
-  const now = new Date();
-  let cutoff: Date;
-  if (period === "Daily") {
-    cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  } else if (period === "Weekly") {
-    const dow = now.getDay();
-    cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    cutoff.setDate(cutoff.getDate() - (dow === 0 ? 6 : dow - 1));
-  } else {
-    cutoff = new Date(now.getFullYear(), now.getMonth(), 1);
-  }
+  const { start, tomorrow } = getPeriodWindow(period);
   const beforePnL = allTrades.reduce((sum, t) => {
     const d = new Date(t.date + "T12:00:00");
-    if (d < cutoff) return sum + (t.outcome === "WIN" ? t.netProfit : t.outcome === "LOSS" ? -t.netLoss : 0);
+    if (d < start && d < tomorrow) return sum + (t.outcome === "WIN" ? t.netProfit : t.outcome === "LOSS" ? -t.netLoss : 0);
     return sum;
   }, 0);
   return Math.max(startingBalance + beforePnL, 1);
+}
+
+function getPeriodTargetPct(period: Period, monthlyGoalPct: number, tradingDaysPerMonth: number): number {
+  if (monthlyGoalPct <= 0) return 0;
+  const m = monthlyGoalPct / 100;
+  const td = tradingDaysPerMonth > 0 ? tradingDaysPerMonth : 22;
+  if (period === "Daily")   return (Math.pow(1 + m, 1 / td) - 1) * 100;
+  if (period === "Weekly")  return (Math.pow(1 + m, 5 / td) - 1) * 100;
+  if (period === "Monthly") return monthlyGoalPct;
+  return (Math.pow(1 + m, 12) - 1) * 100;
 }
 
 function calcProfitFactor(trades: Trade[]): { value: number; display: string; isInfinite: boolean; isNA: boolean } {
@@ -287,18 +302,19 @@ function MetricBlock({
   );
 }
 
-export default function PerformanceScoreCard({ analytics: allAnalytics, trades, startingBalance }: Props) {
+export default function PerformanceScoreCard({ analytics: allAnalytics, trades, startingBalance, monthlyGoalPct, tradingDaysPerMonth }: Props) {
   const [, setLocation] = useLocation();
   const [period, setPeriod] = useState<Period>("Monthly");
 
   const allPeriodStats = useMemo(() =>
-    (["Daily", "Weekly", "Monthly"] as Period[]).map((p) => {
+    (["Daily", "Weekly", "Monthly", "Yearly"] as Period[]).map((p) => {
       const ft = filterByPeriod(trades, p);
       const baseBalance = getPeriodBaseBalance(trades, p, startingBalance);
       const netDollar = ft.reduce((s, t) => s + (t.outcome === "WIN" ? t.netProfit : t.outcome === "LOSS" ? -t.netLoss : 0), 0);
       const pct = baseBalance > 0 ? (netDollar / baseBalance) * 100 : 0;
-      return { period: p, netDollar, pct };
-    }), [trades, startingBalance]);
+      const targetPct = getPeriodTargetPct(p, monthlyGoalPct, tradingDaysPerMonth);
+      return { period: p, netDollar, pct, targetPct };
+    }), [trades, startingBalance, monthlyGoalPct, tradingDaysPerMonth]);
 
   const filteredTrades = useMemo(() => filterByPeriod(trades, period), [trades, period]);
   const periodBaseBalance = useMemo(() => getPeriodBaseBalance(trades, period, startingBalance), [trades, period, startingBalance]);
@@ -364,7 +380,9 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
 
   const insights = useMemo(() => buildInsights(filteredTrades, periodBaseBalance), [filteredTrades, periodBaseBalance]);
 
-  const PERIOD_LABEL: Record<Period, string> = { Daily: "Today", Weekly: "This Week", Monthly: "This Month" };
+  const PERIOD_LABEL: Record<Period, string> = { Daily: "Today", Weekly: "This Week", Monthly: "This Month", Yearly: "This Year" };
+  const PERIOD_SHORT: Record<Period, string> = { Daily: "Daily", Weekly: "Weekly", Monthly: "Monthly", Yearly: "Yearly" };
+  const currentPeriodStat = allPeriodStats.find(s => s.period === period)!;
 
   return (
     <div className="glass-card border-t-2 border-t-emerald-500/60 p-4 w-full hover:border-white/15 transition-colors">
@@ -383,28 +401,30 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
         <div className="py-12 text-center text-muted-foreground text-sm">Add trades to see your performance score</div>
       ) : (
         <>
-          {/* Period tabs */}
-          <div className="grid grid-cols-3 bg-secondary/40 border border-border/40 rounded-2xl p-1 gap-1 mb-4">
+          {/* Period tabs — 2×2 on mobile, 4 in a row on sm+ */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 bg-secondary border border-border/40 rounded-2xl p-1 gap-1 mb-4">
             {allPeriodStats.map(({ period: p, netDollar, pct }) => {
               const active = p === period;
               const pos = netDollar >= 0;
               const hasDollar = netDollar !== 0;
               const valColor = !hasDollar ? "text-muted-foreground" : pos ? "text-[#2ecc71]" : "text-red-400";
               const dollarStr = hasDollar ? fmtCompact(netDollar) : "—";
-              const pctStr = hasDollar ? `${pos ? "+" : ""}${Math.abs(pct) < 10 ? pct.toFixed(2) : pct.toFixed(1)}%` : "";
+              const pctStr = hasDollar
+                ? `${pos ? "+" : ""}${pct.toFixed(2)}%`
+                : startingBalance > 0 ? "0.00%" : "";
               return (
                 <button key={p} onClick={() => setPeriod(p)}
-                  className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl gap-0.5 transition-all ${active ? "bg-secondary/50 shadow-inner" : "hover:bg-secondary/20"}`}>
-                  <span className={`text-[11px] font-semibold leading-tight ${active ? "text-foreground" : "text-muted-foreground"}`}>{p}</span>
+                  className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl gap-0.5 transition-all ${active ? "bg-card shadow-inner border border-border/60" : "hover:bg-secondary/60"}`}>
+                  <span className={`text-[10px] font-semibold uppercase tracking-wider leading-tight ${active ? "text-foreground" : "text-muted-foreground"}`}>{PERIOD_SHORT[p]}</span>
                   <span className={`text-[13px] font-bold leading-tight ${valColor}`}>{dollarStr}</span>
-                  {pctStr && <span className={`text-[10px] font-medium leading-tight ${valColor}`}>{pctStr}</span>}
+                  {pctStr && <span className={`text-[10px] font-semibold leading-tight ${valColor}`}>{pctStr}</span>}
                 </button>
               );
             })}
           </div>
 
-          {/* P&L for period */}
-          <div className="mb-4 p-3 rounded-xl bg-secondary/30 border border-border/40">
+          {/* P&L for selected period */}
+          <div className="mb-3 p-3 rounded-xl bg-secondary border border-border/40">
             <p className="text-[11px] text-muted-foreground font-medium mb-2">Net P&L — {PERIOD_LABEL[period]}</p>
             <div className="flex items-end gap-3 flex-wrap">
               <div>
@@ -413,11 +433,14 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
                 </p>
                 {periodBaseBalance > 1 && (
                   <p className={`text-[13px] font-semibold mt-0.5 ${isPos ? "text-[#2ecc71]" : "text-red-400"}`}>
-                    {isPos ? "+" : ""}{periodReturnPct.toFixed(2)}%
+                    {isPos ? "+" : ""}{periodReturnPct.toFixed(2)}% return
+                    {currentPeriodStat?.targetPct > 0 && (
+                      <span className="text-muted-foreground font-normal"> / {currentPeriodStat.targetPct.toFixed(2)}% target</span>
+                    )}
                   </p>
                 )}
               </div>
-              <div className="flex gap-4 ml-auto text-right">
+              <div className="flex gap-3 ml-auto text-right flex-wrap justify-end">
                 <div>
                   <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Win Rate</p>
                   <p className={`text-sm font-bold ${winRate >= 50 ? "text-[#2ecc71]" : "text-red-400"}`}>{winRate.toFixed(1)}%</p>
@@ -436,7 +459,75 @@ export default function PerformanceScoreCard({ analytics: allAnalytics, trades, 
                 </div>
               </div>
             </div>
+            {/* Progress bar vs target */}
+            {currentPeriodStat?.targetPct > 0 && (
+              <div className="mt-2.5">
+                <div className="h-1.5 rounded-full bg-border/40 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${Math.min(100, Math.max(0, (periodReturnPct / currentPeriodStat.targetPct) * 100))}%`,
+                      background: periodReturnPct >= currentPeriodStat.targetPct ? "#2ecc71" : periodReturnPct > 0 ? "#f59e0b" : "#ef4444",
+                    }}
+                  />
+                </div>
+                <p className="text-[9px] text-muted-foreground mt-1">
+                  {Math.min(100, Math.max(0, (periodReturnPct / currentPeriodStat.targetPct) * 100)).toFixed(0)}% of {PERIOD_SHORT[period].toLowerCase()} target
+                </p>
+              </div>
+            )}
           </div>
+
+          {/* Target vs Actual table — only shown when a goal is set */}
+          {monthlyGoalPct > 0 && (
+            <div className="mb-3 rounded-xl bg-secondary border border-border/40 overflow-hidden">
+              <div className="px-3 py-2 border-b border-border/40 flex items-center gap-2">
+                <Target className="w-3.5 h-3.5 text-muted-foreground" />
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Period Targets vs Actual</p>
+              </div>
+              <div className="divide-y divide-border/30">
+                {allPeriodStats.map(({ period: p, pct, targetPct }) => {
+                  const fmtPct = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+                  const progress = targetPct > 0 ? Math.min(100, Math.max(0, (pct / targetPct) * 100)) : 0;
+                  const statusLabel = targetPct <= 0 ? "No Target"
+                    : pct >= targetPct ? "Above Target"
+                    : pct > 0 ? "In Progress"
+                    : pct === 0 ? "Not Started"
+                    : "Below Target";
+                  const statusColor = targetPct <= 0 ? "text-muted-foreground"
+                    : pct >= targetPct ? "text-emerald-400"
+                    : pct > 0 ? "text-yellow-400"
+                    : pct === 0 ? "text-muted-foreground"
+                    : "text-red-400";
+                  const isActive = p === period;
+                  return (
+                    <button key={p} onClick={() => setPeriod(p)}
+                      className={`w-full grid grid-cols-4 gap-1 px-3 py-2 text-left transition-colors ${isActive ? "bg-card/60" : "hover:bg-card/30"}`}>
+                      <span className={`text-[11px] font-semibold ${isActive ? "text-foreground" : "text-muted-foreground"}`}>{PERIOD_SHORT[p]}</span>
+                      <span className="text-[11px] text-muted-foreground">{targetPct > 0 ? `${targetPct.toFixed(2)}%` : "—"}</span>
+                      <span className={`text-[11px] font-semibold ${pct > 0 ? "text-[#2ecc71]" : pct < 0 ? "text-red-400" : "text-muted-foreground"}`}>
+                        {fmtPct(pct)}
+                      </span>
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className={`text-[10px] font-semibold ${statusColor}`}>{statusLabel}</span>
+                        {targetPct > 0 && (
+                          <div className="w-full h-1 rounded-full bg-border/40 overflow-hidden">
+                            <div className="h-full rounded-full" style={{
+                              width: `${progress}%`,
+                              background: pct >= targetPct ? "#2ecc71" : pct > 0 ? "#f59e0b" : "#374151",
+                            }} />
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="px-3 py-1.5 border-t border-border/40">
+                <p className="text-[9px] text-muted-foreground">Target | Actual | Status · Tap a row to switch period · Return % = Net P&L ÷ Period Opening Balance × 100</p>
+              </div>
+            </div>
+          )}
 
           {/* Equity curve */}
           <div className="rounded-2xl border border-border/40 bg-secondary/80 overflow-hidden px-3 pt-4 pb-2 mb-3">
